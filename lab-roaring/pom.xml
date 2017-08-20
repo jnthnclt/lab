@@ -3,16 +3,16 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>org.colt.os</groupId>
-        <artifactId>lab</artifactId>
+        <groupId>com.github.jnthnclt</groupId>
+        <artifactId>os.lab</artifactId>
         <version>0.1-SNAPSHOT</version>
     </parent>
-    <groupId>org.colt.os.lab</groupId>
-    <artifactId>lab-roaring</artifactId>
+    <groupId>com.github.jnthnclt</groupId>
+    <artifactId>os.lab.roaring</artifactId>
     <dependencies>
         <dependency>
-            <groupId>org.colt.os.lab</groupId>
-            <artifactId>lab</artifactId>
+            <groupId>com.github.jnthnclt</groupId>
+            <artifactId>os.lab.core</artifactId>
             <version>0.1-SNAPSHOT</version>
         </dependency>
     </dependencies>
