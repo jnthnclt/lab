@@ -211,10 +211,8 @@ public class UIO {
         return 0;
     }
 
-    /**
-     * Lex key range splittting Copied from HBase
-     * Iterate over keys within the passed range.
-     */
+    //Lex key range splittting Copied from HBase
+    //Iterate over keys within the passed range.
     public static Iterable<byte[]> iterateOnSplits(byte[] a, byte[] b, boolean inclusive, int num, Comparator<byte[]> lexicographicalComparator) {
         byte[] aPadded;
         byte[] bPadded;

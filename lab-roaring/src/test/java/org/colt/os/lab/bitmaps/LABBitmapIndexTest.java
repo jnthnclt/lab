@@ -2,6 +2,7 @@ package org.colt.os.lab.bitmaps;
 
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import java.io.File;
 import java.util.Arrays;
@@ -407,13 +408,14 @@ public class LABBitmapIndexTest {
 
     public static ValueIndex<byte[]> buildValueIndex(String name) throws Exception {
         File root = Files.createTempDir();
+        ListeningExecutorService executorService = MoreExecutors.newDirectExecutorService();
         LABEnvironment environment = new LABEnvironment(new LABStats(), LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(1),
             LABEnvironment.buildLABDestroyThreadPool(1),
             null,
             root,
             new LABHeapPressure(new LABStats(),
-                MoreExecutors.sameThreadExecutor(),
+                executorService,
                 name,
                 1024 * 1024,
                 2 * 1024 * 1024,
