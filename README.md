@@ -1,6 +1,7 @@
 ![L.A.B](https://github.com/jnthnclt/lab/wiki/images/lab-logo.png)
 =========
 
+[![Build Status](https://travis-ci.org/lab/lab.png)](https://travis-ci.org/lab/lab)
 [![][license img]][license]
 
 #### What It Is
