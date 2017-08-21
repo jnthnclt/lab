@@ -16,10 +16,6 @@ public class LHash<V> {
         return state.size();
     }
 
-    /**
-     *
-     * @return
-     */
     public void clear() {
         state = state.allocate(0);
     }

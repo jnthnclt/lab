@@ -12,10 +12,7 @@ public class OHash<K, V> implements OH<K, V> {
     private final OHEqualer<K> equaler;
     private volatile OHState<K,V> state;
 
-    /**
-     *
-     * @param capacity
-     */
+
     public OHash(OHState<K, V> state, OHasher<K> hasher, OHEqualer<K> equaler) {
         this.hasher = hasher;
         this.equaler = equaler;
@@ -27,10 +24,6 @@ public class OHash<K, V> implements OH<K, V> {
         return state.size();
     }
 
-    /**
-     *
-     * @return
-     */
     @Override
     public void clear() {
         state = state.allocate(0);

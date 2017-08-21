@@ -12,11 +12,6 @@ public class BAHash<V> implements BAH<V> {
     private final BAHEqualer equaler;
     private volatile BAHState<V> state;
 
-    /**
-     * @param state
-     * @param hasher
-     * @param equaler
-     */
     public BAHash(BAHState<V> state, BAHasher hasher, BAHEqualer equaler) {
         this.hasher = hasher;
         this.equaler = equaler;
@@ -28,9 +23,6 @@ public class BAHash<V> implements BAH<V> {
         return state.size();
     }
 
-    /**
-     * @return
-     */
     @Override
     public void clear() {
         state = state.allocate(0);

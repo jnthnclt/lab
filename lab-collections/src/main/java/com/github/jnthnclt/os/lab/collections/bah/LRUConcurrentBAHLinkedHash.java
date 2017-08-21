@@ -25,13 +25,7 @@ public class LRUConcurrentBAHLinkedHash<V> {
     private final AtomicLong updates = new AtomicLong();
     private final AtomicLong syntheticTime = new AtomicLong(0);
 
-    /**
-     * @param initialCapacity
-     * @param maxCapacity
-     * @param slack           the percentage the size can go over the maxCapacity before the collections removes items (0.2 typical)
-     * @param hasValues
-     * @param concurrency
-     */
+    // slack           the percentage the size can go over the maxCapacity before the collections removes items (0.2 typical)
     @SuppressWarnings("unchecked")
     public LRUConcurrentBAHLinkedHash(int initialCapacity, int maxCapacity, float slack, boolean hasValues, int concurrency) {
         this.capacity = initialCapacity;

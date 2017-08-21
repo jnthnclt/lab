@@ -11,11 +11,7 @@ public class BAPHash<V> implements BAPH<V> {
     private final BAPHEqualer equaler;
     private volatile BAPHState<V> state;
 
-    /**
-     * @param state
-     * @param hasher
-     * @param equaler
-     */
+
     public BAPHash(BAPHState<V> state, BAPHasher hasher, BAPHEqualer equaler) {
         this.hasher = hasher;
         this.equaler = equaler;
@@ -27,9 +23,6 @@ public class BAPHash<V> implements BAPH<V> {
         return state.size();
     }
 
-    /**
-     * @return
-     */
     @Override
     public void clear() {
         state = state.allocate(0);
