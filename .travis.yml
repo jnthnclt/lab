@@ -17,5 +17,5 @@ branches:
 #################
 script: mvn javadoc:test-javadoc &&  mvn clean test jacoco:report install -Dgpg.skip=true
 
-after_success:
-  - mvn coveralls:report
+#after_success:
+#  - mvn coveralls:report
