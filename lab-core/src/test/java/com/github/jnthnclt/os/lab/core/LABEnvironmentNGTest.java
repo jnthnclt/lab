@@ -433,11 +433,11 @@ public class LABEnvironmentNGTest {
                 return true;
             }, true, rawEntryBuffer, keyBuffer);
 
-            System.out.println("Append Elapse:" + (System.currentTimeMillis() - start));
+            //System.out.println("Append Elapse:" + (System.currentTimeMillis() - start));
             if (commit) {
                 start = System.currentTimeMillis();
                 index.commit(true, true);
-                System.out.println("Commit Elapse:" + (System.currentTimeMillis() - start));
+                //System.out.println("Commit Elapse:" + (System.currentTimeMillis() - start));
                 start = System.currentTimeMillis();
             }
 
@@ -446,11 +446,11 @@ public class LABEnvironmentNGTest {
     }
 
     private void test(ValueIndex index, String name, IdProvider idProvider, int commitCount, int batchCount) throws Exception {
-        if (index instanceof LAB) {
+        /*if (index instanceof LAB) {
             System.out.println("\n\n");
             ((LAB) index).auditRanges((key) -> "" + UIO.bytesLong(key));
             System.out.println("\n\n");
-        }
+        }*/
 
         idProvider.reset();
         assertEquals(index.name(), name);
@@ -477,7 +477,7 @@ public class LABEnvironmentNGTest {
                         return true;
                     }, true);
             }
-            System.out.print(".");
+            //System.out.print(".");
         }
 
         System.out.println("\nTesting Misses... " + name);
@@ -500,7 +500,7 @@ public class LABEnvironmentNGTest {
                         return true;
                     }, true);
             }
-            System.out.print(".");
+            //System.out.print(".");
         }
 
         if (!failures.isEmpty()) {

@@ -68,7 +68,7 @@ public class LABWalTest {
             true,
             false);
 
-        System.out.println("Opening...");
+        //System.out.println("Opening...");
         env.open();
 
         int numValueIndexes = 1;
@@ -96,7 +96,7 @@ public class LABWalTest {
         }
 
 
-        System.out.println("Running...");
+        //System.out.println("Running...");
         ExecutorService executorService = Executors.newFixedThreadPool(concurrencyLevel);
         List<Future<?>> futures = Lists.newArrayList();
         for (int i = 0; i < concurrencyLevel; i++) {
@@ -105,7 +105,7 @@ public class LABWalTest {
                 int count = 0;
                 while ((running.get() || count < numKeys) && count < maxWrites) {
                     if (count % 1_000 == 0) {
-                        System.out.println("Thread:" + index + " count:" + count);
+                        //System.out.println("Thread:" + index + " count:" + count);
                     }
                     count++;
 
@@ -130,22 +130,22 @@ public class LABWalTest {
         Thread.sleep(5_000L);
         running.set(false);
 
-        System.out.println("Stopping...");
+        //System.out.println("Stopping...");
         for (Future<?> future : futures) {
             future.get();
         }
 
-        System.out.println("Closing...");
+        //System.out.println("Closing...");
         for (ValueIndex<byte[]> valueIndex : valueIndexes) {
             valueIndex.close(true, false);
         }
         env.close();
         executorService.shutdownNow();
 
-        System.out.println("Waiting...");
+        //System.out.println("Waiting...");
         Thread.sleep(2_000L);
 
-        System.out.println("Reopening...");
+        //System.out.println("Reopening...");
         env = new LABEnvironment(labStats,
             LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(4),
@@ -165,7 +165,7 @@ public class LABWalTest {
             true,
             false);
         env.open((valueIndexId, key, timestamp, tombstoned, version, payload) -> {
-            System.out.println("Applied");
+            //System.out.println("Applied");
             return true;
         });
         for (int i = 0; i < numValueIndexes; i++) {
@@ -176,7 +176,7 @@ public class LABWalTest {
             //valueIndexIds[i] = name.getBytes(StandardCharsets.UTF_8);
         }
 
-        System.out.println("Validating...");
+        //System.out.println("Validating...");
         AtomicLong[] journalCount = new AtomicLong[numValueIndexes];
         for (int i = 0; i < numValueIndexes; i++) {
             journalCount[i] = new AtomicLong(0);
@@ -198,16 +198,16 @@ public class LABWalTest {
                         count.incrementAndGet();
                         Long expected = keyTimestamps[index].get(key.getLong(0));
                         if (expected == null || expected != timestamp) {
-                            System.out.println("Index:" + index + " expected:" + expected + " found:" + timestamp);
+                            //System.out.println("Index:" + index + " expected:" + expected + " found:" + timestamp);
                         }
                     } else {
-                        System.out.println("Index:" + index + " missed");
+                        //System.out.println("Index:" + index + " missed");
                         missed.incrementAndGet();
                     }
                     return true;
                 },
                 false);
-            System.out.println("Index:" + index + " count:" + count + " missed:" + missed);
+            //System.out.println("Index:" + index + " count:" + count + " missed:" + missed);
         }
     }
 
@@ -222,7 +222,7 @@ public class LABWalTest {
     public void testEnvWithWALAndMemMap() throws Exception {
 
         File root = testEnvRoot;
-        System.out.println("Created root " + root);
+        //System.out.println("Created root " + root);
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
         LABHeapPressure LABHeapPressure1 = new LABHeapPressure(new LABStats(),
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
@@ -251,18 +251,18 @@ public class LABWalTest {
         ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo", 4096, 1024 * 1024 * 10, -1, -1, -1,
             NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 19, TestUtils.indexType, 2d, true);
 
-        System.out.println("Created env");
+        //System.out.println("Created env");
 
         String[] lastJournal = { null };
         env.open((valueIndexId, key, timestamp, tombstoned, version, payload) -> {
             String m = " key:" + UIO.bytesLong(key) + " timestamp:" + timestamp + " version:" + UIO.bytesLong(payload);
             if (lastJournal[0] == null) {
-                System.out.println("First: " + m);
+                //System.out.println("First: " + m);
             }
             lastJournal[0] = m;
             return true;
         });
-        System.out.println("Last: " + lastJournal[0]);
+        //System.out.println("Last: " + lastJournal[0]);
 
         ValueIndex index = env.open(valueIndexConfig);
 
@@ -271,8 +271,8 @@ public class LABWalTest {
         index.rowScan((index1, key, timestamp, tombstoned, version, payload) -> {
 
             if (monotonic.get() + 1 != payload.getLong(0) || monotonic.get() + 1 != timestamp) {
-                System.out.println(lastWTF[0]);
-                System.out.println("opening:" + (monotonic.get() + 1) + " vs " + payload.getLong(0) + " t:" + timestamp);
+                //System.out.println(lastWTF[0]);
+                //System.out.println("opening:" + (monotonic.get() + 1) + " vs " + payload.getLong(0) + " t:" + timestamp);
             }
             lastWTF[0] = "opening:" + (monotonic.get() + 1) + " vs " + payload.getLong(0) + " t:" + timestamp;
             Assert.assertEquals(monotonic.get() + 1, payload.getLong(0), "unexpected payload");
@@ -286,7 +286,7 @@ public class LABWalTest {
             monotonic.set(0);
         }
 
-        System.out.println("Opened at monotonic:" + monotonic.get());
+        //System.out.println("Opened at monotonic:" + monotonic.get());
 
         IdProvider idProvider = new IdProvider() {
             @Override
@@ -306,9 +306,9 @@ public class LABWalTest {
             batchCount = 1;
         }
 
-        System.out.println("Open env");
+        //System.out.println("Open env");
         index(index, "foo", idProvider, batchCount, batchSize, false);
-        System.out.println("Indexed");
+        //System.out.println("Indexed");
 
         AtomicInteger all = new AtomicInteger();
         index.rowScan((index1, key, timestamp, tombstoned, version, payload) -> {
@@ -316,11 +316,11 @@ public class LABWalTest {
             return true;
         }, true);
 
-        System.out.println();
-        System.out.println("/----------------------------");
-        System.out.println("| Finally:" + all.get() + " " + root);
-        System.out.println("\\----------------------------");
-        System.out.println();
+        //System.out.println();
+        //System.out.println("/----------------------------");
+        //System.out.println("| Finally:" + all.get() + " " + root);
+        //System.out.println("\\----------------------------");
+        //System.out.println();
 
 
     }
@@ -355,11 +355,11 @@ public class LABWalTest {
                 return true;
             }, true, rawEntryBuffer, keyBuffer);
 
-            System.out.println("---->   Append Elapse:" + (System.currentTimeMillis() - start) + " " + wroteV[0]);
+            //System.out.println("---->   Append Elapse:" + (System.currentTimeMillis() - start) + " " + wroteV[0]);
             if (commit) {
                 start = System.currentTimeMillis();
                 index.commit(true, true);
-                System.out.println("----> Commit Elapse:" + (System.currentTimeMillis() - start));
+                //System.out.println("----> Commit Elapse:" + (System.currentTimeMillis() - start));
             }
         }
     }

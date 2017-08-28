@@ -132,7 +132,7 @@ public class LABEnvironmentConcurrenyNGTest {
                                 return true;
                             }, fsync, rawEntryBuffer, keyBuffer);
                             index.commit(fsync, true);
-                            System.out.println((c + 1) + " out of " + commitCount + " gets:" + hits.get() + " debt:" + index.debt() + ".");
+                            //System.out.println((c + 1) + " out of " + commitCount + " gets:" + hits.get() + " debt:" + index.debt() + ".");
                         }
                         return null;
                     } catch (Exception x) {
@@ -162,7 +162,7 @@ public class LABEnvironmentConcurrenyNGTest {
                                     return true;
                                 }, true);
                         }
-                        System.out.println("Reader (" + readerId + ") finished.");
+                        //System.out.println("Reader (" + readerId + ") finished.");
                         return null;
                     } catch (Exception x) {
                         x.printStackTrace();
@@ -181,12 +181,12 @@ public class LABEnvironmentConcurrenyNGTest {
 
             writers.shutdown();
             readers.shutdown();
-            System.out.println("ALL DONE");
+            //System.out.println("ALL DONE");
             env.shutdown();
 
         } catch (Throwable x) {
             x.printStackTrace();
-            System.out.println("Sleeping");
+            //System.out.println("Sleeping");
             Thread.sleep(Long.MAX_VALUE);
         }
     }

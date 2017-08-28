@@ -121,7 +121,7 @@ public class TestUtils {
             Scanner rowScan = new InterleaveStream(acquired, null, null, LABRawhide.SINGLETON);
             try {
                 RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
-                    System.out.println("scanned:" + UIO.bytesLong(keys.get(index[0])) + " " + key(rawEntry));
+                    //System.out.println("scanned:" + UIO.bytesLong(keys.get(index[0])) + " " + key(rawEntry));
                     Assert.assertEquals(UIO.bytesLong(keys.get(index[0])), key(rawEntry));
                     index[0]++;
                     return true;
@@ -131,7 +131,7 @@ public class TestUtils {
             } finally {
                 rowScan.close();
             }
-            System.out.println("rowScan PASSED");
+            //System.out.println("rowScan PASSED");
             return true;
         }, true);
 
@@ -152,7 +152,7 @@ public class TestUtils {
                 while (pointInterleave.next(stream) == Next.more) {
                 }
             }
-            System.out.println("gets PASSED");
+            //System.out.println("gets PASSED");
             return true;
         }, true);
 
@@ -163,13 +163,13 @@ public class TestUtils {
                 int[] streamed = new int[1];
                 RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
                     if (value(rawEntry) > -1) {
-                        System.out.println("Streamed:" + key(rawEntry));
+                        //System.out.println("Streamed:" + key(rawEntry));
                         streamed[0]++;
                     }
                     return true;
                 };
 
-                System.out.println("Asked:" + UIO.bytesLong(keys.get(_i)) + " to " + UIO.bytesLong(keys.get(_i + 3)));
+                //System.out.println("Asked:" + UIO.bytesLong(keys.get(_i)) + " to " + UIO.bytesLong(keys.get(_i + 3)));
                 Scanner rangeScan = new InterleaveStream(acquired, keys.get(_i), keys.get(_i + 3), LABRawhide.SINGLETON);
                 try {
                     while (rangeScan.next(stream) == Next.more) {
@@ -180,7 +180,7 @@ public class TestUtils {
                 Assert.assertEquals(3, streamed[0]);
             }
 
-            System.out.println("rangeScan PASSED");
+            //System.out.println("rangeScan PASSED");
             return true;
         }, true);
 
@@ -206,7 +206,7 @@ public class TestUtils {
 
             }
 
-            System.out.println("rangeScan2 PASSED");
+            //System.out.println("rangeScan2 PASSED");
             return true;
         }, true);
     }

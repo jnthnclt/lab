@@ -129,9 +129,9 @@ public class LABValidationNGTest {
 
                         if (version.get() > (writerCount * commitCount * batchSize) / 2) {
                             if (close.compareAndSet(false, true)) {
-                                System.out.println("****** Closing lab during writes... ****** ");
+                                //System.out.println("****** Closing lab during writes... ****** ");
                                 lab.close(true, fsync);
-                                System.out.println("****** Lab closed... ****** ");
+                                //System.out.println("****** Lab closed... ****** ");
 
                                 try {
                                     FileUtils.forceMkdir(new File(finalRoot, "foobar"));
@@ -139,7 +139,7 @@ public class LABValidationNGTest {
                                 } catch (Exception x) {
                                     Assert.fail();
                                 }
-                                System.out.println("****** Lab moved... ****** ");
+                                //System.out.println("****** Lab moved... ****** ");
                             }
                         }
                         lab.append((stream) -> {
@@ -157,11 +157,11 @@ public class LABValidationNGTest {
 
                         lab.commit(fsync, true);
                     }
-                    System.out.println("Writer " + wi + " done...");
+                    //System.out.println("Writer " + wi + " done...");
                     return null;
                 } catch (Exception x) {
                     if (close.get() && (x instanceof LABClosedException)) {
-                        System.out.println("Writer " + wi + " exiting because: " + x);
+                        //System.out.println("Writer " + wi + " exiting because: " + x);
                         return null;
                     } else {
                         x.printStackTrace();
@@ -295,7 +295,7 @@ public class LABValidationNGTest {
                             return true;
                         }, fsync, rawEntryBuffer, keyBuffer);
                         lab.commit(fsync, true);
-                        System.out.println((c + 1) + " out of " + commitCount + " gets:" + hits.get() + " debt:" + lab.debt());
+                        //System.out.println((c + 1) + " out of " + commitCount + " gets:" + hits.get() + " debt:" + lab.debt());
                     }
                     return null;
                 } catch (Exception x) {
@@ -341,7 +341,7 @@ public class LABValidationNGTest {
 
                         if (maxId == found.size()) {
                             passed.incrementAndGet();
-                            System.out.println("PASSED: " + found.size() + "  vs " + maxId);
+                            //System.out.println("PASSED: " + found.size() + "  vs " + maxId);
                             log.add("PASSED: " + found.size() + "  vs " + maxId);
                             failed.set(0);
                         } else {
@@ -352,7 +352,7 @@ public class LABValidationNGTest {
                                     missing.add(i);
                                 }
                             }
-                            System.out.println("FAILED: " + found.size() + "  vs " + maxId + " missing=" + missing + " " + missing.size());
+                            //System.out.println("FAILED: " + found.size() + "  vs " + maxId + " missing=" + missing + " " + missing.size());
                             log.add("FAILED: " + found.size() + "  vs " + maxId + " missing=" + missing + " " + missing.size());
                         }
                         if (running.get() <= 0) {
@@ -361,7 +361,7 @@ public class LABValidationNGTest {
                         }
 
                     }
-                    System.out.println("Reader (" + readerId + ") finished.");
+                    //System.out.println("Reader (" + readerId + ") finished.");
                     return null;
                 } catch (Exception x) {
                     log.add(x.getMessage());

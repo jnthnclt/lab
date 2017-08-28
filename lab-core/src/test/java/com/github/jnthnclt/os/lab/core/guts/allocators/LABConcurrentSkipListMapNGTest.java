@@ -35,13 +35,13 @@ public class LABConcurrentSkipListMapNGTest {
                 (added, reused) -> {
                 });
         }
-        System.out.println("Count:" + map.size());
-        System.out.println("first:" + UIO.bytesLong(map.firstKey()));
-        System.out.println("last:" + UIO.bytesLong(map.lastKey()));
+        //System.out.println("Count:" + map.size());
+        //System.out.println("first:" + UIO.bytesLong(map.firstKey()));
+        //System.out.println("last:" + UIO.bytesLong(map.lastKey()));
 
         Scanner scanner = map.scanner(null, null, new BolBuffer(), new BolBuffer());
         while (scanner.next((FormatTransformer readKeyFormatTransformer, FormatTransformer readValueFormatTransformer, BolBuffer rawEntry) -> {
-            System.out.println("Keys:" + UIO.bytesLong(rawEntry.copy()));
+            //System.out.println("Keys:" + UIO.bytesLong(rawEntry.copy()));
             return true;
         }) == Next.more) {
         }

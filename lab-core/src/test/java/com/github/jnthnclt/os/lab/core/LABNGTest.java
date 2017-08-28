@@ -1,28 +1,27 @@
 package com.github.jnthnclt.os.lab.core;
 
+import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
+import com.github.jnthnclt.os.lab.core.api.Keys.KeyStream;
 import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
+import com.github.jnthnclt.os.lab.core.api.NoOpFormatTransformerProvider;
+import com.github.jnthnclt.os.lab.core.api.ValueIndex;
+import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.api.rawhide.KeyValueRawhide;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
 import com.github.jnthnclt.os.lab.core.guts.IndexUtil;
+import com.github.jnthnclt.os.lab.core.guts.Leaps;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
 import com.github.jnthnclt.os.lab.core.guts.api.KeyToString;
+import com.github.jnthnclt.os.lab.core.io.BolBuffer;
+import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import com.google.common.io.Files;
-import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
-import com.github.jnthnclt.os.lab.core.api.Keys.KeyStream;
-import com.github.jnthnclt.os.lab.core.api.NoOpFormatTransformerProvider;
-import com.github.jnthnclt.os.lab.core.api.ValueIndex;
-import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
-import com.github.jnthnclt.os.lab.core.guts.Leaps;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -78,33 +77,33 @@ public class LABNGTest {
                 }
                 return true;
             }, fsync, rawEntryBuffer, keyBuffer);
-            System.out.println("Pre Commit");
+            //System.out.println("Pre Commit");
             long c = count.get();
             AtomicLong f;
             do {
                 f = new AtomicLong();
                 assertRangeScan(c, index, f);
                 if (f.get() > 0) {
-                    System.out.println("SPINNING ");
+                    //System.out.println("SPINNING ");
                 }
                 fails.addAndGet(f.get());
             }
             while (f.get() > 0);
             index.commit(true, true);
-            System.out.println("Post Commit");
+            //System.out.println("Post Commit");
             do {
                 f = new AtomicLong();
                 assertRangeScan(c, index, f);
                 if (f.get() > 0) {
-                    System.out.println("SPINNING");
+                    //System.out.println("SPINNING");
                 }
                 fails.addAndGet(f.get());
             }
             while (f.get() > 0);
-            System.out.println(c + " -------------------------------------");
+            //System.out.println(c + " -------------------------------------");
         }
 
-        System.out.println("fails:" + fails.get());
+        //System.out.println("fails:" + fails.get());
         assertEquals(fails.get(), 0);
     }
 
@@ -132,8 +131,8 @@ public class LABNGTest {
                                     return "" + UIO.bytesLong(key);
                                 }
                             });
-                            System.out.println("RANGE FAILED: from:" + ff + " to:" + tt + " already contained " + got);
-                            System.out.println();
+                            //System.out.println("RANGE FAILED: from:" + ff + " to:" + tt + " already contained " + got);
+                            //System.out.println();
                         }
                         return true;
                     }, true);
@@ -146,8 +145,8 @@ public class LABNGTest {
                             return "" + UIO.bytesLong(key);
                         }
                     });
-                    System.out.print("RANGE FAILED: from:" + f + " to:" + t + " result:" + rangeScan);
-                    System.out.println();
+                   //System.out.print("RANGE FAILED: from:" + f + " to:" + t + " result:" + rangeScan);
+                    //System.out.println();
                 }
             }
 
@@ -160,14 +159,14 @@ public class LABNGTest {
             if (!added) {
                 fails.incrementAndGet();
                 long got = key.getLong(0);
-                System.out.println("RANGE FAILED: already contained " + got);
+                //System.out.println("RANGE FAILED: already contained " + got);
             }
             return true;
         }, true);
 
         if (rowScan.size() != c) {
             fails.incrementAndGet();
-            System.out.print("ROW FAILED: expected " + c + " result:" + rowScan);
+            //System.out.print("ROW FAILED: expected " + c + " result:" + rowScan);
         }
     }
 
@@ -317,7 +316,7 @@ public class LABNGTest {
             }
             return true;
         }, (index1, key, timestamp, tombstoned, version, payload) -> {
-            System.out.println(IndexUtil.toString(key) + " " + timestamp + " " + tombstoned + " " + version + " " + IndexUtil.toString(payload));
+            //System.out.println(IndexUtil.toString(key) + " " + timestamp + " " + tombstoned + " " + version + " " + IndexUtil.toString(payload));
             assertEquals(UIO.bytesLong(payload.copy()), expectedValues[index1]);
             return true;
         }, true);
@@ -375,7 +374,7 @@ public class LABNGTest {
             long timestamp = Integer.MAX_VALUE - i;
             long version = timestamp + 1;
             index.append((stream) -> {
-                System.out.println("wrote timestamp:" + timestamp + " version:" + version);
+                //System.out.println("wrote timestamp:" + timestamp + " version:" + version);
                 stream.stream(-1, key, timestamp, false, version, UIO.longBytes(timestamp, new byte[8], 0));
                 return true;
             }, fsync, rawEntryBuffer, keyBuffer);
@@ -387,7 +386,7 @@ public class LABNGTest {
             long timestamp = Integer.MAX_VALUE - i;
             long version = timestamp + 1;
             index.append((stream) -> {
-                System.out.println("wrote timestamp:" + timestamp + " version:" + version);
+                //System.out.println("wrote timestamp:" + timestamp + " version:" + version);
                 stream.stream(-1, key, timestamp, false, version, UIO.longBytes(timestamp, new byte[8], 0));
                 return true;
             }, fsync, rawEntryBuffer, keyBuffer);
@@ -399,7 +398,7 @@ public class LABNGTest {
             return true;
         }, (index1, key1, timestamp, tombstoned, version, payload) -> {
             gotTimestamp[0] = timestamp;
-            System.out.println(IndexUtil.toString(key1) + " " + timestamp + " " + tombstoned + " " + version + " " + IndexUtil.toString(payload));
+            //System.out.println(IndexUtil.toString(key1) + " " + timestamp + " " + tombstoned + " " + version + " " + IndexUtil.toString(payload));
             return true;
         }, true);
 
@@ -455,7 +454,7 @@ public class LABNGTest {
         for (int i = 0; i < 10; i++) {
             long timestamp = i;
             index.append((stream) -> {
-                System.out.println("wrote timestamp:" + timestamp);
+                //System.out.println("wrote timestamp:" + timestamp);
                 stream.stream(-1, key, 0, false, 0, UIO.longBytes(timestamp, new byte[8], 0));
                 return true;
             }, fsync, rawEntryBuffer, keyBuffer);
@@ -466,7 +465,7 @@ public class LABNGTest {
         for (int i = 10; i < 20; i++) {
             long timestamp = i;
             index.append((stream) -> {
-                System.out.println("wrote timestamp:" + timestamp);
+                //System.out.println("wrote timestamp:" + timestamp);
                 stream.stream(-1, key, 0, false, 0, UIO.longBytes(timestamp, new byte[8], 0));
                 return true;
             }, fsync, rawEntryBuffer, keyBuffer);
@@ -478,7 +477,7 @@ public class LABNGTest {
             return true;
         }, (index1, key1, timestamp, tombstoned, version, payload) -> {
             gotTimestamp[0] = payload.getLong(0);
-            System.out.println(IndexUtil.toString(key1) + " " + timestamp + " " + tombstoned + " " + version + " " + IndexUtil.toString(payload));
+            //System.out.println(IndexUtil.toString(key1) + " " + timestamp + " " + tombstoned + " " + version + " " + IndexUtil.toString(payload));
             return true;
         }, true);
 
@@ -555,10 +554,10 @@ public class LABNGTest {
     }
 
     private void testScanExpected(ValueIndex index, long[] expected) throws Exception {
-        System.out.println("Checking full scan");
+       // System.out.println("Checking full scan");
         List<Long> scanned = new ArrayList<>();
         index.rowScan((index1, key, timestamp, tombstoned, version, payload) -> {
-            System.out.println("scan:" + IndexUtil.toString(key) + " " + timestamp + " " + tombstoned + " " + version + " " + IndexUtil.toString(payload));
+            //System.out.println("scan:" + IndexUtil.toString(key) + " " + timestamp + " " + tombstoned + " " + version + " " + IndexUtil.toString(payload));
             if (!tombstoned) {
                 scanned.add(payload.getLong(0));
             }
@@ -566,17 +565,17 @@ public class LABNGTest {
         }, true);
         assertEquals(scanned.size(), expected.length);
         for (int i = 0; i < expected.length; i++) {
-            System.out.println((long) scanned.get(i) + " vs " + expected[i]);
+            //System.out.println((long) scanned.get(i) + " vs " + expected[i]);
             assertEquals((long) scanned.get(i), expected[i]);
         }
     }
 
     private void testRangeScanExpected(ValueIndex index, byte[] from, byte[] to, long[] expected) throws Exception {
 
-        System.out.println("Checking range scan:" + Arrays.toString(from) + "->" + Arrays.toString(to));
+        //System.out.println("Checking range scan:" + Arrays.toString(from) + "->" + Arrays.toString(to));
         List<Long> scanned = new ArrayList<>();
         index.rangeScan(from, to, (index1, key, timestamp, tombstoned, version, payload) -> {
-            System.out.println("scan:" + IndexUtil.toString(key) + " " + timestamp + " " + tombstoned + " " + version + " " + IndexUtil.toString(payload));
+            //System.out.println("scan:" + IndexUtil.toString(key) + " " + timestamp + " " + tombstoned + " " + version + " " + IndexUtil.toString(payload));
             if (!tombstoned) {
                 scanned.add(payload.getLong(0));
             }
@@ -584,7 +583,7 @@ public class LABNGTest {
         }, true);
         assertEquals(scanned.size(), expected.length);
         for (int i = 0; i < expected.length; i++) {
-            System.out.println((long) scanned.get(i) + " vs " + expected[i]);
+            //System.out.println((long) scanned.get(i) + " vs " + expected[i]);
             assertEquals((long) scanned.get(i), expected[i]);
         }
     }
