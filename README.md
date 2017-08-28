@@ -3,6 +3,7 @@
 
 [![Build Status](https://travis-ci.org/jnthnclt/lab.png)](https://travis-ci.org/jnthnclt/lab)
 [![][license img]][license]
+[![Coverage Status](https://coveralls.io/repos/github/jnthnclt/lab/badge.svg?branch=master)](https://coveralls.io/github/jnthnclt/lab?branch=master)
 
 # What It Is
 Swiss army knife LSM implementation.
