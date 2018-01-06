@@ -8,9 +8,12 @@ import com.google.common.io.Files;
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import java.io.File;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import com.github.jnthnclt.os.lab.core.api.Keys.KeyStream;
@@ -43,13 +46,15 @@ public class LABStress {
         LABStats stats = new LABStats();
         ValueIndex index = createIndex(root, indexType, hashIndexLoadFactor, stats, globalHeapCostInBytes);
 
-        int totalCardinality = 100_000_000;
+        long totalCardinality = 100_000_000;
 
         printLabels();
 
-        String write = stress("warm:jit",
+        String write = stress(true,
+                "warm:jit",
             stats,
             index,
+            0,
             totalCardinality,
             800_000, // writesPerSecond
             1_000_000, //writeCount
@@ -83,18 +88,41 @@ public class LABStress {
         // ---
         printLabels();
 
-        totalCardinality = 100_000_000;
+        totalCardinality = 3_000_000_000L;
 
-        write = stress("stress:RW",
-            stats,
-            index,
-            totalCardinality,
-            250_000, // writesPerSecond
-            1_000, //writeCount
-            1, //readForNSeconds
-            1_000, // readCount
-            false,
-            globalHeapCostInBytes); // removes
+        int threadCount = 2; //Runtime.getRuntime().availableProcessors();
+        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+
+        futures = new ArrayList<>();
+        for (int i = 0; i < threadCount; i++) {
+
+            LABStats stats1 = stats;
+            ValueIndex index1 = index;
+            long totalCardinality1 = totalCardinality;
+            AtomicLong globalHeapCostInBytes1 = globalHeapCostInBytes;
+            int efi = i;
+            futures.add(executorService.submit(() -> {
+                String write1 = stress(true,
+                        "stress:RW",
+                        stats1,
+                        index1,
+                        (totalCardinality1 / threadCount) * efi,
+                        totalCardinality1 / threadCount,
+                        1_000_000, // writesPerSecond
+                        (1_000_000_000 / threadCount), //writeCount
+                        1, //readForNSeconds
+                        1, // readCount
+                        false,
+                        globalHeapCostInBytes1); // removes
+                return write1;
+            }));
+        }
+
+        for (Future future : futures) {
+            System.out.println(future.get());
+        }
+        executorService.shutdownNow();
+
 
         System.out.println("\n\n");
         ((LAB) index).auditRanges((key) -> "" + UIO.bytesLong(key));
@@ -120,14 +148,16 @@ public class LABStress {
 
         printLabels();
 
-        write = stress("stress:R",
+        write = stress(true,
+                "stress:R",
             stats,
             index,
+            0,
             totalCardinality,
             0, // writesPerSecond
             0, //writeCount
-            10, //readForNSeconds
-            1_000, // readCount
+            1, //readForNSeconds
+            1_000_000, // readCount
             false,
             globalHeapCostInBytes); // removes
 
@@ -143,9 +173,9 @@ public class LABStress {
 
     private void printLabels() {
 
-        System.out.println("sample, writes, writes/sec, writeElapse, reads, reads/sec, readElapse, hits, miss, merged, split, readAmplification, approxCount, "
-            + "debt, open, closed, append, journaledAppend, merging, merged, spliting, splits, slabbed, allocationed, released, freed, gc, gcCommit, "
-            + "pressureCommit, commit, fsyncedCommit, bytesWrittenToWAL, bytesWrittenAsIndex, bytesWrittenAsSplit, bytesWrittenAsMerge");
+        System.out.println("sample writes writes/sec writeElapse reads reads/sec readElapse hits miss merged split readAmplification approxCount "
+            + "debt open closed append journaledAppend merging merged spliting splits slabbed allocationed released freed gc gcCommit "
+            + "pressureCommit commit fsyncedCommit bytesWrittenToWAL bytesWrittenAsIndex bytesWrittenAsSplit bytesWrittenAsMerge");
 
     }
 
@@ -154,19 +184,20 @@ public class LABStress {
         double hashIndexLoadFactor,
         LABStats stats,
         AtomicLong globalHeapCostInBytes) throws Exception {
+
         System.out.println("Created root " + root);
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100_000, 8);
         LABHeapPressure labHeapPressure = new LABHeapPressure(stats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
-            1024 * 1024 * 20,
-            1024 * 1024 * 40,
+            1024 * 1024 * 100,
+            1024 * 1024 * 200,
             globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
 
         LABEnvironment env = new LABEnvironment(stats,
             LABEnvironment.buildLABSchedulerThreadPool(1),
-            LABEnvironment.buildLABCompactorThreadPool(4), // compact
+            LABEnvironment.buildLABCompactorThreadPool(Math.max(1,Runtime.getRuntime().availableProcessors()-1)), // compact
             LABEnvironment.buildLABDestroyThreadPool(1), // destroy
             null,
             root, // rootFile
@@ -183,10 +214,10 @@ public class LABStress {
         System.out.println("Created env");
         ValueIndex index = env.open(new ValueIndexConfig("foo",
             1024 * 4, // entriesBetweenLeaps
-            1024 * 1024 * 10, // maxHeapPressureInBytes
+            1024 * 1024 * 100, // maxHeapPressureInBytes
             -1, // splitWhenKeysTotalExceedsNBytes
             -1, // splitWhenValuesTotalExceedsNBytes
-            1024 * 1024 * 100, // splitWhenValuesAndKeysTotalExceedsNBytes
+            1024 * 1024 * 64, // splitWhenValuesAndKeysTotalExceedsNBytes
             NoOpFormatTransformerProvider.NAME,
             "8x8fixedWidthRawhide", //new LABRawhide(),
             MemoryRawEntryFormat.NAME,
@@ -196,10 +227,12 @@ public class LABStress {
         return index;
     }
 
-    private String stress(String name,
+    private String stress(boolean report,
+        String name,
         LABStats stats,
         ValueIndex index,
-        int totalCardinality,
+        long offset,
+        long totalCardinality,
         int writesPerSecond,
         int writeCount,
         int readForNSeconds,
@@ -236,7 +269,7 @@ public class LABStress {
                 index.append((stream) -> {
                     for (int i = 0; i < writesPerSecond; i++) {
                         count.incrementAndGet();
-                        long key = rand.nextInt(totalCardinality);
+                        long key = offset + (long)(rand.nextDouble() * totalCardinality);
                         stream.stream(-1,
                             UIO.longBytes(key, keyBytes, 0),
                             System.currentTimeMillis(),
@@ -272,7 +305,7 @@ public class LABStress {
                 while (System.currentTimeMillis() - s < (1000 * readForNSeconds)) {
 
                     index.get((KeyStream keyStream) -> {
-                        long k = rand.nextInt(totalCardinality);
+                        long k = (long)(rand.nextDouble() * totalCardinality);
                         UIO.longBytes(k, keyBytes, 0);
                         keyStream.key(0, keyBytes, 0, keyBytes.length);
                         return true;
@@ -313,42 +346,46 @@ public class LABStress {
 
             DecimalFormat formatter = new DecimalFormat("#,###.00");
 
-            System.out.println(name + ":" + c
-                + ", " + formatter.format(writesPerSecond)
-                + ", " + formatter.format(writeRate)
-                + ", " + formatter.format(writeElapse)
-                + ", " + formatter.format(reads)
-                + ", " + formatter.format(readRate)
-                + ", " + formatter.format(readElapse)
-                + ", " + formatter.format(hits.get())
-                + ", " + formatter.format(misses.get())
-                + ", " + RangeStripedCompactableIndexes.mergeCount.get()
-                + ", " + RangeStripedCompactableIndexes.splitCount.get()
-                + ", " + formatter.format((LAB.pointTxIndexCount.get() / (double) LAB.pointTxCalled.get()))
-                + ", " + index.count()
-                + ", " + stats.debt.longValue()
-                + ", " + stats.open.longValue()
-                + ", " + stats.closed.longValue()
-                + ", " + stats.append.longValue()
-                + ", " + stats.journaledAppend.longValue()
-                + ", " + stats.merging.longValue()
-                + ", " + stats.merged.longValue()
-                + ", " + stats.spliting.longValue()
-                + ", " + stats.splits.longValue()
-                + ", " + stats.slabbed.longValue()
-                + ", " + stats.allocationed.longValue()
-                + ", " + stats.released.longValue()
-                + ", " + stats.freed.longValue()
-                + ", " + stats.gc.longValue()
-                + ", " + stats.gcCommit.longValue()
-                + ", " + stats.pressureCommit.longValue()
-                + ", " + stats.commit.longValue()
-                + ", " + stats.fsyncedCommit.longValue()
-                + ", " + stats.bytesWrittenToWAL.longValue()
-                + ", " + stats.bytesWrittenAsIndex.longValue()
-                + ", " + stats.bytesWrittenAsSplit.longValue()
-                + ", " + stats.bytesWrittenAsMerge.longValue()
-            );
+            if (report) {
+
+
+                System.out.println(name + ":" + c
+                        + " " + formatter.format(writesPerSecond)
+                        + " " + formatter.format(writeRate)
+                        + " " + formatter.format(writeElapse)
+                        + " " + formatter.format(reads)
+                        + " " + formatter.format(readRate)
+                        + " " + formatter.format(readElapse)
+                        + " " + formatter.format(hits.getAndSet(0))
+                        + " " + formatter.format(misses.getAndSet(0))
+                        + " " + RangeStripedCompactableIndexes.mergeCount.getAndSet(0)
+                        + " " + RangeStripedCompactableIndexes.splitCount.getAndSet(0)
+                        + " " + formatter.format((LAB.pointTxIndexCount.get() / (double) LAB.pointTxCalled.get()))
+                        + " " + index.count()
+                        + " " + stats.debt.sumThenReset()
+                        + " " + stats.open.sumThenReset()
+                        + " " + stats.closed.sumThenReset()
+                        + " " + stats.append.sumThenReset()
+                        + " " + stats.journaledAppend.sumThenReset()
+                        + " " + stats.merging.sumThenReset()
+                        + " " + stats.merged.sumThenReset()
+                        + " " + stats.spliting.sumThenReset()
+                        + " " + stats.splits.sumThenReset()
+                        + " " + stats.slabbed.sumThenReset()
+                        + " " + stats.allocationed.sumThenReset()
+                        + " " + stats.released.sumThenReset()
+                        + " " + stats.freed.sumThenReset()
+                        + " " + stats.gc.sumThenReset()
+                        + " " + stats.gcCommit.sumThenReset()
+                        + " " + stats.pressureCommit.sumThenReset()
+                        + " " + stats.commit.sumThenReset()
+                        + " " + stats.fsyncedCommit.sumThenReset()
+                        + " " + stats.bytesWrittenToWAL.sumThenReset()
+                        + " " + stats.bytesWrittenAsIndex.sumThenReset()
+                        + " " + stats.bytesWrittenAsSplit.sumThenReset()
+                        + " " + stats.bytesWrittenAsMerge.sumThenReset()
+                );
+            }
 
 
         }

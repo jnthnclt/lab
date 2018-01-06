@@ -20,7 +20,7 @@ import java.util.Comparator;
  */
 public class ActiveScan implements Scanner {
 
-    private static final LABLogger LOG = LABLoggerFactory.getLogger();;
+    private static final LABLogger LOG = LABLoggerFactory.getLogger();
 
     private final boolean hashIndexEnabled;
 
