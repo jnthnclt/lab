@@ -8,7 +8,9 @@ import com.github.jnthnclt.os.lab.core.util.LABLogger;
 import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
 import com.google.common.primitives.Bytes;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Future;
 import org.roaringbitmap.LABBitmapAndLastId;
 
 public class LABBitmapIndexes<BM extends IBM, IBM> {
@@ -53,6 +55,27 @@ public class LABBitmapIndexes<BM extends IBM, IBM> {
         this.indexKeyInterner = indexKeyInterner;
     }
 
+    public void compact() throws Exception {
+        for (ValueIndex<byte[]> bitmapIndex : bitmapIndexes) {
+            compact(bitmapIndex);
+        }
+
+        for (ValueIndex<byte[]> termIndex : termIndexes) {
+            compact(termIndex);
+        }
+
+        for (ValueIndex<byte[]> cardinality : cardinalities) {
+            compact(cardinality);
+        }
+    }
+
+    private void compact(ValueIndex<byte[]> index) throws Exception {
+        List<Future<Object>> futures = index.compact(true, 0, 0, true);
+        for (Future<Object> future : (futures != null) ? futures : Collections.<Future<Object>>emptyList()) {
+            future.get();
+        }
+    }
+
     public void flush() throws Exception {
         for (ValueIndex<byte[]> bitmapIndex : bitmapIndexes) {
             bitmapIndex.commit(true, true);
@@ -93,6 +116,11 @@ public class LABBitmapIndexes<BM extends IBM, IBM> {
     public void remove(int fieldId, boolean cardinality, byte[] key, int[] ids) throws Exception {
         getIndex(fieldId, key).remove(ids);
         mergeCardinalities(fieldId, cardinality, key, ids, cardinality ? new long[ids.length] : null);
+    }
+
+    public long getApproximateCount(int fieldId) throws Exception {
+        byte[] fieldIdBytes = intBytes(fieldId);
+        return getTermIndex(fieldId).count();
     }
 
     public void streamTermIdsForField(
