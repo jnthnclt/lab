@@ -35,7 +35,7 @@ public class LABStress {
 
     private static final LABLogger LOG = LABLoggerFactory.getLogger();;
 
-    @Test(enabled = true)
+    @Test(enabled = false)
     public void stressWritesTest() throws Exception {
 
         LABHashIndexType indexType = LABHashIndexType.cuckoo;

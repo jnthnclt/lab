@@ -40,9 +40,6 @@ import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.api.UIO;
 
-/**
- * @author jonathan.colt
- */
 public class RangeStripedCompactableIndexes {
 
     private static final LABLogger LOG = LABLoggerFactory.getLogger();;
@@ -259,7 +256,6 @@ public class RangeStripedCompactableIndexes {
         final String indexName;
         final long stripeId;
         final CompactableIndexes compactableIndexes;
-        private final Semaphore semaphore = new Semaphore(Short.MAX_VALUE, true);
 
         public FileBackMergableIndexs(ExecutorService destroy,
             AtomicLong largestStripeId,
@@ -298,24 +294,20 @@ public class RangeStripedCompactableIndexes {
             BolBuffer keyBuffer,
             BolBuffer entryBuffer,
             BolBuffer entryKeyBuffer) throws Exception {
-            semaphore.acquire();
-            try {
-                ReadOnlyIndex lab = flushMemoryIndexToDisk(primaryName,
-                        rawhideName,
-                        memoryIndex,
-                        minKey,
-                        maxKey,
-                        largestIndexId.incrementAndGet(),
-                        0,
-                        fsync,
-                        keyBuffer,
-                        entryBuffer,
-                        entryKeyBuffer);
 
-                compactableIndexes.append(lab);
-            } finally {
-                 semaphore.release();
-            }
+            ReadOnlyIndex lab = flushMemoryIndexToDisk(primaryName,
+                rawhideName,
+                memoryIndex,
+                minKey,
+                maxKey,
+                largestIndexId.incrementAndGet(),
+                0,
+                fsync,
+                keyBuffer,
+                entryBuffer,
+                entryKeyBuffer);
+
+            compactableIndexes.append(lab);
         }
 
         private ReadOnlyIndex flushMemoryIndexToDisk(String primaryName,
@@ -462,17 +454,15 @@ public class RangeStripedCompactableIndexes {
             FileUtils.forceMkdir(commitingRoot);
             FileUtils.forceMkdir(splittingRoot);
 
-
+            long nextStripeIdLeft = largestStripeId.incrementAndGet();
+            long nextStripeIdRight = largestStripeId.incrementAndGet();
             FileBackMergableIndexs self = this;
             splitCount.incrementAndGet();
             LOG.inc("split");
             return () -> {
-                semaphore.acquire(Short.MAX_VALUE);
+                appendSemaphore.acquire(Short.MAX_VALUE);
                 try {
                     RawEntryFormat format = rawhideFormat.get();
-                    long nextStripeIdLeft = largestStripeId.incrementAndGet();
-                    long nextStripeIdRight = largestStripeId.incrementAndGet();
-
 
                     return callback.call((IndexRangeId id, long worstCaseCount) -> {
                         int maxLeaps = calculateIdealMaxLeaps(worstCaseCount, entriesBetweenLeaps);
@@ -571,7 +561,7 @@ public class RangeStripedCompactableIndexes {
                     }, fsync);
 
                 } finally {
-                    semaphore.release(Short.MAX_VALUE);
+                    appendSemaphore.release(Short.MAX_VALUE);
                 }
             };
 
@@ -636,84 +626,89 @@ public class RangeStripedCompactableIndexes {
         BolBuffer entryBuffer,
         BolBuffer entryKeyBuffer) throws Exception {
 
-        BolBuffer minKey = new BolBuffer(memoryIndex.minKey());
-        BolBuffer maxKey = new BolBuffer(memoryIndex.maxKey());
+        appendSemaphore.acquire();
+        try {
+            BolBuffer minKey = new BolBuffer(memoryIndex.minKey());
+            BolBuffer maxKey = new BolBuffer(memoryIndex.maxKey());
 
-        if (indexes.isEmpty()) {
-            long stripeId = largestStripeId.incrementAndGet();
-            FileBackMergableIndexs index = new FileBackMergableIndexs(destroy,
-                largestStripeId,
-                largestIndexId,
-                root,
-                primaryName,
-                stripeId,
-                new CompactableIndexes(stats, rawhide));
+            if (indexes.isEmpty()) {
+                long stripeId = largestStripeId.incrementAndGet();
+                FileBackMergableIndexs index = new FileBackMergableIndexs(destroy,
+                    largestStripeId,
+                    largestIndexId,
+                    root,
+                    primaryName,
+                    stripeId,
+                    new CompactableIndexes(stats, rawhide));
+                index.append(rawhideName, memoryIndex, null, null, fsync, keyBuffer, entryBuffer, entryKeyBuffer);
 
-            index.append(rawhideName, memoryIndex, null, null, fsync, keyBuffer, entryBuffer, entryKeyBuffer);
-
-            synchronized (copyIndexOnWrite) {
-                ConcurrentSkipListMap<byte[], FileBackMergableIndexs> copyOfIndexes = new ConcurrentSkipListMap<>(rawhide.getKeyComparator());
-                copyOfIndexes.putAll(indexes);
-                copyOfIndexes.put(minKey.bytes, index);
-                indexes = copyOfIndexes;
-                indexesArray = copyOfIndexes.entrySet().toArray(new Entry[0]);
-            }
-            return;
-        }
-
-        SortedMap<byte[], FileBackMergableIndexs> tailMap = indexes.tailMap(minKey.bytes);
-        if (tailMap.isEmpty()) {
-            tailMap = indexes.tailMap(indexes.lastKey());
-        } else {
-            byte[] priorKey = indexes.lowerKey(tailMap.firstKey());
-            if (priorKey == null) {
-                FileBackMergableIndexs moved;
                 synchronized (copyIndexOnWrite) {
                     ConcurrentSkipListMap<byte[], FileBackMergableIndexs> copyOfIndexes = new ConcurrentSkipListMap<>(rawhide.getKeyComparator());
                     copyOfIndexes.putAll(indexes);
-                    moved = copyOfIndexes.remove(tailMap.firstKey());
-                    copyOfIndexes.put(minKey.bytes, moved);
+                    copyOfIndexes.put(minKey.bytes, index);
                     indexes = copyOfIndexes;
                     indexesArray = copyOfIndexes.entrySet().toArray(new Entry[0]);
                 }
-                tailMap = indexes.tailMap(minKey.bytes);
-            } else {
-                tailMap = indexes.tailMap(priorKey);
+                return;
             }
-        }
 
-        Comparator<byte[]> keyComparator = rawhide.getKeyComparator();
-        Map.Entry<byte[], FileBackMergableIndexs> priorEntry = null;
-        for (Map.Entry<byte[], FileBackMergableIndexs> currentEntry : tailMap.entrySet()) {
-            if (priorEntry == null) {
-                priorEntry = currentEntry;
+            SortedMap<byte[], FileBackMergableIndexs> tailMap = indexes.tailMap(minKey.bytes);
+            if (tailMap.isEmpty()) {
+                tailMap = indexes.tailMap(indexes.lastKey());
             } else {
-                if (memoryIndex.containsKeyInRange(priorEntry.getKey(), currentEntry.getKey())) {
-                    priorEntry.getValue().append(rawhideName,
-                        memoryIndex,
-                        priorEntry.getKey(),
-                        currentEntry.getKey(),
-                        fsync,
-                        keyBuffer,
-                        entryBuffer,
-                        entryKeyBuffer);
-                }
-                priorEntry = currentEntry;
-                if (keyComparator.compare(maxKey.bytes, currentEntry.getKey()) < 0) {
-                    priorEntry = null;
-                    break;
+                byte[] priorKey = indexes.lowerKey(tailMap.firstKey());
+                if (priorKey == null) {
+                    FileBackMergableIndexs moved;
+                    synchronized (copyIndexOnWrite) {
+                        ConcurrentSkipListMap<byte[], FileBackMergableIndexs> copyOfIndexes = new ConcurrentSkipListMap<>(rawhide.getKeyComparator());
+                        copyOfIndexes.putAll(indexes);
+                        moved = copyOfIndexes.remove(tailMap.firstKey());
+                        copyOfIndexes.put(minKey.bytes, moved);
+                        indexes = copyOfIndexes;
+                        indexesArray = copyOfIndexes.entrySet().toArray(new Entry[0]);
+                    }
+                    tailMap = indexes.tailMap(minKey.bytes);
+                } else {
+                    tailMap = indexes.tailMap(priorKey);
                 }
             }
-        }
-        if (priorEntry != null && memoryIndex.containsKeyInRange(priorEntry.getKey(), null)) {
-            priorEntry.getValue().append(rawhideName,
-                memoryIndex,
-                priorEntry.getKey(),
-                null,
-                fsync,
-                keyBuffer,
-                entryBuffer,
-                entryKeyBuffer);
+
+            Comparator<byte[]> keyComparator = rawhide.getKeyComparator();
+            Map.Entry<byte[], FileBackMergableIndexs> priorEntry = null;
+            for (Map.Entry<byte[], FileBackMergableIndexs> currentEntry : tailMap.entrySet()) {
+                if (priorEntry == null) {
+                    priorEntry = currentEntry;
+                } else {
+                    if (memoryIndex.containsKeyInRange(priorEntry.getKey(), currentEntry.getKey())) {
+                        priorEntry.getValue().append(rawhideName,
+                            memoryIndex,
+                            priorEntry.getKey(),
+                            currentEntry.getKey(),
+                            fsync,
+                            keyBuffer,
+                            entryBuffer,
+                            entryKeyBuffer);
+                    }
+                    priorEntry = currentEntry;
+                    if (keyComparator.compare(maxKey.bytes, currentEntry.getKey()) < 0) {
+                        priorEntry = null;
+                        break;
+                    }
+                }
+            }
+            if (priorEntry != null && memoryIndex.containsKeyInRange(priorEntry.getKey(), null)) {
+                priorEntry.getValue().append(rawhideName,
+                    memoryIndex,
+                    priorEntry.getKey(),
+                    null,
+                    fsync,
+                    keyBuffer,
+                    entryBuffer,
+                    entryKeyBuffer);
+            }
+
+        } finally {
+            appendSemaphore.release();
         }
 
     }
