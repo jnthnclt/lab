@@ -1,7 +1,6 @@
-package com.github.jnthnclt.os.lab.collections.bah;
+package com.github.jnthnclt.os.lab.collections.baph;
 
 import com.beust.jcommander.internal.Sets;
-import com.github.jnthnclt.os.lab.collections.baph.ConcurrentBAPHash;
 import java.util.Set;
 import org.testng.annotations.Test;
 

@@ -1,9 +1,5 @@
-package com.github.jnthnclt.os.lab.collections.bah;
+package com.github.jnthnclt.os.lab.collections.baph;
 
-import com.github.jnthnclt.os.lab.collections.baph.BAPHEqualer;
-import com.github.jnthnclt.os.lab.collections.baph.BAPHMapState;
-import com.github.jnthnclt.os.lab.collections.baph.BAPHash;
-import com.github.jnthnclt.os.lab.collections.baph.BAPHasher;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Random;

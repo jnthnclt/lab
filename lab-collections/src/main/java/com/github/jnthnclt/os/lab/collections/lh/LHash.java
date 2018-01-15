@@ -1,5 +1,7 @@
 package com.github.jnthnclt.os.lab.collections.lh;
 
+import java.util.concurrent.Semaphore;
+
 /**
  *
  * @author jonathan.colt
@@ -163,7 +165,7 @@ public class LHash<V> {
         return keyShuffle % state.capacity();
     }
 
-    public boolean stream(LHashValueStream<V> stream) throws Exception {
+    public boolean stream(Semaphore semaphore, LHashValueStream<V> stream) throws Exception {
         LHMapState<V> s = state;
         long c = s.capacity();
         if (c <= 0) {
@@ -176,11 +178,14 @@ public class LHash<V> {
 
             long key;
             V value = null;
-            synchronized (this) {
+            semaphore.acquire();
+            try {
                 key = s.key(i);
                 if (key != nil && key != skipped) {
                     value = s.value(i);
                 }
+            } finally {
+                semaphore.release();
             }
             if (key != nil && key != skipped) {
                 if (!stream.keyValue(key, value)) {

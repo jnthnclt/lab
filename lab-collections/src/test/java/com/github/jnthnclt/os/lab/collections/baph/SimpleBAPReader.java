@@ -1,4 +1,4 @@
-package com.github.jnthnclt.os.lab.collections.bah;
+package com.github.jnthnclt.os.lab.collections.baph;
 
 import com.github.jnthnclt.os.lab.collections.baph.BAPReader;
 import java.util.Map;
