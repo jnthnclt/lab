@@ -34,7 +34,7 @@ public class BAPHashNGTest {
         }
 
         map.stream((byte[] key, String value) -> {
-            System.out.println(Arrays.toString(key) + "->" + value);
+            //System.out.println(Arrays.toString(key) + "->" + value);
             return true;
         });
 
@@ -83,7 +83,7 @@ public class BAPHashNGTest {
         for (byte i = 0; i < count; i++) {
             byte[] key = new byte[]{i};
             if (r.nextBoolean()) {
-                System.out.println("Removed:" + i);
+                //System.out.println("Removed:" + i);
                 map.remove(key, 0, 1);
                 validation.remove(new ByteArrayKey(new byte[]{i}));
                 removed[i] = key;
@@ -126,7 +126,7 @@ public class BAPHashNGTest {
         for (byte i = 0; i < count; i++) {
             byte[] key = new byte[]{i};
             if (r.nextBoolean()) {
-                System.out.println("Removed:" + i);
+                //System.out.println("Removed:" + i);
                 map.remove(key, 0, 1);
                 validation.remove(new ByteArrayKey(new byte[]{i}));
                 removed[i] = key;

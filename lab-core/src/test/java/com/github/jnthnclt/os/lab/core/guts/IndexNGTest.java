@@ -184,7 +184,7 @@ public class IndexNGTest {
         try {
             Scanner rowScan = reader.rowScan(new ActiveScan(false), new BolBuffer(), new BolBuffer());
             RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
-                System.out.println("rowScan:" + TestUtils.key(rawEntry));
+                //System.out.println("rowScan:" + TestUtils.key(rawEntry));
                 Assert.assertEquals(UIO.bytesLong(keys.get(index[0])), TestUtils.key(rawEntry));
                 index[0]++;
                 return true;
@@ -195,7 +195,7 @@ public class IndexNGTest {
             reader.release();
             reader = null;
         }
-        System.out.println("Point Get");
+        //System.out.println("Point Get");
         for (int i = 0; i < count * step; i++) {
             long k = i;
             reader = memoryIndex.acquireReader();
@@ -203,7 +203,7 @@ public class IndexNGTest {
                 byte[] key = UIO.longBytes(k, new byte[8], 0);
                 RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
 
-                    System.out.println("Got: " + TestUtils.toString(rawEntry));
+                    //System.out.println("Got: " + TestUtils.toString(rawEntry));
                     if (rawEntry != null) {
                         byte[] rawKey = UIO.longBytes(TestUtils.key(rawEntry), new byte[8], 0);
                         Assert.assertEquals(rawKey, key);
@@ -229,20 +229,20 @@ public class IndexNGTest {
             }
         }
 
-        System.out.println("Ranges");
+        //System.out.println("Ranges");
         for (int i = 0; i < keys.size() - 3; i++) {
             int _i = i;
 
             int[] streamed = new int[1];
             RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, entry) -> {
                 if (entry != null) {
-                    System.out.println("Streamed:" + TestUtils.toString(entry));
+                    //System.out.println("Streamed:" + TestUtils.toString(entry));
                     streamed[0]++;
                 }
                 return true;
             };
 
-            System.out.println("Asked:" + UIO.bytesLong(keys.get(_i)) + " to " + UIO.bytesLong(keys.get(_i + 3)));
+            //System.out.println("Asked:" + UIO.bytesLong(keys.get(_i)) + " to " + UIO.bytesLong(keys.get(_i + 3)));
             reader = memoryIndex.acquireReader();
             try {
                 Scanner rangeScan = reader.rangeScan(new ActiveScan(false), keys.get(_i), keys.get(_i + 3), new BolBuffer(), new BolBuffer());
@@ -288,7 +288,7 @@ public class IndexNGTest {
         try {
             Scanner rowScan = reader.rowScan(new ActiveScan(false), new BolBuffer(), new BolBuffer());
             RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
-                System.out.println("rowScan: found:" + TestUtils.key(rawEntry) + " expected:" + UIO.bytesLong(keys.get(index[0])));
+                //System.out.println("rowScan: found:" + TestUtils.key(rawEntry) + " expected:" + UIO.bytesLong(keys.get(index[0])));
                 Assert.assertEquals(TestUtils.key(rawEntry), UIO.bytesLong(keys.get(index[0])));
                 index[0]++;
                 return true;
@@ -299,7 +299,7 @@ public class IndexNGTest {
             reader.release();
             reader = null;
         }
-        System.out.println("Point Get");
+        //System.out.println("Point Get");
         for (int i = 0; i < count * step; i++) {
             long k = i;
             reader = walIndex.acquireReader();
@@ -307,7 +307,7 @@ public class IndexNGTest {
                 byte[] key = UIO.longBytes(k, new byte[8], 0);
                 RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
 
-                    System.out.println("Got: " + TestUtils.toString(rawEntry));
+                    //System.out.println("Got: " + TestUtils.toString(rawEntry));
                     if (rawEntry != null) {
                         byte[] rawKey = UIO.longBytes(TestUtils.key(rawEntry), new byte[8], 0);
                         Assert.assertEquals(rawKey, key);
@@ -333,20 +333,20 @@ public class IndexNGTest {
             }
         }
 
-        System.out.println("Ranges");
+        //System.out.println("Ranges");
         for (int i = 0; i < keys.size() - 3; i++) {
             int _i = i;
 
             int[] streamed = new int[1];
             RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, entry) -> {
                 if (entry != null) {
-                    System.out.println("Streamed:" + TestUtils.toString(entry));
+                    //System.out.println("Streamed:" + TestUtils.toString(entry));
                     streamed[0]++;
                 }
                 return true;
             };
 
-            System.out.println("Asked:" + UIO.bytesLong(keys.get(_i)) + " to " + UIO.bytesLong(keys.get(_i + 3)));
+            //System.out.println("Asked:" + UIO.bytesLong(keys.get(_i)) + " to " + UIO.bytesLong(keys.get(_i + 3)));
             reader = walIndex.acquireReader();
             try {
                 Scanner rangeScan = reader.rangeScan(new ActiveScan(false), keys.get(_i), keys.get(_i + 3), new BolBuffer(), new BolBuffer());

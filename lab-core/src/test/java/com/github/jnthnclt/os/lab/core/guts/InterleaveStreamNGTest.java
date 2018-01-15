@@ -165,16 +165,16 @@ public class InterleaveStreamNGTest {
                         new StripingBolBufferLocks(1024)
                     ));
                 TestUtils.append(rand, memoryIndexes[i], 0, step, count, desired, keyBuffer);
-                System.out.println("Index " + i);
+                //System.out.println("Index " + i);
 
                 readerIndexs[wi] = memoryIndexes[i].acquireReader();
                 Scanner nextRawEntry = readerIndexs[wi].rowScan(new ActiveScan(false), new BolBuffer(), new BolBuffer());
                 while (nextRawEntry.next((readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
-                    System.out.println(TestUtils.toString(rawEntry));
+                    //System.out.println(TestUtils.toString(rawEntry));
                     return true;
                 }) == Next.more) {
                 }
-                System.out.println("\n");
+                //System.out.println("\n");
 
                 reorderIndexReaders[i] = readerIndexs[wi];
             }
@@ -182,14 +182,14 @@ public class InterleaveStreamNGTest {
             InterleaveStream ips = new InterleaveStream(reorderIndexReaders, null, null, rawhide);
 
             List<Expected> expected = new ArrayList<>();
-            System.out.println("Expected:");
+            //System.out.println("Expected:");
             for (Map.Entry<byte[], byte[]> entry : desired.entrySet()) {
                 long key = UIO.bytesLong(entry.getKey());
                 long value = TestUtils.value(entry.getValue());
                 expected.add(new Expected(key, value));
-                System.out.println(key + " timestamp:" + value);
+                //System.out.println(key + " timestamp:" + value);
             }
-            System.out.println("\n");
+            //System.out.println("\n");
 
             assertExpected(ips, expected);
         } finally {
@@ -208,7 +208,7 @@ public class InterleaveStreamNGTest {
             long key = TestUtils.key(rawEntry);
             long value = TestUtils.value(rawEntry);
 
-            System.out.println("key:" + key + " vs " + expect.key + " value:" + value + " vs " + expect.value);
+            //System.out.println("key:" + key + " vs " + expect.key + " value:" + value + " vs " + expect.value);
             if (key != expect.key) {
                 passed[0] = false;
             }

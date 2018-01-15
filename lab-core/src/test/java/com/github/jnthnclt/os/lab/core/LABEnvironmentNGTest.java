@@ -37,7 +37,7 @@ public class LABEnvironmentNGTest {
             //IdProvider idProvider = new MonotomicIdProvider(0);
 
             root = Files.createTempDir();
-            System.out.println("root" + root.getAbsolutePath());
+            //System.out.println("root" + root.getAbsolutePath());
             LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
             LABStats labStats = new LABStats();
             LABHeapPressure LABHeapPressure1 = new LABHeapPressure(labStats,
@@ -64,9 +64,9 @@ public class LABEnvironmentNGTest {
                 NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 2, TestUtils.indexType, 0.75d, false);
 
             ValueIndex index = env.open(valueIndexConfig);
-            System.out.println("Lets index so stuff....");
+            //System.out.println("Lets index so stuff....");
             index(index, "foo", idProvider, 34, 3_000, true);
-            System.out.println("Lets test its all there....");
+            //System.out.println("Lets test its all there....");
 
             test(index, "foo", idProvider, 34, 3_000);
             assertEquals(env.list(), Collections.singletonList("foo"));
@@ -91,11 +91,11 @@ public class LABEnvironmentNGTest {
 
             index = env.open(valueIndexConfig);
             assertEquals(env.list(), Collections.singletonList("foo"));
-            System.out.println("\nLets re-test its all there....");
+            //System.out.println("\nLets re-test its all there....");
             test(index, "foo", idProvider, 34, 3_000);
-            System.out.println("Lets re-index so stuff....");
+            //System.out.println("Lets re-index so stuff....");
             index(index, "foo", idProvider, 34, 3_000, true);
-            System.out.println("Lets re-re-test its all there....");
+            //System.out.println("Lets re-re-test its all there....");
             test(index, "foo", idProvider, 34, 3_000);
 
             env.shutdown();
@@ -118,7 +118,7 @@ public class LABEnvironmentNGTest {
                 false);
             assertEquals(env.list(), Collections.singletonList("foo"));
             env.rename("foo", "bar", true);
-            System.out.println(env.list() + " vs " + Collections.singletonList("bar"));
+            //System.out.println(env.list() + " vs " + Collections.singletonList("bar"));
             assertEquals(env.list(), Collections.singletonList("bar"));
 
             valueIndexConfig = new ValueIndexConfig("bar", 4096, 1024 * 1024 * 10, -1, -1, -1,
@@ -126,17 +126,17 @@ public class LABEnvironmentNGTest {
             assertEquals(env.list(), Collections.singletonList("bar"));
             index = env.open(valueIndexConfig);
 
-            System.out.println("Lets test its all there after move....");
+            //System.out.println("Lets test its all there after move....");
             test(index, "bar", idProvider, 34, 3_000);
-            System.out.println("Lets re-re-re-index so stuff after move....");
+            //System.out.println("Lets re-re-re-index so stuff after move....");
             index(index, "bar", idProvider, 34, 3_000, true);
-            System.out.println("Lets re-test its all there after move....");
+            //System.out.println("Lets re-test its all there after move....");
             test(index, "bar", idProvider, 34, 3_000);
 
             env.shutdown();
             env.close();
 
-            System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            //System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
             LABHeapPressure LABHeapPressure4 = new LABHeapPressure(labStats,
                 LABEnvironment.buildLABHeapSchedulerThreadPool(1),
                 "default",
@@ -153,7 +153,7 @@ public class LABEnvironmentNGTest {
                 new StripingBolBufferLocks(1024),
                 true,
                 false);
-            System.out.println(env.list() + " vs " + Collections.singletonList("bar"));
+            //System.out.println(env.list() + " vs " + Collections.singletonList("bar"));
             assertEquals(env.list(), Collections.singletonList("bar"));
             env.remove("bar", true);
             assertEquals(env.list(), Collections.emptyList());
@@ -216,7 +216,7 @@ public class LABEnvironmentNGTest {
         //IdProvider idProvider = new MonotomicIdProvider(0);
 
         File root = Files.createTempDir();
-        System.out.println("Created root");
+        //System.out.println("Created root");
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
         LABHeapPressure LABHeapPressure1 = new LABHeapPressure(new LABStats(),
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
@@ -239,16 +239,16 @@ public class LABEnvironmentNGTest {
         ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo", 4096, 1024 * 1024 * 10, -1, -1, -1,
             NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 2, TestUtils.indexType, 0.75d, false);
 
-        System.out.println("Created env");
+        //System.out.println("Created env");
 
         ValueIndex index = env.open(valueIndexConfig);
-        System.out.println("Open env");
+        //System.out.println("Open env");
         index(index, "foo", idProvider, 34, 3_000, true);
         test(index, "foo", idProvider, 34, 3_000);
-        System.out.println("Indexed");
+        //System.out.println("Indexed");
 
         env.shutdown();
-        System.out.println("Shutdown");
+        //System.out.println("Shutdown");
 
         LABHeapPressure LABHeapPressure2 = new LABHeapPressure(new LABStats(),
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
@@ -267,16 +267,16 @@ public class LABEnvironmentNGTest {
             new StripingBolBufferLocks(1024),
             true,
             false);
-        System.out.println("Recreate env");
+        //System.out.println("Recreate env");
 
         index = env.open(valueIndexConfig);
-        System.out.println("Re-open env");
+        ////System.out.println("Re-open env");
         test(index, "foo", idProvider, 34, 3_000);
         index(index, "foo", idProvider, 34, 3_000, true);
         test(index, "foo", idProvider, 34, 3_000);
         System.out.println("Re-indexed");
         env.shutdown();
-        System.out.println("Re-shutdown");
+        //System.out.println("Re-shutdown");
 
     }
 
@@ -286,7 +286,7 @@ public class LABEnvironmentNGTest {
         //IdProvider idProvider = new MonotomicIdProvider(0);
 
         File root = Files.createTempDir();
-        System.out.println("Created root");
+        //System.out.println("Created root");
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
         LABHeapPressure LABHeapPressure1 = new LABHeapPressure(new LABStats(),
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
@@ -314,16 +314,16 @@ public class LABEnvironmentNGTest {
         ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo", 4096, 1024 * 1024 * 10, -1, -1, -1,
             NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 2, TestUtils.indexType, 0.75d, false);
 
-        System.out.println("Created env");
+        //System.out.println("Created env");
 
         ValueIndex index = env.open(valueIndexConfig);
-        System.out.println("Open env");
+        //System.out.println("Open env");
         index(index, "foo", idProvider, 34, 3_000, false);
         test(index, "foo", idProvider, 34, 3_000);
-        System.out.println("Indexed");
+        //System.out.println("Indexed");
         env.close();
         env.shutdown();
-        System.out.println("Shutdown");
+        //System.out.println("Shutdown");
 
         LABHeapPressure LABHeapPressure2 = new LABHeapPressure(new LABStats(),
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
@@ -347,21 +347,21 @@ public class LABEnvironmentNGTest {
             new StripingBolBufferLocks(1024),
             true,
             false);
-        System.out.println("Recreate env");
+        //System.out.println("Recreate env");
         AtomicLong journalCount = new AtomicLong(0);
         env.open((valueIndexId, key, timestamp, tombstoned, version, payload) -> {
             journalCount.incrementAndGet();
             return true;
         });
         assertEquals(journalCount.get(), 34 * 3_000);
-        System.out.println("Re-open index");
+        //System.out.println("Re-open index");
         index = env.open(valueIndexConfig);
         test(index, "foo", idProvider, 34, 3_000);
         index(index, "foo", idProvider, 34, 3_000, true);
         test(index, "foo", idProvider, 34, 3_000);
-        System.out.println("Re-indexed");
+        //System.out.println("Re-indexed");
         env.shutdown();
-        System.out.println("Re-shutdown");
+        //System.out.println("Re-shutdown");
 
         LABHeapPressure LABHeapPressure3 = new LABHeapPressure(new LABStats(),
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
@@ -386,18 +386,18 @@ public class LABEnvironmentNGTest {
             new StripingBolBufferLocks(1024),
             true,
             false);
-        System.out.println("Re-Recreate env");
+        //System.out.println("Re-Recreate env");
         journalCount.set(0);
         env.open((valueIndexId, key, timestamp, tombstoned, version, payload) -> {
             journalCount.incrementAndGet();
             return true;
         });
         assertEquals(journalCount.get(), 0);
-        System.out.println("Re-Re-open index");
+        //System.out.println("Re-Re-open index");
         index = env.open(valueIndexConfig);
         test(index, "foo", idProvider, 34, 3_000);
         env.shutdown();
-        System.out.println("Re-Re-shutdown");
+        //System.out.println("Re-Re-shutdown");
 
     }
 
@@ -455,7 +455,7 @@ public class LABEnvironmentNGTest {
         idProvider.reset();
         assertEquals(index.name(), name);
 
-        System.out.println("Testing Hits... " + name);
+        //System.out.println("Testing Hits... " + name);
         List<String> failures = Lists.newArrayList();
         for (int c = 0; c < commitCount; c++) {
             for (int i = 0; i < batchCount; i++) {
@@ -480,7 +480,7 @@ public class LABEnvironmentNGTest {
             //System.out.print(".");
         }
 
-        System.out.println("\nTesting Misses... " + name);
+        //System.out.println("\nTesting Misses... " + name);
         for (int c = 0; c < commitCount; c++) {
             for (int i = 0; i < batchCount; i++) {
                 long askedFor = -idProvider.nextId();
