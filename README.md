@@ -4,6 +4,7 @@
 [![Build Status](https://travis-ci.org/jnthnclt/lab.png)](https://travis-ci.org/jnthnclt/lab)
 [![][license img]][license]
 [![Coverage Status](https://coveralls.io/repos/github/jnthnclt/lab/badge.svg?branch=master)](https://coveralls.io/github/jnthnclt/lab?branch=master)
+[![Maven Central status](https://img.shields.io/maven-central/v/com.ruleoftech/markdown-page-generator-plugin.svg)](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.github.jnthnclt%22%20AND%20a%3A%22lab.core%22)
 
 # What It Is
 Swiss army knife LSM implementation.
