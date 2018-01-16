@@ -1,8 +1,11 @@
 package com.github.jnthnclt.os.lab.consistency;
 
-public class HelloConsistency {
+import org.testng.annotations.Test;
 
-    public static void main(String[] args) {
+public class LABHelloConsistencyNGTest {
+
+    @Test
+    public void test() throws Exception {
 
         int replication = 3;
         Node[] nodes = new Node[replication];

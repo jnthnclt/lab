@@ -1,18 +1,19 @@
 package com.github.jnthnclt.os.lab.consistency;
 
 
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import org.testng.annotations.Test;
 
-public class LABConsistency {
+public class LABConsistencyNGTest {
 
 
-    public static void main(String[] args) throws InterruptedException {
+    @Test
+    public void test() throws Exception {
 
 
         int replication = 3;
