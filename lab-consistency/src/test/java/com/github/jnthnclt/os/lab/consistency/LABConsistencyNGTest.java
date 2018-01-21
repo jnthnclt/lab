@@ -91,7 +91,7 @@ public class LABConsistencyNGTest {
         System.out.println("added:" + added.size());
         for (int i = 1; i < 100_000; i++) {
             if (added.get((long) i) == null) {
-                System.out.println("grrr " + i + " " + added.get((long) i));
+                //System.out.println("grrr " + i + " " + added.get((long) i));
             }
         }
 

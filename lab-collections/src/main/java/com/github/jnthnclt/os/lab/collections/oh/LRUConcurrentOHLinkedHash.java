@@ -3,11 +3,11 @@ package com.github.jnthnclt.os.lab.collections.oh;
 import com.github.jnthnclt.os.lab.collections.KeyValueStream;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- *
  * @author jonathan.colt
  */
 public class LRUConcurrentOHLinkedHash<K, V> {
@@ -19,6 +19,7 @@ public class LRUConcurrentOHLinkedHash<K, V> {
     private final boolean hasValues;
     private final OHasher<K> hasher;
     private final OHEqualer<K> equaler;
+    private final Semaphore[] hmapsSemaphore;
     private final OHash<K, LRUValue<V>>[] hmaps;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private volatile Thread cleaner;
@@ -35,16 +36,21 @@ public class LRUConcurrentOHLinkedHash<K, V> {
         this.hasValues = hasValues;
         this.hasher = hasher;
         this.equaler = equaler;
+        this.hmapsSemaphore = new Semaphore[concurrency];
         this.hmaps = new OHash[concurrency];
     }
 
-    public void put(K key, V value) {
+    public void put(K key, V value) throws InterruptedException {
         int hashCode = hasher.hashCode(key);
-        OHash<K, LRUValue<V>> lhmap = lhmap(hashCode, true);
+        int i = lhmap(hashCode, true);
+        OHash<K, LRUValue<V>> lhmap = hmaps[i];
         LRUValue<V> v = new LRUValue<>(value, syntheticTime.incrementAndGet());
-        synchronized (lhmap) {
+        hmapsSemaphore[i].acquire(Short.MAX_VALUE);
+        try {
             lhmap.remove(hashCode, key);
             lhmap.put(hashCode, key, v);
+        } finally {
+            hmapsSemaphore[i].release(Short.MAX_VALUE);
         }
         if (updates.incrementAndGet() > maxCapacity * slack) {
             synchronized (updates) {
@@ -53,7 +59,7 @@ public class LRUConcurrentOHLinkedHash<K, V> {
         }
     }
 
-    public static interface CleanerExceptionCallback {
+    public interface CleanerExceptionCallback {
 
         boolean exception(Throwable t);
     }
@@ -119,7 +125,7 @@ public class LRUConcurrentOHLinkedHash<K, V> {
                 }
             } else {
                 @SuppressWarnings("unchecked")
-                FirstValue<K,V>[] firstValues = new FirstValue[hmaps.length];
+                FirstValue<K, V>[] firstValues = new FirstValue[hmaps.length];
                 for (int j = 0; j < hmaps.length; j++) {
                     OHash<K, LRUValue<V>> hmap = hmaps[j];
                     if (hmap != null) {
@@ -196,25 +202,30 @@ public class LRUConcurrentOHLinkedHash<K, V> {
         }
     }
 
-    private OHash<K, LRUValue<V>> lhmap(int hashCode, boolean create) {
+    private int lhmap(int hashCode, boolean create) {
         int index = Math.abs((hashCode) % hmaps.length);
         if (hmaps[index] == null && create) {
             synchronized (hmaps) {
                 if (hmaps[index] == null) {
+                    hmapsSemaphore[index] = new Semaphore(Short.MAX_VALUE, true);
                     hmaps[index] = new OHash<>(new OHLinkedMapState<>(capacity, hasValues, null), hasher, equaler);
                 }
             }
         }
-        return hmaps[index];
+        return index;
     }
 
-    public V get(K key) {
+    public V get(K key) throws InterruptedException {
         int hashCode = hasher.hashCode(key);
-        OHash<K, LRUValue<V>> hmap = lhmap(hashCode, false);
+        int i = lhmap(hashCode, false);
+        OHash<K, LRUValue<V>> hmap = hmaps[i];
         if (hmap != null) {
             LRUValue<V> got;
-            synchronized (hmap) {
+            hmapsSemaphore[i].acquire(Short.MAX_VALUE);
+            try {
                 got = hmap.get(hashCode, key);
+            } finally {
+                hmapsSemaphore[i].release(Short.MAX_VALUE);
             }
             if (got != null) {
                 return got.value;
@@ -223,22 +234,30 @@ public class LRUConcurrentOHLinkedHash<K, V> {
         return null;
     }
 
-    public void remove(K key) {
+    public void remove(K key) throws InterruptedException {
 
         int hashCode = hasher.hashCode(key);
-        OHash<K, LRUValue<V>> lhmap = lhmap(hashCode, false);
-        if (lhmap != null) {
-            synchronized (lhmap) {
-                lhmap.remove(hashCode, key);
+        int i = lhmap(hashCode, false);
+        OHash<K, LRUValue<V>> hmap = hmaps[i];
+        if (hmap != null) {
+            hmapsSemaphore[i].acquire(Short.MAX_VALUE);
+            try {
+                hmap.remove(hashCode, key);
+            } finally {
+                hmapsSemaphore[i].release(Short.MAX_VALUE);
             }
         }
     }
 
-    public void clear() {
-        for (OHash<K, LRUValue<V>> lhmap : hmaps) {
-            if (lhmap != null) {
-                synchronized (lhmap) {
-                    lhmap.clear();
+    public void clear() throws InterruptedException {
+        for (int i = 0; i < hmaps.length; i++) {
+            OHash<K, LRUValue<V>> hmap = hmaps[i];
+            if (hmap != null) {
+                hmapsSemaphore[i].acquire(Short.MAX_VALUE);
+                try {
+                    hmap.clear();
+                } finally {
+                    hmapsSemaphore[i].release(Short.MAX_VALUE);
                 }
             }
         }
@@ -255,9 +274,10 @@ public class LRUConcurrentOHLinkedHash<K, V> {
     }
 
     public boolean stream(KeyValueStream<K, V> keyValueStream) throws Exception {
-        for (OHash<K, LRUValue<V>> hmap : hmaps) {
+        for (int i = 0; i < hmaps.length; i++) {
+            OHash<K, LRUValue<V>> hmap = hmaps[i];
             if (hmap != null) {
-                if (!hmap.stream((K key, LRUValue<V> value) -> keyValueStream.keyValue(key, value.value))) {
+                if (!hmap.stream(hmapsSemaphore[i],(K key, LRUValue<V> value) -> keyValueStream.keyValue(key, value.value))) {
                     return false;
                 }
             }

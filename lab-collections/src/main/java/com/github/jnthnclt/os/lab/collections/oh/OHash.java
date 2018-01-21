@@ -1,6 +1,7 @@
 package com.github.jnthnclt.os.lab.collections.oh;
 
 import com.github.jnthnclt.os.lab.collections.KeyValueStream;
+import java.util.concurrent.Semaphore;
 
 /**
  *
@@ -209,7 +210,7 @@ public class OHash<K, V> implements OH<K, V> {
     }
 
     @Override
-    public boolean stream(KeyValueStream<K, V> stream) throws Exception {
+    public boolean stream(Semaphore semaphore, KeyValueStream<K, V> stream) throws Exception {
         OHState<K,V> s = state;
         long c = s.capacity();
         if (c <= 0) {
@@ -221,11 +222,14 @@ public class OHash<K, V> implements OH<K, V> {
 
             K key;
             V value = null;
-            synchronized (this) {
+            semaphore.acquire();
+            try {
                 key = s.key(i);
                 if (key != null && key != skipped) {
                     value = s.value(i);
                 }
+            } finally {
+                semaphore.release();
             }
             if (key != null && key != skipped) {
                 if (!stream.keyValue(key, value)) {

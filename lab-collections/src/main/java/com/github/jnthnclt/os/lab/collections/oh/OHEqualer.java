@@ -6,6 +6,8 @@ package com.github.jnthnclt.os.lab.collections.oh;
  */
 public interface OHEqualer<K> {
 
-    public boolean equals(K a, K b);
+    OHEqualer SINGLETON = (a,b) -> a.equals(b);
+
+    boolean equals(K a, K b);
 
 }

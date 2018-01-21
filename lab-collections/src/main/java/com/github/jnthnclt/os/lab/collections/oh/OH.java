@@ -1,6 +1,7 @@
 package com.github.jnthnclt.os.lab.collections.oh;
 
 import com.github.jnthnclt.os.lab.collections.KeyValueStream;
+import java.util.concurrent.Semaphore;
 
 /**
  *
@@ -26,6 +27,6 @@ public interface OH<K, V> {
 
     long size();
 
-    boolean stream(KeyValueStream<K, V> stream) throws Exception;
+    boolean stream(Semaphore semaphore, KeyValueStream<K, V> stream) throws Exception;
 
 }
