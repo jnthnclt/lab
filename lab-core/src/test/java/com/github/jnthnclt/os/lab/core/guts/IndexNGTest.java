@@ -59,7 +59,8 @@ public class IndexNGTest {
             new RawEntryFormat(0, 0),
             NoOpFormatTransformerProvider.NO_OP,
             TestUtils.indexType,
-            0.75d
+            0.75d,
+            Long.MAX_VALUE
         );
 
         BolBuffer keyBuffer = new BolBuffer();
@@ -150,7 +151,8 @@ public class IndexNGTest {
             new RawEntryFormat(0, 0),
             NoOpFormatTransformerProvider.NO_OP,
             TestUtils.indexType,
-            0.75d);
+            0.75d,
+            Long.MAX_VALUE);
         disIndex.append((stream) -> {
             ReadIndex reader = memoryIndex.acquireReader();
             try {

@@ -327,7 +327,8 @@ public class LABEnvironment {
             fsyncFileRenames,
             config.hashIndexType,
             config.hashIndexLoadFactor,
-            config.hashIndexEnabled);
+            config.hashIndexEnabled,
+            config.deleteTombstonedVersionsAfterMillis);
 
     }
 

@@ -45,6 +45,7 @@ import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
  */
 public class LAB implements ValueIndex<byte[]> {
 
+
     static private class CompactLock {
     }
 
@@ -108,7 +109,8 @@ public class LAB implements ValueIndex<byte[]> {
         boolean fsyncFileRenames,
         LABHashIndexType hashIndexType,
         double hashIndexLoadFactor,
-        boolean hashIndexEnabled) throws Exception {
+        boolean hashIndexEnabled,
+        long deleteTombstonedVersionsAfterMillis) throws Exception {
 
         stats.open.increment();
 
@@ -138,7 +140,8 @@ public class LAB implements ValueIndex<byte[]> {
             leapsCache,
             fsyncFileRenames,
             hashIndexType,
-            hashIndexLoadFactor);
+            hashIndexLoadFactor,
+            deleteTombstonedVersionsAfterMillis);
         this.minDebt = minDebt;
         this.maxDebt = maxDebt;
         this.indexProvider = indexProvider;

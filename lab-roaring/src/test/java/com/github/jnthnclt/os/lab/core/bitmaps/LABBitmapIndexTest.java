@@ -428,8 +428,20 @@ public class LABBitmapIndexTest {
             new StripingBolBufferLocks(2048),
             false,
             false);
-        return environment.open(new ValueIndexConfig(name, 64, 1024 * 1024, -1, -1, 10 * 1024 * 1024, NoOpFormatTransformerProvider.NAME, LABRawhide.NAME,
-            MemoryRawEntryFormat.NAME, 20, LABHashIndexType.cuckoo, 2d, true));
+        return environment.open(new ValueIndexConfig(name,
+            64,
+            1024 * 1024,
+            -1,
+            -1,
+            10 * 1024 * 1024,
+            NoOpFormatTransformerProvider.NAME,
+            LABRawhide.NAME,
+            MemoryRawEntryFormat.NAME,
+            20,
+            LABHashIndexType.cuckoo,
+            2d,
+            true,
+            Long.MAX_VALUE));
     }
 
 }

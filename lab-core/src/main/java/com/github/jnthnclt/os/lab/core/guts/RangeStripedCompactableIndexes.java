@@ -68,6 +68,7 @@ public class RangeStripedCompactableIndexes {
     private final boolean fsyncFileRenames;
     private final LABHashIndexType hashIndexType;
     private final double hashIndexLoadFactor;
+    private final long deleteTombstonedVersionsAfterMillis;
 
     public RangeStripedCompactableIndexes(LABStats stats,
         ExecutorService destroy,
@@ -83,7 +84,8 @@ public class RangeStripedCompactableIndexes {
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache,
         boolean fsyncFileRenames,
         LABHashIndexType hashIndexType,
-        double hashIndexLoadFactor) throws Exception {
+        double hashIndexLoadFactor,
+        long deleteTombstonedVersionsAfterMillis) throws Exception {
 
         this.stats = stats;
         this.destroy = destroy;
@@ -101,6 +103,7 @@ public class RangeStripedCompactableIndexes {
         this.hashIndexType = hashIndexType;
         this.hashIndexLoadFactor = hashIndexLoadFactor;
         this.indexes = new ConcurrentSkipListMap<>(rawhide.getKeyComparator());
+        this.deleteTombstonedVersionsAfterMillis = deleteTombstonedVersionsAfterMillis;
 
         File indexRoot = new File(root, primaryName);
         File[] stripeDirs = indexRoot.listFiles();
@@ -353,7 +356,9 @@ public class RangeStripedCompactableIndexes {
                     rawhide,
                     format,
                     formatTransformerProvider,
-                    hashIndexType, hashIndexLoadFactor);
+                    hashIndexType,
+                    hashIndexLoadFactor,
+                    deleteTombstonedVersionsAfterMillis);
                 appendableIndex.append((stream) -> {
                     ReadIndex reader = memoryIndex.acquireReader();
                     try {
@@ -481,7 +486,8 @@ public class RangeStripedCompactableIndexes {
                             format,
                             formatTransformerProvider,
                             hashIndexType,
-                            hashIndexLoadFactor);
+                            hashIndexLoadFactor,
+                            deleteTombstonedVersionsAfterMillis);
                     }, (IndexRangeId id, long worstCaseCount) -> {
                         int maxLeaps = calculateIdealMaxLeaps(worstCaseCount, entriesBetweenLeaps);
                         File splitIntoDir = new File(splittingRoot, String.valueOf(nextStripeIdRight));
@@ -499,7 +505,8 @@ public class RangeStripedCompactableIndexes {
                             format,
                             formatTransformerProvider,
                             hashIndexType,
-                            hashIndexLoadFactor);
+                            hashIndexLoadFactor,
+                            deleteTombstonedVersionsAfterMillis);
                     }, (ids) -> {
                         File left = new File(indexRoot, String.valueOf(nextStripeIdLeft));
                         File leftActive = new File(left, "active");
@@ -592,7 +599,9 @@ public class RangeStripedCompactableIndexes {
                     rawhide,
                     format,
                     formatTransformerProvider,
-                    hashIndexType, hashIndexLoadFactor);
+                    hashIndexType,
+                    hashIndexLoadFactor,
+                    deleteTombstonedVersionsAfterMillis);
             }, (ids) -> {
                 File mergedIndexFile = ids.get(0).toFile(mergingRoot);
                 File file = ids.get(0).toFile(activeRoot);

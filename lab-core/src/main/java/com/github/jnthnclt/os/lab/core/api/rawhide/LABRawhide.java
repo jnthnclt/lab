@@ -118,6 +118,13 @@ public class LABRawhide implements Rawhide {
     }
 
     @Override
+    public boolean tombstone(FormatTransformer readKeyFormatTransformer,
+        FormatTransformer readValueFormatTransformer,
+        BolBuffer rawEntrys) {
+        return rawEntrys.get(4 + rawEntrys.getInt(0) + 8) != 0;
+    }
+
+    @Override
     public boolean streamRawEntry(int index,
         FormatTransformer readKeyFormatTransformer,
         FormatTransformer readValueFormatTransformer,

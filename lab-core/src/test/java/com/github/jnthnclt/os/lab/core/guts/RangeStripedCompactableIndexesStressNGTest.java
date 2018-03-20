@@ -71,7 +71,8 @@ public class RangeStripedCompactableIndexesStressNGTest {
             leapsCache,
             false,
             TestUtils.indexType,
-            0.75d);
+            0.75d,
+            Long.MAX_VALUE);
 
         int count = 0;
 

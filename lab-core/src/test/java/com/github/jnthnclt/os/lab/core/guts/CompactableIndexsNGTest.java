@@ -63,7 +63,8 @@ public class CompactableIndexsNGTest {
                 MemoryRawEntryFormat.SINGLETON,
                 NoOpFormatTransformerProvider.NO_OP,
                 TestUtils.indexType,
-                0.75d);
+                0.75d,
+                Long.MAX_VALUE);
 
             write.append((stream) -> {
                 for (int i = 0; i < counts[ci]; i++) {
@@ -154,7 +155,9 @@ public class CompactableIndexsNGTest {
                     rawhide,
                     new RawEntryFormat(0, 0),
                     NoOpFormatTransformerProvider.NO_OP,
-                    TestUtils.indexType, 0.75d);
+                    TestUtils.indexType,
+                    0.75d,
+                    Long.MAX_VALUE);
                 TestUtils.append(rand, write, 0, step, count, desired, keyBuffer);
                 write.closeAppendable(fsync);
 
@@ -185,7 +188,8 @@ public class CompactableIndexsNGTest {
                         new RawEntryFormat(0, 0),
                         NoOpFormatTransformerProvider.NO_OP,
                         TestUtils.indexType,
-                        0.75d);
+                        0.75d,
+                        Long.MAX_VALUE);
                 },
                 (ids) -> {
                     LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
@@ -234,7 +238,8 @@ public class CompactableIndexsNGTest {
                 new RawEntryFormat(0, 0),
                 NoOpFormatTransformerProvider.NO_OP,
                 TestUtils.indexType,
-                0.75d);
+                0.75d,
+                Long.MAX_VALUE);
             TestUtils.append(rand, write, 0, step, count, desired, keyBuffer);
             write.closeAppendable(fsync);
 
@@ -285,7 +290,8 @@ public class CompactableIndexsNGTest {
                         new RawEntryFormat(0, 0),
                         NoOpFormatTransformerProvider.NO_OP,
                         TestUtils.indexType,
-                        0.75d);
+                        0.75d,
+                        Long.MAX_VALUE);
                 }, (ids) -> {
                     LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
                     return new ReadOnlyIndex(destroy, ids.get(0), new ReadOnlyFile(indexFiler), NoOpFormatTransformerProvider.NO_OP, rawhide,

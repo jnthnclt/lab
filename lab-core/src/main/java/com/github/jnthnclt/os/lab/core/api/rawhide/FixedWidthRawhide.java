@@ -94,6 +94,11 @@ public class FixedWidthRawhide implements Rawhide {
     }
 
     @Override
+    public boolean tombstone(FormatTransformer readKeyFormatTransformer, FormatTransformer readValueFormatTransformer, BolBuffer rawEntry) {
+        return false;
+    }
+
+    @Override
     public boolean isNewerThan(long timestamp, long timestampVersion, long newerThanTimestamp, long newerThanTimestampVersion) {
         return true;
     }

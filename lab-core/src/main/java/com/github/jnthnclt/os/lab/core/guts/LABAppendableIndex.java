@@ -3,6 +3,7 @@ package com.github.jnthnclt.os.lab.core.guts;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.api.FormatTransformerProvider;
@@ -23,7 +24,7 @@ import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
  */
 public class LABAppendableIndex implements RawAppendableIndex {
 
-    public static final LABLogger LOG = LABLoggerFactory.getLogger();;
+    public static final LABLogger LOG = LABLoggerFactory.getLogger();
 
     public static final byte ENTRY = 0;
     public static final byte LEAP = 1;
@@ -41,6 +42,7 @@ public class LABAppendableIndex implements RawAppendableIndex {
     private final RawEntryFormat rawhideFormat;
     private final LABHashIndexType hashIndexType;
     private final double hashIndexLoadFactor;
+    private final long deleteTombstonedVersionsAfterMillis;
 
     private LeapFrog latestLeapFrog;
     private int updatesSinceLeap;
@@ -67,7 +69,8 @@ public class LABAppendableIndex implements RawAppendableIndex {
         RawEntryFormat rawhideFormat,
         FormatTransformerProvider formatTransformerProvider,
         LABHashIndexType hashIndexType,
-        double hashIndexLoadFactor) throws Exception {
+        double hashIndexLoadFactor,
+        long deleteTombstonedVersionsAfterMillis) throws Exception {
 
         this.appendedStat = appendedStat;
         this.indexRangeId = indexRangeId;
@@ -79,6 +82,7 @@ public class LABAppendableIndex implements RawAppendableIndex {
         this.rawhideFormat = rawhideFormat;
         this.hashIndexType = hashIndexType;
         this.hashIndexLoadFactor = hashIndexLoadFactor;
+        this.deleteTombstonedVersionsAfterMillis = deleteTombstonedVersionsAfterMillis;
 
         this.writeKeyFormatTransformer = formatTransformerProvider.write(rawhideFormat.getKeyFormat());
         this.writeValueFormatTransformer = formatTransformerProvider.write(rawhideFormat.getValueFormat());
@@ -90,10 +94,28 @@ public class LABAppendableIndex implements RawAppendableIndex {
         if (appendOnly == null) {
             appendOnly = appendOnlyFile.appender();
         }
+        // TODO the is be passed in by a provider so we can distort time
+        long approximateCurrentVersion = System.currentTimeMillis();
+        long deleteIfVersionOldThanTimestamp = approximateCurrentVersion - deleteTombstonedVersionsAfterMillis;
+
+        AtomicLong expiredTombstones = new AtomicLong();
         AppendableHeap appendableHeap = new AppendableHeap(1024);
         appendEntries.consume((readKeyFormatTransformer, readValueFormatTransformer, rawEntryBuffer) -> {
 
             //entryBuffer.reset();
+            // Unfortunately this impl expect version to me timestampMillis
+
+            long rawEntryTimestamp = rawhide.timestamp(readKeyFormatTransformer, readValueFormatTransformer, rawEntryBuffer);
+            long version = rawhide.version(readKeyFormatTransformer, readValueFormatTransformer, rawEntryBuffer);
+
+            if (deleteTombstonedVersionsAfterMillis > 0
+                && rawhide.tombstone(readKeyFormatTransformer, readValueFormatTransformer, rawEntryBuffer)
+                && version < deleteIfVersionOldThanTimestamp) {
+                expiredTombstones.incrementAndGet();
+                return true;
+            }
+
+
             long fp = appendOnly.getFilePointer();
             startOfEntryIndex[updatesSinceLeap] = fp + appendableHeap.length();
             appendableHeap.appendByte(ENTRY);
@@ -106,13 +128,12 @@ public class LABAppendableIndex implements RawAppendableIndex {
             keysSizeInBytes += keyLength;
             valuesSizeInBytes += rawEntryBuffer.length - keyLength;
 
-            long rawEntryTimestamp = rawhide.timestamp(readKeyFormatTransformer, readValueFormatTransformer, rawEntryBuffer);
             if (rawEntryTimestamp > -1 && maxTimestamp < rawEntryTimestamp) {
                 maxTimestamp = rawEntryTimestamp;
-                maxTimestampVersion = rawhide.version(readKeyFormatTransformer, readValueFormatTransformer, rawEntryBuffer);
+                maxTimestampVersion = version;
             } else {
                 maxTimestamp = rawEntryTimestamp;
-                maxTimestampVersion = rawhide.version(readKeyFormatTransformer, readValueFormatTransformer, rawEntryBuffer);
+                maxTimestampVersion = version;
             }
 
             if (firstKey == null) {
@@ -145,6 +166,12 @@ public class LABAppendableIndex implements RawAppendableIndex {
             appendOnly.append(appendableHeap.leakBytes(), 0, (int) appendableHeap.length());
             appendedStat.add(appendableHeap.length());
         }
+
+        if (expiredTombstones.get() > 0) {
+            LOG.info("{} records were dropped during the append because there version was more than {} millis old",
+                expiredTombstones.get(), deleteTombstonedVersionsAfterMillis);
+        }
+
         return true;
     }
 
@@ -214,7 +241,7 @@ public class LABAppendableIndex implements RawAppendableIndex {
 
         int chunkPower = UIO.chunkPower(length + 1, 0);
         byte hashIndexLongPrecision = (byte) Math.min((chunkPower / 8) + 1, 8);
-        long maxReinsertionsBeforeExtinction = (long)(count * 0.01d);
+        long maxReinsertionsBeforeExtinction = (long) (count * 0.01d);
 
         byte numHashFunctions = 2;
         PointerReadableByteBufferFile c = null;
@@ -225,7 +252,7 @@ public class LABAppendableIndex implements RawAppendableIndex {
         long reinsertion = 0;
         long start = System.currentTimeMillis();
         long clear = 0;
-        long[] histo = new long[0];
+        long[] histo;
         try {
             CUCKOO_EXTINCTION_LEVEL_EVENT:
             while (true) {
@@ -234,7 +261,7 @@ public class LABAppendableIndex implements RawAppendableIndex {
                     c.close();
                 }
 
-                numHashFunctions = (byte)(3 + extinctions);
+                numHashFunctions = (byte) (3 + extinctions);
                 long hashIndexMaxCapacity = (count + (long) (count * Math.max(1f, hashIndexLoadFactor))) + 1;
 
                 hashIndexSizeInBytes = hashIndexMaxCapacity * hashIndexLongPrecision;
@@ -289,7 +316,7 @@ public class LABAppendableIndex implements RawAppendableIndex {
                             k = rawhide.key(readKeyFormatTransformer, readValueFormatTransformer, entryBuffer, key);
                             displaced = cuckooInsert(numHashFunctions, length, hashIndexLongPrecision, hashIndexMaxCapacity, c, k, displaced, histo);
                             displaceable--;
-                            if (displaceable < 0 || reinsertion > maxReinsertionsBeforeExtinction)  {
+                            if (displaceable < 0 || reinsertion > maxReinsertionsBeforeExtinction) {
                                 extinctions++;
                                 LOG.warn("Cuckoo: {} with entries:{} capacity:{} numHashFunctions:{} extinctions:{}",
                                     appendOnlyFile.getFile(), count, hashIndexMaxCapacity, numHashFunctions, extinctions);
@@ -314,7 +341,8 @@ public class LABAppendableIndex implements RawAppendableIndex {
             f.close();
         }
 
-        LOG.info("Built hash index for {} with {} entries in {} + {} millis numHashFunctions:{} precision:{} cost:{} bytes reinsertion:{} extinctions:{} histo:{}",
+        LOG.info(
+            "Built hash index for {} with {} entries in {} + {} millis numHashFunctions:{} precision:{} cost:{} bytes reinsertion:{} extinctions:{} histo:{}",
             appendOnlyFile.getFile(),
             count,
             clear,

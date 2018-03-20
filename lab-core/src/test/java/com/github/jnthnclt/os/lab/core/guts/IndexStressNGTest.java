@@ -80,7 +80,8 @@ public class IndexStressNGTest {
                                     new RawEntryFormat(0, 0),
                                     NoOpFormatTransformerProvider.NO_OP,
                                     TestUtils.indexType,
-                                    0.75d);
+                                    0.75d,
+                                    Long.MAX_VALUE);
                             },
                             (ids) -> {
                                 File mergedFile = ids.get(0).toFile(root);
@@ -194,7 +195,8 @@ public class IndexStressNGTest {
                 new RawEntryFormat(0, 0),
                 NoOpFormatTransformerProvider.NO_OP,
                 TestUtils.indexType,
-                0.75d);
+                0.75d,
+                Long.MAX_VALUE);
             BolBuffer keyBuffer = new BolBuffer();
             long lastKey = TestUtils.append(rand, write, 0, maxKeyIncrement, batchSize, null, keyBuffer);
             write.closeAppendable(fsync);

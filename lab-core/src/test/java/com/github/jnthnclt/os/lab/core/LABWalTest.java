@@ -77,8 +77,20 @@ public class LABWalTest {
         //byte[][] valueIndexIds = new byte[numValueIndexes][];
         for (int i = 0; i < numValueIndexes; i++) {
             String name = "index-" + i;
-            ValueIndexConfig valueIndexConfig = new ValueIndexConfig(name, 4096, 1024 * 1024 * 10, -1, -1, -1,
-                NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 2, TestUtils.indexType, 0.75d, false);
+            ValueIndexConfig valueIndexConfig = new ValueIndexConfig(name,
+                4096,
+                1024 * 1024 * 10,
+                -1,
+                -1,
+                -1,
+                NoOpFormatTransformerProvider.NAME,
+                LABRawhide.NAME,
+                MemoryRawEntryFormat.NAME,
+                2,
+                TestUtils.indexType,
+                0.75d,
+                false,
+                Long.MAX_VALUE);
             valueIndexes[i] = env.open(valueIndexConfig);
             //valueIndexIds[i] = name.getBytes(StandardCharsets.UTF_8);
         }
@@ -170,8 +182,20 @@ public class LABWalTest {
         });
         for (int i = 0; i < numValueIndexes; i++) {
             String name = "index-" + i;
-            ValueIndexConfig valueIndexConfig = new ValueIndexConfig(name, 4096, 1024 * 1024 * 10, -1, -1, -1,
-                NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 2, TestUtils.indexType, 0.75d, false);
+            ValueIndexConfig valueIndexConfig = new ValueIndexConfig(name,
+                4096,
+                1024 * 1024 * 10,
+                -1,
+                -1,
+                -1,
+                NoOpFormatTransformerProvider.NAME,
+                LABRawhide.NAME,
+                MemoryRawEntryFormat.NAME,
+                2,
+                TestUtils.indexType,
+                0.75d,
+                false,
+                Long.MAX_VALUE);
             valueIndexes[i] = env.open(valueIndexConfig);
             //valueIndexIds[i] = name.getBytes(StandardCharsets.UTF_8);
         }
@@ -248,8 +272,20 @@ public class LABWalTest {
             true,
             true);
 
-        ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo", 4096, 1024 * 1024 * 10, -1, -1, -1,
-            NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 19, TestUtils.indexType, 2d, true);
+        ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo",
+            4096,
+            1024 * 1024 * 10,
+            -1,
+            -1,
+            -1,
+            NoOpFormatTransformerProvider.NAME,
+            LABRawhide.NAME,
+            MemoryRawEntryFormat.NAME,
+            19,
+            TestUtils.indexType,
+            2d,
+            true,
+            Long.MAX_VALUE);
 
         //System.out.println("Created env");
 

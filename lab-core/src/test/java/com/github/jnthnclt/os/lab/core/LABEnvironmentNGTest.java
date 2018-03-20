@@ -60,8 +60,20 @@ public class LABEnvironmentNGTest {
                 false);
             assertEquals(env.list(), Collections.emptyList());
 
-            ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo", 4096, 1024 * 1024 * 10, -1, -1, -1,
-                NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 2, TestUtils.indexType, 0.75d, false);
+            ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo",
+                4096,
+                1024 * 1024 * 10,
+                -1,
+                -1,
+                -1,
+                NoOpFormatTransformerProvider.NAME,
+                LABRawhide.NAME,
+                MemoryRawEntryFormat.NAME,
+                2,
+                TestUtils.indexType,
+                0.75d,
+                false,
+                Long.MAX_VALUE);
 
             ValueIndex index = env.open(valueIndexConfig);
             //System.out.println("Lets index so stuff....");
@@ -121,8 +133,20 @@ public class LABEnvironmentNGTest {
             //System.out.println(env.list() + " vs " + Collections.singletonList("bar"));
             assertEquals(env.list(), Collections.singletonList("bar"));
 
-            valueIndexConfig = new ValueIndexConfig("bar", 4096, 1024 * 1024 * 10, -1, -1, -1,
-                NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 2, TestUtils.indexType, 0.75d, false);
+            valueIndexConfig = new ValueIndexConfig("bar",
+                4096,
+                1024 * 1024 * 10,
+                -1,
+                -1,
+                -1,
+                NoOpFormatTransformerProvider.NAME,
+                LABRawhide.NAME,
+                MemoryRawEntryFormat.NAME,
+                2,
+                TestUtils.indexType,
+                0.75d,
+                false,
+                Long.MAX_VALUE);
             assertEquals(env.list(), Collections.singletonList("bar"));
             index = env.open(valueIndexConfig);
 
@@ -236,8 +260,20 @@ public class LABEnvironmentNGTest {
             true,
             false);
 
-        ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo", 4096, 1024 * 1024 * 10, -1, -1, -1,
-            NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 2, TestUtils.indexType, 0.75d, false);
+        ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo",
+            4096,
+            1024 * 1024 * 10,
+            -1,
+            -1,
+            -1,
+            NoOpFormatTransformerProvider.NAME,
+            LABRawhide.NAME,
+            MemoryRawEntryFormat.NAME,
+            2,
+            TestUtils.indexType,
+            0.75d,
+            false,
+            Long.MAX_VALUE);
 
         //System.out.println("Created env");
 
@@ -311,8 +347,20 @@ public class LABEnvironmentNGTest {
             true,
             false);
 
-        ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo", 4096, 1024 * 1024 * 10, -1, -1, -1,
-            NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 2, TestUtils.indexType, 0.75d, false);
+        ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo",
+            4096,
+            1024 * 1024 * 10,
+            -1,
+            -1,
+            -1,
+            NoOpFormatTransformerProvider.NAME,
+            LABRawhide.NAME,
+            MemoryRawEntryFormat.NAME,
+            2,
+            TestUtils.indexType,
+            0.75d,
+            false,
+            Long.MAX_VALUE);
 
         //System.out.println("Created env");
 

@@ -28,6 +28,10 @@ public interface Rawhide {
         FormatTransformer readValueFormatTransformer,
         BolBuffer rawEntry);
 
+    boolean tombstone(FormatTransformer readKeyFormatTransformer,
+        FormatTransformer readValueFormatTransformer,
+        BolBuffer rawEntry);
+
     boolean streamRawEntry(int index,
         FormatTransformer readKeyFormatTransformer,
         FormatTransformer readValueFormatTransformer,

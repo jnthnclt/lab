@@ -106,8 +106,20 @@ public class LABEnvironmentConcurrenyNGTest {
             ExecutorService readers = Executors.newFixedThreadPool(readerCount, new ThreadFactoryBuilder().setNameFormat("readers-%d").build());
 
             Random rand = new Random(12345);
-            ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo", 4096, 1000, 10 * 1024 * 1024, 0, 0,
-                NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 2, TestUtils.indexType, 0.75d, false);
+            ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo",
+                4096,
+                1000,
+                10 * 1024 * 1024,
+                0,
+                0,
+                NoOpFormatTransformerProvider.NAME,
+                LABRawhide.NAME,
+                MemoryRawEntryFormat.NAME,
+                2,
+                TestUtils.indexType,
+                0.75d,
+                false,
+                Long.MAX_VALUE);
             ValueIndex index = env.open(valueIndexConfig);
 
             AtomicLong running = new AtomicLong();

@@ -22,6 +22,7 @@ public class ValueIndexConfig {
     public final LABHashIndexType hashIndexType;
     public final double hashIndexLoadFactor;
     public final boolean hashIndexEnabled;
+    public final long deleteTombstonedVersionsAfterMillis;
 
     @JsonCreator
     public ValueIndexConfig(@JsonProperty("primaryName") String primaryName,
@@ -36,7 +37,8 @@ public class ValueIndexConfig {
         @JsonProperty("entryLengthPower") int entryLengthPower,
         @JsonProperty("hashIndexType") LABHashIndexType hashIndexType,
         @JsonProperty("hashIndexLoadFactor") double hashIndexLoadFactor,
-        @JsonProperty("hashIndexEnabled") boolean hashIndexEnabled) {
+        @JsonProperty("hashIndexEnabled") boolean hashIndexEnabled,
+        @JsonProperty("deleteTombstonedVersionsAfterMillis") long deleteTombstonedVersionsAfterMillis) {
 
         this.primaryName = primaryName;
         this.entriesBetweenLeaps = entriesBetweenLeaps;
@@ -51,6 +53,7 @@ public class ValueIndexConfig {
         this.hashIndexType = hashIndexType;
         this.hashIndexLoadFactor = hashIndexLoadFactor;
         this.hashIndexEnabled = hashIndexEnabled;
+        this.deleteTombstonedVersionsAfterMillis = deleteTombstonedVersionsAfterMillis;
     }
 
 }
