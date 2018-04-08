@@ -28,6 +28,13 @@ public class LABUtils {
         return o;
     }
 
+    public static int writeFixedWidthByteArray(byte[] bytes, byte[] destination, int offset) {
+        int o = offset;
+        UIO.writeBytes(bytes, destination, o);
+        o += bytes.length;
+        return o;
+    }
+
     public static byte[] prefixUpperExclusive(byte[] keyFragment) {
         byte[] upper = new byte[keyFragment.length];
         System.arraycopy(keyFragment, 0, upper, 0, keyFragment.length);

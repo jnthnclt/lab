@@ -6,7 +6,7 @@ import com.github.jnthnclt.os.lab.core.api.FormatTransformerProvider;
 import com.github.jnthnclt.os.lab.core.api.JournalStream;
 import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
-import com.github.jnthnclt.os.lab.core.api.rawhide.KeyValueRawhide;
+import com.github.jnthnclt.os.lab.core.api.rawhide.LABKeyValueRawhide;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.LABIndexProvider;
@@ -105,7 +105,7 @@ public class LABEnvironment {
         boolean fsyncFileRenames) throws Exception {
 
         register(NoOpFormatTransformerProvider.NAME, NoOpFormatTransformerProvider.NO_OP);
-        register(KeyValueRawhide.NAME, KeyValueRawhide.SINGLETON);
+        register(LABKeyValueRawhide.NAME, LABKeyValueRawhide.SINGLETON);
         register(LABRawhide.NAME, LABRawhide.SINGLETON);
         register(MemoryRawEntryFormat.NAME, MemoryRawEntryFormat.SINGLETON);
 

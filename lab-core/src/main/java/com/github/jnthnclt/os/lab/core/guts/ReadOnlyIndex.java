@@ -3,17 +3,18 @@ package com.github.jnthnclt.os.lab.core.guts;
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.api.FormatTransformerProvider;
+import com.github.jnthnclt.os.lab.core.api.Snapshot;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABCorruptedException;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
+import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
+import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 
 /**
  * @author jonathan.colt
@@ -103,7 +104,8 @@ public class ReadOnlyIndex implements ReadIndex {
         seekTo++;
         if (type != LABAppendableIndex.FOOTER) {
             throw new LABCorruptedException(
-                "Footer Corruption! Found " + type + " expected " + LABAppendableIndex.FOOTER + " within file:" + readOnlyFile.getFileName() + " length:" + readOnlyFile
+                "Footer Corruption! Found " + type + " expected " + LABAppendableIndex.FOOTER + " within file:" + readOnlyFile.getFileName() + " length:" +
+                    readOnlyFile
                     .length());
         }
         return Footer.read(readable, seekTo);
@@ -177,7 +179,8 @@ public class ReadOnlyIndex implements ReadIndex {
                 seekTo++;
                 if (type != LABAppendableIndex.LEAP) {
                     throw new LABCorruptedException(
-                        "4. Leaps Corruption! " + type + " expected " + LABAppendableIndex.LEAP + " file:" + readOnlyFile.getFileName() + " length:" + readOnlyFile.length()
+                        "4. Leaps Corruption! " + type + " expected " + LABAppendableIndex.LEAP + " file:" + readOnlyFile.getFileName() + " length:" +
+                            readOnlyFile.length()
                     );
                 }
                 leaps = Leaps.read(readKeyFormatTransformer, readableIndex, seekTo);
@@ -186,6 +189,22 @@ public class ReadOnlyIndex implements ReadIndex {
 
             return this;
         } catch (IOException | RuntimeException x) {
+            hideABone.release();
+            throw x;
+        }
+    }
+
+
+    public void snapshot(Snapshot snapshot) throws Exception {
+        hideABone.acquire();
+        if (disposed.get() || readOnlyFile.isClosed()) {
+            hideABone.release();
+            return;
+        }
+
+        try {
+            snapshot.file(readOnlyFile.getFile());
+        } catch (Exception x) {
             hideABone.release();
             throw x;
         }

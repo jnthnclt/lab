@@ -11,13 +11,13 @@ import com.github.jnthnclt.os.lab.core.io.api.IAppendOnly;
  *
  * @author jonathan.colt
  */
-public class KeyValueRawhide implements Rawhide {
+public class LABKeyValueRawhide implements Rawhide {
 
     public static final String NAME = "keyValueRawhide";
 
-    public static final KeyValueRawhide SINGLETON = new KeyValueRawhide();
+    public static final LABKeyValueRawhide SINGLETON = new LABKeyValueRawhide();
 
-    private KeyValueRawhide() {
+    private LABKeyValueRawhide() {
     }
 
     @Override

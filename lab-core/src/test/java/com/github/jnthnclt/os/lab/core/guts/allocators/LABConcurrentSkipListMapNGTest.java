@@ -5,7 +5,7 @@ import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
 import com.github.jnthnclt.os.lab.core.guts.api.Next;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
-import com.github.jnthnclt.os.lab.core.api.rawhide.FixedWidthRawhide;
+import com.github.jnthnclt.os.lab.core.api.rawhide.LABFixedWidthKeyFixedWidthValueRawhide;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import org.testng.annotations.Test;
@@ -21,7 +21,7 @@ public class LABConcurrentSkipListMapNGTest {
 
         LABAppendOnlyAllocator allocator = new LABAppendOnlyAllocator("test",2);
         LABIndexableMemory labIndexableMemory = new LABIndexableMemory(allocator);
-        FixedWidthRawhide rawhide = new FixedWidthRawhide(8, 8);
+        LABFixedWidthKeyFixedWidthValueRawhide rawhide = new LABFixedWidthKeyFixedWidthValueRawhide(8, 8);
 
         LABConcurrentSkipListMap map = new LABConcurrentSkipListMap(new LABStats(), new LABConcurrentSkipListMemory(rawhide, labIndexableMemory),
             new StripingBolBufferLocks(1024));

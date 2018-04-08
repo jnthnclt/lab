@@ -10,12 +10,12 @@ import com.github.jnthnclt.os.lab.core.io.api.IAppendOnly;
  *
  * @author jonathan.colt
  */
-public class FixedWidthRawhide implements Rawhide {
+public class LABFixedWidthKeyFixedWidthValueRawhide implements Rawhide {
 
     private final int keyLength;
     private final int payloadLength;
 
-    public FixedWidthRawhide(int keyLength, int payloadLength) {
+    public LABFixedWidthKeyFixedWidthValueRawhide(int keyLength, int payloadLength) {
         this.keyLength = keyLength;
         this.payloadLength = payloadLength;
     }

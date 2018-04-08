@@ -6,7 +6,7 @@ import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
 import com.github.jnthnclt.os.lab.core.api.NoOpFormatTransformerProvider;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
-import com.github.jnthnclt.os.lab.core.api.rawhide.KeyValueRawhide;
+import com.github.jnthnclt.os.lab.core.api.rawhide.LABKeyValueRawhide;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
 import com.github.jnthnclt.os.lab.core.guts.IndexUtil;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
@@ -476,7 +476,7 @@ public class LABNGTest {
             -1,
             -1,
             NoOpFormatTransformerProvider.NAME,
-            KeyValueRawhide.NAME,
+            LABKeyValueRawhide.NAME,
             MemoryRawEntryFormat.NAME,
             2,
             TestUtils.indexType,

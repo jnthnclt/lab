@@ -13,6 +13,11 @@ public interface ReadValueIndex {
 
     boolean rangesScan(Ranges ranges, ValueStream stream, boolean hydrateValues) throws Exception;
 
+    /*
+    The expectation is that the keys are in the same lex order as the value index.
+     */
+    boolean rowScan(Keys keys,ValueStream stream, boolean hydrateValues) throws Exception;
+
     boolean rowScan(ValueStream stream, boolean hydrateValues) throws Exception;
 
     long count() throws Exception;

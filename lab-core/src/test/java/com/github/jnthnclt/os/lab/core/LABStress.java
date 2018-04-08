@@ -20,7 +20,7 @@ import com.github.jnthnclt.os.lab.core.api.Keys.KeyStream;
 import com.github.jnthnclt.os.lab.core.api.NoOpFormatTransformerProvider;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
-import com.github.jnthnclt.os.lab.core.api.rawhide.FixedWidthRawhide;
+import com.github.jnthnclt.os.lab.core.api.rawhide.LABFixedWidthKeyFixedWidthValueRawhide;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
 import com.github.jnthnclt.os.lab.core.guts.RangeStripedCompactableIndexes;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
@@ -209,7 +209,7 @@ public class LABStress {
             true,
             false);
 
-        env.register("8x8fixedWidthRawhide", new FixedWidthRawhide(8, 8));
+        env.register("8x8fixedWidthRawhide", new LABFixedWidthKeyFixedWidthValueRawhide(8, 8));
 
         System.out.println("Created env");
         ValueIndex index = env.open(new ValueIndexConfig("foo",

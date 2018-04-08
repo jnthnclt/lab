@@ -1,6 +1,7 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
 import com.github.jnthnclt.os.lab.core.LABStats;
+import com.github.jnthnclt.os.lab.core.api.Snapshot;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABClosedException;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.api.CommitIndex;
@@ -50,6 +51,13 @@ public class CompactableIndexes {
     public CompactableIndexes(LABStats stats,Rawhide rawhide) {
         this.stats = stats;
         this.rawhide = rawhide;
+    }
+
+    public void snapshot(Snapshot snapshot) throws Exception {
+        ReadOnlyIndex[] stackIndexes = indexes;
+        for (ReadOnlyIndex stackIndex : stackIndexes) {
+            stackIndex.snapshot(snapshot);
+        }
     }
 
     public boolean append(ReadOnlyIndex index) {

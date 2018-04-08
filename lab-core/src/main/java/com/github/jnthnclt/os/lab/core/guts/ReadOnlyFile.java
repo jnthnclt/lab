@@ -26,6 +26,10 @@ public class ReadOnlyFile {
         this.size = randomAccessFile.length();
     }
 
+    File getFile() {
+        return file;
+    }
+
     public String getFileName() {
         return file.toString();
     }

@@ -20,11 +20,11 @@ import org.testng.annotations.Test;
  *
  * @author jonathan.colt
  */
-public class FixedWidthRawhideNGTest {
+public class LABFixedWidthKeyFixedWidthValueRawhideNGTest {
 
     @Test
     public void rawEntryTest() throws IOException, Exception {
-        Rawhide rawhide = new FixedWidthRawhide(8, 8);
+        Rawhide rawhide = new LABFixedWidthKeyFixedWidthValueRawhide(8, 8);
         BolBuffer rawEntry = rawhide.toRawEntry(UIO.longBytes(17), 1234, false, 687, UIO.longBytes(45), new BolBuffer());
         Assert.assertEquals(0, rawhide.timestamp(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer()));
         Assert.assertEquals(0, rawhide.version(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer()));
@@ -77,7 +77,7 @@ public class FixedWidthRawhideNGTest {
 
     @Test
     public void bbCompareTest() {
-        FixedWidthRawhide rawhide = new FixedWidthRawhide(8, 8);
+        LABFixedWidthKeyFixedWidthValueRawhide rawhide = new LABFixedWidthKeyFixedWidthValueRawhide(8, 8);
         Assert.assertEquals(rawhide.compareBB(UIO.longBytes(1), 0, 8, UIO.longBytes(1), 0, 8), 0);
         Assert.assertEquals(rawhide.compareBB(UIO.longBytes(10), 0, 8, UIO.longBytes(20), 0, 8), -10);
         Assert.assertEquals(rawhide.compareBB(UIO.longBytes(0), 0, 8, UIO.longBytes(1), 0, 8), -1);
@@ -99,7 +99,7 @@ public class FixedWidthRawhideNGTest {
 
     @Test
     public void compareKeyTest() throws Exception {
-        FixedWidthRawhide rawhide = new FixedWidthRawhide(8, 8);
+        LABFixedWidthKeyFixedWidthValueRawhide rawhide = new LABFixedWidthKeyFixedWidthValueRawhide(8, 8);
         Assert.assertEquals(rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(UIO.longBytes(1)), new BolBuffer(),
             new BolBuffer(UIO.longBytes(1))), 0);
         Assert.assertEquals(rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(UIO.longBytes(0)), new BolBuffer(),
@@ -126,7 +126,7 @@ public class FixedWidthRawhideNGTest {
 
     @Test
     public void compareKey2Test() throws Exception {
-        FixedWidthRawhide rawhide = new FixedWidthRawhide(8, 8);
+        LABFixedWidthKeyFixedWidthValueRawhide rawhide = new LABFixedWidthKeyFixedWidthValueRawhide(8, 8);
         Assert.assertEquals(rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(UIO.longBytes(1)), new BolBuffer(),
             FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(UIO.longBytes(1)), new BolBuffer()), 0);
         Assert.assertEquals(rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(UIO.longBytes(0)), new BolBuffer(),

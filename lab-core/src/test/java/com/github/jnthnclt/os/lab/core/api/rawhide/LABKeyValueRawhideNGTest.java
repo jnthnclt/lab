@@ -34,12 +34,12 @@ import org.testng.annotations.Test;
  *
  * @author jonathan.colt
  */
-public class KeyValueRawhideNGTest {
+public class LABKeyValueRawhideNGTest {
 
     @Test
     public void rawEntryTest() throws IOException, Exception {
 
-        Rawhide rawhide = KeyValueRawhide.SINGLETON;
+        Rawhide rawhide = LABKeyValueRawhide.SINGLETON;
         Assert.assertEquals(0, rawhide.timestamp(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer()));
         Assert.assertEquals(0, rawhide.version(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer()));
 
@@ -96,7 +96,7 @@ public class KeyValueRawhideNGTest {
 
     @Test
     public void bbCompareTest() {
-        Rawhide rawhide = KeyValueRawhide.SINGLETON;
+        Rawhide rawhide = LABKeyValueRawhide.SINGLETON;
         Assert.assertEquals(rawhide.compareBB(UIO.longBytes(1), 0, 8, UIO.longBytes(1), 0, 8), 0);
         Assert.assertEquals(rawhide.compareBB(UIO.longBytes(10), 0, 8, UIO.longBytes(20), 0, 8), -10);
         Assert.assertEquals(rawhide.compareBB(UIO.longBytes(0), 0, 8, UIO.longBytes(1), 0, 8), -1);
@@ -113,7 +113,7 @@ public class KeyValueRawhideNGTest {
 
     @Test
     public void compareKeyTest() throws Exception {
-        Rawhide rawhide = KeyValueRawhide.SINGLETON;
+        Rawhide rawhide = LABKeyValueRawhide.SINGLETON;
         BolBuffer a = rawhide.toRawEntry(UIO.longBytes(1), 1234, false, 687, UIO.longBytes(45), new BolBuffer());
         BolBuffer b = new BolBuffer(UIO.longBytes(1));
         Assert.assertEquals(rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP, a, new BolBuffer(), b), 0);
@@ -146,7 +146,7 @@ public class KeyValueRawhideNGTest {
 
     @Test
     public void compareKey2Test() throws Exception {
-        Rawhide rawhide = KeyValueRawhide.SINGLETON;
+        Rawhide rawhide = LABKeyValueRawhide.SINGLETON;
         BolBuffer a = rawhide.toRawEntry(UIO.longBytes(1), 1234, false, 687, UIO.longBytes(45), new BolBuffer());
         BolBuffer b = rawhide.toRawEntry(UIO.longBytes(1), 1234, false, 687, UIO.longBytes(45), new BolBuffer());
 

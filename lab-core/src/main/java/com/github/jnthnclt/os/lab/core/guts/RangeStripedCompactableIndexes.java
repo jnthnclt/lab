@@ -3,6 +3,7 @@ package com.github.jnthnclt.os.lab.core.guts;
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.LABStats;
 import com.github.jnthnclt.os.lab.core.api.FormatTransformerProvider;
+import com.github.jnthnclt.os.lab.core.api.Snapshot;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.api.KeyToString;
 import com.github.jnthnclt.os.lab.core.guts.api.MergerBuilder;
@@ -154,6 +155,16 @@ public class RangeStripedCompactableIndexes {
         }
     }
 
+    public void snapshot(Snapshot snapshot) throws Exception {
+        Entry<byte[], FileBackMergableIndexs>[] entries = indexesArray;
+        if (entries != null && entries.length == 0) {
+            for (Entry<byte[], FileBackMergableIndexs> fileBackMergableIndexsEntry : entries) {
+                FileBackMergableIndexs value = fileBackMergableIndexsEntry.getValue();
+                value.snapshot(snapshot);
+            }
+        }
+    }
+
     @Override
     public String toString() {
         return "RangeStripedCompactableIndexes{"
@@ -287,6 +298,10 @@ public class RangeStripedCompactableIndexes {
             FileUtils.deleteQuietly(mergingRoot);
             FileUtils.deleteQuietly(commitingRoot);
             FileUtils.deleteQuietly(splittingRoot);
+        }
+
+        void snapshot(Snapshot snapshot) throws Exception {
+            compactableIndexes.snapshot(snapshot);
         }
 
         void append(String rawhideName,

@@ -2,6 +2,7 @@ package com.github.jnthnclt.os.lab.core;
 
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
+import com.github.jnthnclt.os.lab.core.api.Snapshot;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABClosedException;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABCorruptedException;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
@@ -220,6 +221,28 @@ public class LAB implements ValueIndex<byte[]> {
         stats.multiRangeScan.increment();
         return r;
 
+    }
+
+    @Override
+    public boolean rowScan(Keys keys, ValueStream stream, boolean hydrateValues) throws Exception {
+//        BolBuffer streamKeyBuffer = new BolBuffer();
+//        BolBuffer streamValueBuffer = hydrateValues ? new BolBuffer() : null;
+//        boolean r = rangeTx(true, -1, SMALLEST_POSSIBLE_KEY, null, -1, -1,
+//            (index, fromKey, toKey, readIndexes, hydrateValues1) -> {
+//
+//
+//                InterleaveStream interleaveStream = new InterleaveStream(readIndexes, fromKey, toKey, rawhide);
+//                try {
+//                    return rawToReal(index, interleaveStream, streamKeyBuffer, streamValueBuffer, stream);
+//                } finally {
+//                    interleaveStream.close();
+//                }
+//            },
+//            hydrateValues
+//        );
+//        stats.rowScan.increment();
+//        return r;
+        return false;
     }
 
     @Override
@@ -608,6 +631,11 @@ public class LAB implements ValueIndex<byte[]> {
 
             return true;
         }
+    }
+
+    public void snapshot(Snapshot snapshot) throws Exception {
+        // TODO differ snapshot if compaction in progress and avoid compacting when snapshot in progress
+        rangeStripedCompactableIndexes.snapshot(snapshot);
     }
 
     @Override
