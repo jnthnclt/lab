@@ -337,7 +337,8 @@ public class CompactableIndexsNGTest {
         int[] index = new int[1];
         indexs.tx(-1, null, null, (index1, fromKey, toKey, acquired, hydrateValues) -> {
             AtomicBoolean failed = new AtomicBoolean();
-            Scanner rowScan = new InterleaveStream(acquired, null, null, rawhide);
+            Scanner rowScan = new InterleaveStream(rawhide,
+                ActiveScan.indexToFeeds(acquired, null, null, rawhide));
             try {
                 RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
                     //System.out.println("Expected:key:" + UIO.bytesLong(keys.get(index[0])) + " Found:" + TestUtils.toString(rawEntry));
@@ -404,7 +405,8 @@ public class CompactableIndexsNGTest {
                 };
 
                 //System.out.println("Asked index:" + _i + " key:" + UIO.bytesLong(keys.get(_i)) + " to:" + UIO.bytesLong(keys.get(_i + 3)));
-                Scanner rangeScan = new InterleaveStream(acquired, keys.get(_i), keys.get(_i + 3), rawhide);
+                Scanner rangeScan = new InterleaveStream(rawhide,
+                    ActiveScan.indexToFeeds(acquired, keys.get(_i), keys.get(_i + 3), rawhide));
                 try {
                     while (rangeScan.next(stream,null) == Next.more) {
                     }
@@ -428,8 +430,9 @@ public class CompactableIndexsNGTest {
                     }
                     return true;
                 };
-                Scanner rangeScan = new InterleaveStream(acquired, UIO.longBytes(UIO.bytesLong(keys.get(_i)) + 1, new byte[8], 0), keys.get(_i + 3),
-                    rawhide);
+                Scanner rangeScan = new InterleaveStream(rawhide,
+                    ActiveScan.indexToFeeds(acquired, UIO.longBytes(UIO.bytesLong(keys.get(_i)) + 1, new byte[8], 0), keys.get(_i + 3),
+                    rawhide));
                 try {
                     while (rangeScan.next(stream,null) == Next.more) {
                     }

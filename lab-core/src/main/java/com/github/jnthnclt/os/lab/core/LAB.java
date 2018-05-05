@@ -6,6 +6,7 @@ import com.github.jnthnclt.os.lab.core.api.Snapshot;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABClosedException;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABCorruptedException;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
+import com.github.jnthnclt.os.lab.core.guts.ActiveScan;
 import com.github.jnthnclt.os.lab.core.guts.InterleaveStream;
 import com.github.jnthnclt.os.lab.core.guts.LABHashIndexType;
 import com.github.jnthnclt.os.lab.core.guts.LABIndexProvider;
@@ -188,7 +189,11 @@ public class LAB implements ValueIndex<byte[]> {
 
         boolean r = rangeTx(true, -1, from, to, -1, -1,
             (index, fromKey, toKey, readIndexes, hydrateValues1) -> {
-                InterleaveStream interleaveStream = new InterleaveStream(readIndexes, fromKey, toKey, rawhide);
+
+
+                ;
+                InterleaveStream interleaveStream = new InterleaveStream(rawhide,
+                    ActiveScan.indexToFeeds(readIndexes, fromKey, toKey, rawhide));
                 try {
                     return rawToReal(index, interleaveStream, streamKeyBuffer, streamValueBuffer, stream);
                 } finally {
@@ -208,7 +213,8 @@ public class LAB implements ValueIndex<byte[]> {
         boolean r = ranges.ranges((index, from, to) -> {
             return rangeTx(true, index, from, to, -1, -1,
                 (index1, fromKey, toKey, readIndexes, hydrateValues1) -> {
-                    InterleaveStream interleaveStream = new InterleaveStream(readIndexes, fromKey, toKey, rawhide);
+                    InterleaveStream interleaveStream = new InterleaveStream(rawhide,
+                        ActiveScan.indexToFeeds(readIndexes, fromKey, toKey, rawhide));
                     try {
                         return rawToReal(index1, interleaveStream, streamKeyBuffer, streamValueBuffer, stream);
                     } finally {
@@ -251,7 +257,8 @@ public class LAB implements ValueIndex<byte[]> {
         BolBuffer streamValueBuffer = hydrateValues ? new BolBuffer() : null;
         boolean r = rangeTx(true, -1, SMALLEST_POSSIBLE_KEY, null, -1, -1,
             (index, fromKey, toKey, readIndexes, hydrateValues1) -> {
-                InterleaveStream interleaveStream = new InterleaveStream(readIndexes, fromKey, toKey, rawhide);
+                InterleaveStream interleaveStream = new InterleaveStream(rawhide,
+                    ActiveScan.indexToFeeds(readIndexes, fromKey, toKey, rawhide));
                 try {
                     return rawToReal(index, interleaveStream, streamKeyBuffer, streamValueBuffer, stream);
                 } finally {

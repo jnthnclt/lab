@@ -3,6 +3,8 @@ package com.github.jnthnclt.os.lab.core.guts;
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
+import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
+import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
 import com.github.jnthnclt.os.lab.core.io.api.UIO;
@@ -11,10 +13,38 @@ import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
 import java.nio.LongBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.PriorityQueue;
 
 public class ActiveScan {
 
     private static final LABLogger LOG = LABLoggerFactory.getLogger();
+
+    public static PriorityQueue<InterleavingStreamFeed> indexToFeeds(ReadIndex[] indexs, byte[] from, byte[] to, Rawhide rawhide) throws Exception {
+
+        PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds = new PriorityQueue<>();
+
+        boolean rowScan = from == null && to == null;
+        for (int i = 0; i < indexs.length; i++) {
+            Scanner scanner = null;
+            try {
+                if (rowScan) {
+                    scanner = indexs[i].rowScan(new ActiveScanRow(), new BolBuffer(), new BolBuffer());
+                } else {
+                    scanner = indexs[i].rangeScan(new ActiveScanRange(), from, to, new BolBuffer(), new BolBuffer());
+                }
+                if (scanner != null) {
+                    InterleavingStreamFeed interleavingStreamFeed = new InterleavingStreamFeed(i, scanner, rawhide);
+                    interleavingStreamFeeds.add(interleavingStreamFeed);
+                }
+            } catch (Throwable t) {
+                if (scanner != null) {
+                    scanner.close();
+                }
+                throw t;
+            }
+        }
+        return interleavingStreamFeeds;
+    }
 
     public static long getInclusiveStartOfRow(PointerReadableByteBufferFile readable,
         Leaps l,
@@ -119,8 +149,6 @@ public class ActiveScan {
         if (cacheMisses > 0) {
             LOG.inc("LAB>leapCache>misses", cacheMisses);
         }
-
-
         return rowIndex;
     }
 

@@ -36,9 +36,10 @@ public class InterleaveStreamNGTest {
     @Test
     public void testNext() throws Exception {
 
-        InterleaveStream ips = new InterleaveStream(new ReadIndex[] {
-            sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 3, 3, 3, 3, 3 })
-        }, null, null, LABRawhide.SINGLETON);
+        InterleaveStream ips = new InterleaveStream(LABRawhide.SINGLETON,
+            ActiveScan.indexToFeeds(new ReadIndex[] {
+                sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 3, 3, 3, 3, 3 })
+            }, null, null, LABRawhide.SINGLETON));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(1, 3));
@@ -54,11 +55,12 @@ public class InterleaveStreamNGTest {
     @Test
     public void testNext1() throws Exception {
 
-        InterleaveStream ips = new InterleaveStream(new ReadIndex[] {
+        InterleaveStream ips = new InterleaveStream(LABRawhide.SINGLETON,
+            ActiveScan.indexToFeeds(new ReadIndex[] {
             sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 3, 3, 3, 3, 3 }),
             sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 2, 2, 2, 2, 2 }),
             sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 1, 1, 1, 1, 1 })
-        }, null, null, LABRawhide.SINGLETON);
+        }, null, null, LABRawhide.SINGLETON));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(1, 3));
@@ -74,11 +76,12 @@ public class InterleaveStreamNGTest {
     @Test
     public void testNext2() throws Exception {
 
-        InterleaveStream ips = new InterleaveStream(new ReadIndex[] {
+        InterleaveStream ips = new InterleaveStream(LABRawhide.SINGLETON,
+            ActiveScan.indexToFeeds(new ReadIndex[] {
             sequenceIndex(new long[] { 10, 21, 29, 41, 50 }, new long[] { 1, 0, 0, 0, 1 }),
             sequenceIndex(new long[] { 10, 21, 29, 40, 50 }, new long[] { 0, 0, 0, 1, 0 }),
             sequenceIndex(new long[] { 10, 20, 30, 39, 50 }, new long[] { 0, 1, 1, 0, 0 })
-        }, null, null, LABRawhide.SINGLETON);
+        }, null, null, LABRawhide.SINGLETON));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(10, 1));
@@ -179,7 +182,8 @@ public class InterleaveStreamNGTest {
                 reorderIndexReaders[i] = readerIndexs[wi];
             }
 
-            InterleaveStream ips = new InterleaveStream(reorderIndexReaders, null, null, rawhide);
+            InterleaveStream ips = new InterleaveStream(rawhide,
+                ActiveScan.indexToFeeds(reorderIndexReaders, null, null, rawhide));
 
             List<Expected> expected = new ArrayList<>();
             //System.out.println("Expected:");

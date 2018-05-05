@@ -1,13 +1,11 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
-import com.github.jnthnclt.os.lab.core.guts.api.Next;
-import java.util.PriorityQueue;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
+import com.github.jnthnclt.os.lab.core.guts.api.Next;
 import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
-import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
+import java.util.PriorityQueue;
 
 /**
  * @author jonathan.colt
@@ -15,34 +13,14 @@ import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 public class InterleaveStream implements Scanner {
 
     private final Rawhide rawhide;
-    private final PriorityQueue<Feed> feeds = new PriorityQueue<>();
-    private Feed active;
-    private Feed until;
+    private final PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds;
+    private InterleavingStreamFeed active;
+    private InterleavingStreamFeed until;
 
 
-    public InterleaveStream(ReadIndex[] indexs, byte[] from, byte[] to, Rawhide rawhide) throws Exception {
+    public InterleaveStream(Rawhide rawhide, PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds) throws Exception {
         this.rawhide = rawhide;
-        boolean rowScan = from == null && to == null;
-        for (int i = 0; i < indexs.length; i++) {
-            Scanner scanner = null;
-            try {
-                if (rowScan) {
-                    scanner = indexs[i].rowScan(new ActiveScanRow(), new BolBuffer(), new BolBuffer());
-                } else {
-                    scanner = indexs[i].rangeScan(new ActiveScanRange(false), from, to, new BolBuffer(), new BolBuffer());
-                }
-                if (scanner != null) {
-                    Feed feed = new Feed(i, scanner, rawhide);
-                    feed.feedNext();
-                    feeds.add(feed);
-                }
-            } catch (Throwable t) {
-                if (scanner != null) {
-                    scanner.close();
-                }
-                throw t;
-            }
-        }
+        this.interleavingStreamFeeds = interleavingStreamFeeds;
     }
 
     @Override
@@ -50,8 +28,8 @@ public class InterleaveStream implements Scanner {
         if (active != null) {
             active.close();
         }
-        for (Feed feed : feeds) {
-            feed.close();
+        for (InterleavingStreamFeed interleavingStreamFeed : interleavingStreamFeeds) {
+            interleavingStreamFeed.close();
         }
     }
 
@@ -73,25 +51,25 @@ public class InterleaveStream implements Scanner {
         if (active == null || until != null && compare(active, until) >= 0) {
 
             if (active != null) {
-                feeds.add(active);
+                interleavingStreamFeeds.add(active);
             }
 
-            active = feeds.poll();
+            active = interleavingStreamFeeds.poll();
             if (active == null) {
                 return Next.eos;
             }
 
             while (true) {
-                Feed first = feeds.peek();
+                InterleavingStreamFeed first = interleavingStreamFeeds.peek();
                 if (first == null
                     || compare(first, active) != 0) {
                     until = first;
                     break;
                 }
 
-                feeds.poll();
+                interleavingStreamFeeds.poll();
                 if (first.feedNext() != null) {
-                    feeds.add(first);
+                    interleavingStreamFeeds.add(first);
                 } else {
                     first.close();
                 }
@@ -117,7 +95,7 @@ public class InterleaveStream implements Scanner {
         }
     }
 
-    private int compare(Feed left, Feed right) throws Exception {
+    private int compare(InterleavingStreamFeed left, InterleavingStreamFeed right) throws Exception {
         return rawhide.compareKey(left.nextReadKeyFormatTransformer,
             left.nextReadValueFormatTransformer,
             left.nextRawEntry,
@@ -126,66 +104,6 @@ public class InterleaveStream implements Scanner {
             right.nextReadValueFormatTransformer,
             right.nextRawEntry,
             right.entryKeyBuffer);
-    }
-
-    private static class Feed implements Comparable<Feed>, RawEntryStream {
-
-        private final int index;
-        private final Scanner scanner;
-        private final Rawhide rawhide;
-        private final BolBuffer entryKeyBuffer = new BolBuffer();
-
-        private FormatTransformer nextReadKeyFormatTransformer;
-        private FormatTransformer nextReadValueFormatTransformer;
-        private BolBuffer nextRawEntry;
-
-        public Feed(int index, Scanner scanner, Rawhide rawhide) {
-            this.index = index;
-            this.scanner = scanner;
-            this.rawhide = rawhide;
-        }
-
-        private BolBuffer feedNext() throws Exception {
-            Next hadNext = scanner.next(this, null);
-            if (hadNext != Next.more) {
-                nextRawEntry = null;
-            }
-            return nextRawEntry;
-        }
-
-        @Override
-        public boolean stream(FormatTransformer readKeyFormatTransformer, FormatTransformer readValueFormatTransformer, BolBuffer rawEntry) throws Exception {
-            nextRawEntry = rawEntry;
-            nextReadKeyFormatTransformer = readKeyFormatTransformer;
-            nextReadValueFormatTransformer = readValueFormatTransformer;
-            return true;
-        }
-
-        @Override
-        public int compareTo(Feed o) {
-            try {
-                int c = rawhide.mergeCompare(nextReadKeyFormatTransformer,
-                    nextReadValueFormatTransformer,
-                    nextRawEntry,
-                    entryKeyBuffer,
-                    o.nextReadKeyFormatTransformer,
-                    o.nextReadValueFormatTransformer,
-                    o.nextRawEntry,
-                    o.entryKeyBuffer);
-
-                if (c != 0) {
-                    return c;
-                }
-                c = Integer.compare(index, o.index);
-                return c;
-            } catch (Exception x) {
-                throw new RuntimeException(x);
-            }
-        }
-
-        private void close() throws Exception {
-            scanner.close();
-        }
     }
 
 }

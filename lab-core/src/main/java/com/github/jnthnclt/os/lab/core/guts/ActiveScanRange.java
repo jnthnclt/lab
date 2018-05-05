@@ -14,8 +14,6 @@ import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
  */
 public class ActiveScanRange implements Scanner {
 
-    private final boolean hashIndexEnabled;
-
     Rawhide rawhide;
     FormatTransformer readKeyFormatTransformer;
     FormatTransformer readValueFormatTransformer;
@@ -42,8 +40,7 @@ public class ActiveScanRange implements Scanner {
     private BolBuffer bbTo;
 
 
-    public ActiveScanRange(boolean hashIndexEnabled) {
-        this.hashIndexEnabled = hashIndexEnabled;
+    public ActiveScanRange() {
     }
 
     public long getInclusiveStartOfRow(BolBuffer bbKey, BolBuffer entryBuffer, BolBuffer entryKeyBuffer, boolean exact) throws Exception {
@@ -54,7 +51,7 @@ public class ActiveScanRange implements Scanner {
             leapsCache,
             cacheKeyBuffer,
             rawhide,
-            hashIndexEnabled,
+            false,
             hashIndexType,
             hashIndexHashFunctionCount,
             hashIndexHeadOffset,

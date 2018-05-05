@@ -377,7 +377,7 @@ public class RangeStripedCompactableIndexes {
                 appendableIndex.append((stream) -> {
                     ReadIndex reader = memoryIndex.acquireReader();
                     try {
-                        ActiveScanRange activeScan = new ActiveScanRange(false);
+                        ActiveScanRange activeScan = new ActiveScanRange();
                         Scanner scanner = reader.rangeScan(activeScan, minKey, maxKey, entryBuffer, entryKeyBuffer);
                         if (scanner != null) {
                             try {

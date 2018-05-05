@@ -247,7 +247,7 @@ public class IndexNGTest {
             //System.out.println("Asked:" + UIO.bytesLong(keys.get(_i)) + " to " + UIO.bytesLong(keys.get(_i + 3)));
             reader = memoryIndex.acquireReader();
             try {
-                Scanner rangeScan = reader.rangeScan(new ActiveScanRange(false), keys.get(_i), keys.get(_i + 3), new BolBuffer(), new BolBuffer());
+                Scanner rangeScan = reader.rangeScan(new ActiveScanRange(), keys.get(_i), keys.get(_i + 3), new BolBuffer(), new BolBuffer());
                 while (rangeScan != null && rangeScan.next(stream,null) == Next.more) {
                 }
                 Assert.assertEquals(3, streamed[0]);
@@ -268,7 +268,7 @@ public class IndexNGTest {
             };
             reader = memoryIndex.acquireReader();
             try {
-                Scanner rangeScan = reader.rangeScan(new ActiveScanRange(false), UIO.longBytes(UIO.bytesLong(keys.get(_i)) + 1, new byte[8], 0), keys.get(_i + 3),
+                Scanner rangeScan = reader.rangeScan(new ActiveScanRange(), UIO.longBytes(UIO.bytesLong(keys.get(_i)) + 1, new byte[8], 0), keys.get(_i + 3),
                     new BolBuffer(),
                     new BolBuffer());
                 while (rangeScan != null && rangeScan.next(stream,null) == Next.more) {
@@ -351,7 +351,7 @@ public class IndexNGTest {
             //System.out.println("Asked:" + UIO.bytesLong(keys.get(_i)) + " to " + UIO.bytesLong(keys.get(_i + 3)));
             reader = walIndex.acquireReader();
             try {
-                Scanner rangeScan = reader.rangeScan(new ActiveScanRange(false), keys.get(_i), keys.get(_i + 3), new BolBuffer(), new BolBuffer());
+                Scanner rangeScan = reader.rangeScan(new ActiveScanRange(), keys.get(_i), keys.get(_i + 3), new BolBuffer(), new BolBuffer());
                 while (rangeScan != null && rangeScan.next(stream,null) == Next.more) {
                 }
                 Assert.assertEquals(3, streamed[0]);
@@ -372,7 +372,7 @@ public class IndexNGTest {
             };
             reader = walIndex.acquireReader();
             try {
-                Scanner rangeScan = reader.rangeScan(new ActiveScanRange(false), UIO.longBytes(UIO.bytesLong(keys.get(_i)) + 1, new byte[8], 0), keys.get(_i + 3),
+                Scanner rangeScan = reader.rangeScan(new ActiveScanRange(), UIO.longBytes(UIO.bytesLong(keys.get(_i)) + 1, new byte[8], 0), keys.get(_i + 3),
                     new BolBuffer(),
                     new BolBuffer());
                 while (rangeScan != null && rangeScan.next(stream,null) == Next.more) {

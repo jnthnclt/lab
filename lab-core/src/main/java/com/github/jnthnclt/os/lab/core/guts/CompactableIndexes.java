@@ -320,7 +320,8 @@ public class CompactableIndexes {
                             leftAppendableIndex = leftHalfIndexFactory.createIndex(join, worstCaseCount - 1);
                             rightAppendableIndex = rightHalfIndexFactory.createIndex(join, worstCaseCount - 1);
                             LABAppendableIndex effectiveFinalRightAppenableIndex = rightAppendableIndex;
-                            InterleaveStream feedInterleaver = new InterleaveStream(readers, null, null, rawhide);
+                            InterleaveStream feedInterleaver = new InterleaveStream(rawhide,
+                                ActiveScan.indexToFeeds(readers, null, null, rawhide));
                             try {
                                 LOG.debug("Splitting with a middle of:{}", Arrays.toString(middle));
 
@@ -421,7 +422,8 @@ public class CompactableIndexes {
 
                                     ReadIndex catchupReader = catchup.acquireReader();
                                     try {
-                                        InterleaveStream catchupFeedInterleaver = new InterleaveStream(new ReadIndex[]{catchupReader}, null, null, rawhide);
+                                        InterleaveStream catchupFeedInterleaver = new InterleaveStream(rawhide,
+                                            ActiveScan.indexToFeeds(new ReadIndex[]{catchup}, null, null, rawhide));
                                         try {
                                             LOG.debug("Doing a catchup split for a middle of:{}", Arrays.toString(middle));
                                             catchupLeftAppendableIndex.append((leftStream) -> {
@@ -608,7 +610,8 @@ public class CompactableIndexes {
                 LABAppendableIndex appendableIndex = null;
                 try {
                     appendableIndex = indexFactory.createIndex(mergeRangeId, worstCaseCount);
-                    InterleaveStream feedInterleaver = new InterleaveStream(readers, null, null, rawhide);
+                    InterleaveStream feedInterleaver = new InterleaveStream(rawhide,
+                        ActiveScan.indexToFeeds(readers, null, null, rawhide));
                     try {
                         appendableIndex.append((stream) -> {
                             return feedInterleaver.stream((readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {

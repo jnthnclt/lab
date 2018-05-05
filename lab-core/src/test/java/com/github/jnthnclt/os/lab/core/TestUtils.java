@@ -2,6 +2,7 @@ package com.github.jnthnclt.os.lab.core;
 
 import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
+import com.github.jnthnclt.os.lab.core.guts.ActiveScan;
 import com.github.jnthnclt.os.lab.core.guts.CompactableIndexes;
 import com.github.jnthnclt.os.lab.core.guts.InterleaveStream;
 import com.github.jnthnclt.os.lab.core.guts.LABHashIndexType;
@@ -10,13 +11,13 @@ import com.github.jnthnclt.os.lab.core.guts.api.Next;
 import com.github.jnthnclt.os.lab.core.guts.api.RawAppendableIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
+import com.github.jnthnclt.os.lab.core.io.BolBuffer;
+import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicLong;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import org.testng.Assert;
 
 /**
@@ -118,7 +119,8 @@ public class TestUtils {
         int[] index = new int[1];
 
         indexes.tx(-1, null, null, (index1, fromKey, toKey, acquired, hydrateValues) -> {
-            Scanner rowScan = new InterleaveStream(acquired, null, null, LABRawhide.SINGLETON);
+            Scanner rowScan = new InterleaveStream(LABRawhide.SINGLETON,
+                ActiveScan.indexToFeeds(acquired, null, null, LABRawhide.SINGLETON));
             try {
                 RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
                     //System.out.println("scanned:" + UIO.bytesLong(keys.get(index[0])) + " " + key(rawEntry));
@@ -170,7 +172,8 @@ public class TestUtils {
                 };
 
                 //System.out.println("Asked:" + UIO.bytesLong(keys.get(_i)) + " to " + UIO.bytesLong(keys.get(_i + 3)));
-                Scanner rangeScan = new InterleaveStream(acquired, keys.get(_i), keys.get(_i + 3), LABRawhide.SINGLETON);
+                Scanner rangeScan = new InterleaveStream(LABRawhide.SINGLETON,
+                    ActiveScan.indexToFeeds(acquired, keys.get(_i), keys.get(_i + 3), LABRawhide.SINGLETON));
                 try {
                     while (rangeScan.next(stream,null) == Next.more) {
                     }
@@ -194,8 +197,9 @@ public class TestUtils {
                     }
                     return true;
                 };
-                Scanner rangeScan = new InterleaveStream(acquired, UIO.longBytes(UIO.bytesLong(keys.get(_i)) + 1, new byte[8], 0), keys.get(_i + 3),
-                    LABRawhide.SINGLETON);
+                Scanner rangeScan = new InterleaveStream(LABRawhide.SINGLETON,
+                    ActiveScan.indexToFeeds(acquired, UIO.longBytes(UIO.bytesLong(keys.get(_i)) + 1, new byte[8], 0), keys.get(_i + 3),
+                    LABRawhide.SINGLETON));
                 try {
                     while (rangeScan.next(stream,null) == Next.more) {
                     }
