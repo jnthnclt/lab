@@ -247,7 +247,7 @@ public class CompactableIndexsNGTest {
             LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
             ReadOnlyIndex readOnlyIndex = new ReadOnlyIndex(destroy, indexRangeId, readOnlyFile, NoOpFormatTransformerProvider.NO_OP, rawhide, leapsCache);
             ReadIndex readIndex = readOnlyIndex.acquireReader();
-            Scanner scanner = readIndex.rowScan(new ActiveScanRow(), new BolBuffer(), new BolBuffer());
+            Scanner scanner = readIndex.rowScan( new BolBuffer(), new BolBuffer());
             RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
                 //System.out.println(" Dump:" + TestUtils.toString(rawEntry));
                 return true;
@@ -261,7 +261,7 @@ public class CompactableIndexsNGTest {
         indexs.tx(-1, null, null, (index1, fromKey, toKey, readIndexs, hydrateValues) -> {
             for (ReadIndex readIndex : readIndexs) {
                 //System.out.println("---------------------");
-                Scanner rowScan = readIndex.rowScan(new ActiveScanRow(), new BolBuffer(), new BolBuffer());
+                Scanner rowScan = readIndex.rowScan( new BolBuffer(), new BolBuffer());
                 RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
                     //System.out.println(" Found:" + TestUtils.toString(rawEntry));
                     return true;
@@ -307,7 +307,7 @@ public class CompactableIndexsNGTest {
         indexs.tx(-1, null, null, (index1, fromKey, toKey, readIndexs, hydrateValues) -> {
             for (ReadIndex readIndex : readIndexs) {
                 //System.out.println("---------------------");
-                Scanner rowScan = readIndex.rowScan(new ActiveScanRow(), new BolBuffer(), new BolBuffer());
+                Scanner rowScan = readIndex.rowScan( new BolBuffer(), new BolBuffer());
                 RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
                     //System.out.println(" Found:" + TestUtils.toString(rawEntry));
                     return true;

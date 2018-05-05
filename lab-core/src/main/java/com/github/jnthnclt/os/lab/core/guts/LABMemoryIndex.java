@@ -92,7 +92,7 @@ public class LABMemoryIndex implements RawAppendableIndex {
         this.reader = new ReadIndex() {
 
             @Override
-            public Scanner pointScan(ActiveScanPoint activeScan, byte[] key, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+            public Scanner pointScan(boolean hashIndexEnabled, byte[] key, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
                 BolBuffer rawEntry = index.get(new BolBuffer(key), entryBuffer);
                 if (rawEntry == null) {
                     return null;
@@ -116,12 +116,12 @@ public class LABMemoryIndex implements RawAppendableIndex {
             }
 
             @Override
-            public Scanner rangeScan(ActiveScanRange activeScan, byte[] from, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+            public Scanner rangeScan(byte[] from, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
                 return index.scanner(from, to, entryBuffer, entryKeyBuffer);
             }
 
             @Override
-            public Scanner rowScan(ActiveScanRow activeScan, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+            public Scanner rowScan(BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
                 return index.scanner(null, null, entryBuffer, entryKeyBuffer);
             }
 

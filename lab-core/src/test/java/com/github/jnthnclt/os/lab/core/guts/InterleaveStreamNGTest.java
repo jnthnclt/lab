@@ -57,10 +57,10 @@ public class InterleaveStreamNGTest {
 
         InterleaveStream ips = new InterleaveStream(LABRawhide.SINGLETON,
             ActiveScan.indexToFeeds(new ReadIndex[] {
-            sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 3, 3, 3, 3, 3 }),
-            sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 2, 2, 2, 2, 2 }),
-            sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 1, 1, 1, 1, 1 })
-        }, null, null, LABRawhide.SINGLETON));
+                sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 3, 3, 3, 3, 3 }),
+                sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 2, 2, 2, 2, 2 }),
+                sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 1, 1, 1, 1, 1 })
+            }, null, null, LABRawhide.SINGLETON));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(1, 3));
@@ -78,10 +78,10 @@ public class InterleaveStreamNGTest {
 
         InterleaveStream ips = new InterleaveStream(LABRawhide.SINGLETON,
             ActiveScan.indexToFeeds(new ReadIndex[] {
-            sequenceIndex(new long[] { 10, 21, 29, 41, 50 }, new long[] { 1, 0, 0, 0, 1 }),
-            sequenceIndex(new long[] { 10, 21, 29, 40, 50 }, new long[] { 0, 0, 0, 1, 0 }),
-            sequenceIndex(new long[] { 10, 20, 30, 39, 50 }, new long[] { 0, 1, 1, 0, 0 })
-        }, null, null, LABRawhide.SINGLETON));
+                sequenceIndex(new long[] { 10, 21, 29, 41, 50 }, new long[] { 1, 0, 0, 0, 1 }),
+                sequenceIndex(new long[] { 10, 21, 29, 40, 50 }, new long[] { 0, 0, 0, 1, 0 }),
+                sequenceIndex(new long[] { 10, 20, 30, 39, 50 }, new long[] { 0, 1, 1, 0, 0 })
+            }, null, null, LABRawhide.SINGLETON));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(10, 1));
@@ -107,17 +107,17 @@ public class InterleaveStreamNGTest {
             }
 
             @Override
-            public Scanner rangeScan(ActiveScanRange activeScan, byte[] from, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+            public Scanner rangeScan(byte[] from, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
                 throw new UnsupportedOperationException("Not supported.");
             }
 
             @Override
-            public Scanner rowScan(ActiveScanRow activeScan, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+            public Scanner rowScan(BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
                 return nextEntrySequence(keys, values);
             }
 
             @Override
-            public Scanner pointScan(ActiveScanPoint activeScen, byte[] key, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+            public Scanner pointScan(boolean hashIndexEnabled, byte[] key, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
                 throw new UnsupportedOperationException("Not supported.");
             }
 
@@ -171,11 +171,11 @@ public class InterleaveStreamNGTest {
                 //System.out.println("Index " + i);
 
                 readerIndexs[wi] = memoryIndexes[i].acquireReader();
-                Scanner nextRawEntry = readerIndexs[wi].rowScan(new ActiveScanRow(), new BolBuffer(), new BolBuffer());
+                Scanner nextRawEntry = readerIndexs[wi].rowScan(new BolBuffer(), new BolBuffer());
                 while (nextRawEntry.next((readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
                     //System.out.println(TestUtils.toString(rawEntry));
                     return true;
-                },null) == Next.more) {
+                }, null) == Next.more) {
                 }
                 //System.out.println("\n");
 
@@ -220,7 +220,7 @@ public class InterleaveStreamNGTest {
                 passed[0] = false;
             }
             return true;
-        },null) == Next.more) {
+        }, null) == Next.more) {
         }
         Assert.assertTrue(passed[0], "key or value miss match");
         Assert.assertTrue(expected.isEmpty(), "failed to remove all");

@@ -9,5 +9,7 @@ import com.github.jnthnclt.os.lab.core.io.BolBuffer;
  */
 public interface RawEntryStream {
 
-    boolean stream(FormatTransformer readKeyFormatTransformer, FormatTransformer readValueFormatTransformer, BolBuffer rawEntry) throws Exception;
+    boolean stream(FormatTransformer readKeyFormatTransformer,
+        FormatTransformer readValueFormatTransformer,
+        BolBuffer rawEntry) throws Exception;
 }

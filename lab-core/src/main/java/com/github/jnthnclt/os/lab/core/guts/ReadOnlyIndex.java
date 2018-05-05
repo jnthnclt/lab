@@ -323,12 +323,12 @@ public class ReadOnlyIndex implements ReadIndex {
     }
 
     @Override
-    public Scanner rangeScan(ActiveScanRange activeScan, byte[] from, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+    public Scanner rangeScan(byte[] from, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
 
         BolBuffer bbFrom = from == null ? null : new BolBuffer(from);
         BolBuffer bbTo = to == null ? null : new BolBuffer(to);
 
-        ActiveScanRange scan = setup(activeScan);
+        ActiveScanRange scan = setup(new ActiveScanRange());
         long fp = scan.getInclusiveStartOfRow(new BolBuffer(from), entryBuffer, entryKeyBuffer, false);
         if (fp < 0) {
             return null;
@@ -338,15 +338,15 @@ public class ReadOnlyIndex implements ReadIndex {
     }
 
     @Override
-    public Scanner rowScan(ActiveScanRow activeScan, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
-        ActiveScanRow scan = setup(activeScan);
+    public Scanner rowScan(BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+        ActiveScanRow scan = setup(new ActiveScanRow());
         scan.setupRowScan(entryBuffer);
         return scan;
     }
 
     @Override
-    public Scanner pointScan(ActiveScanPoint activeScan, byte[] key, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
-        ActiveScanPoint pointScan = setup(activeScan);
+    public Scanner pointScan(boolean hashIndexEnabled, byte[] key, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+        ActiveScanPoint pointScan = setup(new ActiveScanPoint(hashIndexEnabled));
         long fp = pointScan.getInclusiveStartOfRow(new BolBuffer(key), entryBuffer, entryKeyBuffer, true);
         if (fp < 0) {
             return null;

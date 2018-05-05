@@ -35,7 +35,7 @@ public class LABStress {
 
     private static final LABLogger LOG = LABLoggerFactory.getLogger();;
 
-    @Test(enabled = false)
+    @Test(enabled = true)
     public void stressWritesTest() throws Exception {
 
         LABHashIndexType indexType = LABHashIndexType.cuckoo;
@@ -88,9 +88,9 @@ public class LABStress {
         // ---
         printLabels();
 
-        totalCardinality = 3_000_000_000L;
+        totalCardinality = 10_000_000L;
 
-        int threadCount = 2; //Runtime.getRuntime().availableProcessors();
+        int threadCount = 1; //Runtime.getRuntime().availableProcessors();
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
 
         futures = new ArrayList<>();
@@ -111,7 +111,7 @@ public class LABStress {
                         1_000_000, // writesPerSecond
                         (1_000_000_000 / threadCount), //writeCount
                         1, //readForNSeconds
-                        1, // readCount
+                    1, // readCount
                         false,
                         globalHeapCostInBytes1); // removes
                 return write1;
@@ -157,7 +157,7 @@ public class LABStress {
             0, // writesPerSecond
             0, //writeCount
             1, //readForNSeconds
-            1_000_000, // readCount
+            10_000_000, // readCount
             false,
             globalHeapCostInBytes); // removes
 

@@ -28,9 +28,9 @@ public class ActiveScan {
             Scanner scanner = null;
             try {
                 if (rowScan) {
-                    scanner = indexs[i].rowScan(new ActiveScanRow(), new BolBuffer(), new BolBuffer());
+                    scanner = indexs[i].rowScan(new BolBuffer(), new BolBuffer());
                 } else {
-                    scanner = indexs[i].rangeScan(new ActiveScanRange(), from, to, new BolBuffer(), new BolBuffer());
+                    scanner = indexs[i].rangeScan(from, to, new BolBuffer(), new BolBuffer());
                 }
                 if (scanner != null) {
                     InterleavingStreamFeed interleavingStreamFeed = new InterleavingStreamFeed(i, scanner, rawhide);

@@ -23,7 +23,7 @@ public class PointInterleave implements Scanner, RawEntryStream {
             Scanner scanner = null;
             try {
                 BolBuffer entryBuffer = new BolBuffer(); // must be new since we retain a reference
-                scanner = index.pointScan(new ActiveScanPoint(hashIndexEnabled), key, entryBuffer, entryKeyBuffer);
+                scanner = index.pointScan(hashIndexEnabled, key, entryBuffer, entryKeyBuffer);
                 if (scanner != null) {
                     scanner.next(this, null);
                     scanner.close();
