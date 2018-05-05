@@ -1,13 +1,21 @@
 package com.github.jnthnclt.os.lab.core;
 
-import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
-import com.github.jnthnclt.os.lab.core.guts.LABHashIndexType;
-import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
-import com.github.jnthnclt.os.lab.core.util.LABLogger;
-import com.google.common.io.Files;
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
+import com.github.jnthnclt.os.lab.core.api.Keys.KeyStream;
+import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
+import com.github.jnthnclt.os.lab.core.api.ValueIndex;
+import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
+import com.github.jnthnclt.os.lab.core.api.rawhide.LABFixedWidthKeyFixedWidthValueRawhide;
+import com.github.jnthnclt.os.lab.core.guts.LABHashIndexType;
+import com.github.jnthnclt.os.lab.core.guts.Leaps;
+import com.github.jnthnclt.os.lab.core.guts.RangeStripedCompactableIndexes;
+import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
+import com.github.jnthnclt.os.lab.core.io.BolBuffer;
+import com.github.jnthnclt.os.lab.core.io.api.UIO;
+import com.github.jnthnclt.os.lab.core.util.LABLogger;
+import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
+import com.google.common.io.Files;
 import java.io.File;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -16,15 +24,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
-import com.github.jnthnclt.os.lab.core.api.Keys.KeyStream;
-import com.github.jnthnclt.os.lab.core.api.ValueIndex;
-import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
-import com.github.jnthnclt.os.lab.core.api.rawhide.LABFixedWidthKeyFixedWidthValueRawhide;
-import com.github.jnthnclt.os.lab.core.guts.Leaps;
-import com.github.jnthnclt.os.lab.core.guts.RangeStripedCompactableIndexes;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
-import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
 import org.testng.annotations.Test;
 
 /**
@@ -108,7 +107,7 @@ public class LABStress {
                         (totalCardinality1 / threadCount) * efi,
                         totalCardinality1 / threadCount,
                         1_000_000, // writesPerSecond
-                        (1_000_000_000 / threadCount), //writeCount
+                        (10_000_000 / threadCount), //writeCount
                         1, //readForNSeconds
                     1, // readCount
                         false,
@@ -345,23 +344,21 @@ public class LABStress {
             LOG.set("pointTxIndexCount", LAB.pointTxIndexCount.get());
             LOG.set("pointTxCalled", LAB.pointTxCalled.get());
 
-            DecimalFormat formatter = new DecimalFormat("#,###.00");
-
             if (report) {
 
 
                 System.out.println(name + ":" + c
-                        + " " + formatter.format(writesPerSecond)
-                        + " " + formatter.format(writeRate)
-                        + " " + formatter.format(writeElapse)
-                        + " " + formatter.format(reads)
-                        + " " + formatter.format(readRate)
-                        + " " + formatter.format(readElapse)
-                        + " " + formatter.format(hits.getAndSet(0))
-                        + " " + formatter.format(misses.getAndSet(0))
+                        + " " + writesPerSecond
+                        + " " + writeRate
+                        + " " + writeElapse
+                        + " " + reads
+                        + " " + readRate
+                        + " " + readElapse
+                        + " " + hits.getAndSet(0)
+                        + " " + misses.getAndSet(0)
                         + " " + RangeStripedCompactableIndexes.mergeCount.getAndSet(0)
                         + " " + RangeStripedCompactableIndexes.splitCount.getAndSet(0)
-                        + " " + formatter.format((LAB.pointTxIndexCount.get() / (double) LAB.pointTxCalled.get()))
+                        + " " + (LAB.pointTxIndexCount.get() / (double) LAB.pointTxCalled.get())
                         + " " + index.count()
                         + " " + stats.debt.sumThenReset()
                         + " " + stats.open.sumThenReset()
