@@ -1,7 +1,5 @@
 package com.github.jnthnclt.os.lab.core;
 
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
-import com.github.jnthnclt.os.lab.core.api.FormatTransformerProvider;
 import com.github.jnthnclt.os.lab.core.api.JournalStream;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueStream;
@@ -180,14 +178,11 @@ public class LABWAL {
                             ListMultimap<Long, byte[]> valueIndexVersionedEntries = allEntries.get(valueIndexKey);
                             if (valueIndexVersionedEntries != null) {
                                 ValueIndexConfig valueIndexConfig = environment.valueIndexConfig(valueIndexKey.getBytes(StandardCharsets.UTF_8));
-                                FormatTransformerProvider formatTransformerProvider = environment.formatTransformerProvider(
-                                    valueIndexConfig.formatTransformerProviderName);
+
                                 Rawhide rawhide = environment.rawhide(valueIndexConfig.rawhideName);
                                 RawEntryFormat rawEntryFormat = environment.rawEntryFormat(valueIndexConfig.rawEntryFormatName);
                                 LAB appendToValueIndex = (LAB) openValueIndex(environment, valueIndexId, valueIndexes);
 
-                                FormatTransformer readKey = formatTransformerProvider.read(rawEntryFormat.getKeyFormat());
-                                FormatTransformer readValue = formatTransformerProvider.read(rawEntryFormat.getValueFormat());
 
                                 BolBuffer kb = new BolBuffer();
                                 BolBuffer vb = new BolBuffer();
@@ -207,7 +202,7 @@ public class LABWAL {
 
                                     for (byte[] entry : valueIndexVersionedEntries.get(appendVersion)) {
 
-                                        if (!rawhide.streamRawEntry(-1, readKey, readValue, new BolBuffer(entry), kb, vb, valueStream)) {
+                                        if (!rawhide.streamRawEntry(-1, new BolBuffer(entry), kb, vb, valueStream)) {
                                             return false;
                                         }
                                     }

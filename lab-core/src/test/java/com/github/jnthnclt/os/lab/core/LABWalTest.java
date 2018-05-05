@@ -15,7 +15,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import com.github.jnthnclt.os.lab.core.LABEnvironmentNGTest.IdProvider;
 import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
-import com.github.jnthnclt.os.lab.core.api.NoOpFormatTransformerProvider;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
@@ -83,7 +82,7 @@ public class LABWalTest {
                 -1,
                 -1,
                 -1,
-                NoOpFormatTransformerProvider.NAME,
+                "deprecated",
                 LABRawhide.NAME,
                 MemoryRawEntryFormat.NAME,
                 2,
@@ -188,7 +187,7 @@ public class LABWalTest {
                 -1,
                 -1,
                 -1,
-                NoOpFormatTransformerProvider.NAME,
+                "deprecated",
                 LABRawhide.NAME,
                 MemoryRawEntryFormat.NAME,
                 2,
@@ -278,7 +277,7 @@ public class LABWalTest {
             -1,
             -1,
             -1,
-            NoOpFormatTransformerProvider.NAME,
+            "deprecated",
             LABRawhide.NAME,
             MemoryRawEntryFormat.NAME,
             19,

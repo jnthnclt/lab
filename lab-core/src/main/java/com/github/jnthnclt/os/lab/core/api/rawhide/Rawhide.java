@@ -1,6 +1,5 @@
 package com.github.jnthnclt.os.lab.core.api.rawhide;
 
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.guts.IndexUtil;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
 import java.util.Comparator;
@@ -13,28 +12,22 @@ import com.github.jnthnclt.os.lab.core.io.api.IAppendOnly;
  */
 public interface Rawhide {
 
-    BolBuffer key(FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
+    BolBuffer key(
         BolBuffer rawEntry,
         BolBuffer keyBuffer) throws Exception;
 
     boolean hasTimestampVersion();
 
-    long timestamp(FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
+    long timestamp(
         BolBuffer rawEntry);
 
-    long version(FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
+    long version(
         BolBuffer rawEntry);
 
-    boolean tombstone(FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
+    boolean tombstone(
         BolBuffer rawEntry);
 
     boolean streamRawEntry(int index,
-        FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
         BolBuffer rawEntry,
         BolBuffer keyBuffer,
         BolBuffer valueBuffer,
@@ -49,53 +42,38 @@ public interface Rawhide {
 
     int rawEntryToBuffer(PointerReadableByteBufferFile readable, long offset, BolBuffer entryBuffer) throws Exception;
 
-    void writeRawEntry(FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
+    void writeRawEntry(
         BolBuffer rawEntryBuffer,
-        FormatTransformer writeKeyFormatTransformer,
-        FormatTransformer writeValueFormatTransformer,
         IAppendOnly appendOnly) throws Exception;
 
     // Default impls from here on out
-    default BolBuffer merge(FormatTransformer currentReadKeyFormatTransformer,
-        FormatTransformer currentReadValueFormatTransformer,
+    default BolBuffer merge(
         BolBuffer currentRawEntry,
-        FormatTransformer addingReadKeyFormatTransformer,
-        FormatTransformer addingReadValueFormatTransformer,
-        BolBuffer addingRawEntry,
-        FormatTransformer mergedReadKeyFormatTransformer,
-        FormatTransformer mergedReadValueFormatTransformer) {
+        BolBuffer addingRawEntry) {
         return addingRawEntry;
     }
 
-    default int mergeCompare(FormatTransformer aReadKeyFormatTransformer,
-        FormatTransformer aReadValueFormatTransformer,
+    default int mergeCompare(
         BolBuffer aRawEntry,
         BolBuffer aKeyBuffer,
-        FormatTransformer bReadKeyFormatTransformer,
-        FormatTransformer bReadValueFormatTransformer,
         BolBuffer bRawEntry,
         BolBuffer bKeyBuffer) throws Exception {
 
-        return compareKey(aReadKeyFormatTransformer, aReadValueFormatTransformer, aRawEntry, aKeyBuffer,
-            bReadKeyFormatTransformer, bReadValueFormatTransformer, bRawEntry, bKeyBuffer);
+        return compareKey( aRawEntry, aKeyBuffer,
+             bRawEntry, bKeyBuffer);
     }
 
-    default int compareKey(FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
+    default int compareKey(
         BolBuffer rawEntry,
         BolBuffer keyBuffer,
         BolBuffer compareKey
     ) throws Exception {
-        return IndexUtil.compare(key(readKeyFormatTransformer, readValueFormatTransformer, rawEntry, keyBuffer), compareKey);
+        return IndexUtil.compare(key(rawEntry, keyBuffer), compareKey);
     }
 
-    default int compareKey(FormatTransformer aReadKeyFormatTransformer,
-        FormatTransformer aReadValueFormatTransformer,
+    default int compareKey(
         BolBuffer aRawEntry,
         BolBuffer aKeyBuffer,
-        FormatTransformer bReadKeyFormatTransformer,
-        FormatTransformer bReadValueFormatTransformer,
         BolBuffer bRawEntry,
         BolBuffer bKeyBuffer) throws Exception {
 
@@ -107,8 +85,8 @@ public interface Rawhide {
             return aRawEntry.length;
         } else {
             return IndexUtil.compare(
-                key(aReadKeyFormatTransformer, aReadValueFormatTransformer, aRawEntry, aKeyBuffer),
-                key(bReadKeyFormatTransformer, bReadValueFormatTransformer, bRawEntry, bKeyBuffer)
+                key( aRawEntry, aKeyBuffer),
+                key( bRawEntry, bKeyBuffer)
             );
         }
     }

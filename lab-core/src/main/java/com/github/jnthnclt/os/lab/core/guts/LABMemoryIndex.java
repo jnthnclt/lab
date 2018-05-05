@@ -2,7 +2,6 @@ package com.github.jnthnclt.os.lab.core.guts;
 
 import com.github.jnthnclt.os.lab.core.LABHeapPressure;
 import com.github.jnthnclt.os.lab.core.LABStats;
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.LABIndex.Compute;
 import com.github.jnthnclt.os.lab.core.guts.api.AppendEntries;
@@ -60,20 +59,19 @@ public class LABMemoryIndex implements RawAppendableIndex {
             stats.released.add(-resued);
         };
 
-        this.compute = (readKeyFormatTransformer, readValueFormatTransformer, rawEntryBuffer, value) -> {
+        this.compute = (rawEntryBuffer, value) -> {
 
             BolBuffer merged;
             if (value == null) {
                 approximateCount.incrementAndGet();
                 merged = rawEntryBuffer;
             } else {
-                merged = rawhide.merge(FormatTransformer.NO_OP, FormatTransformer.NO_OP, value,
-                    readKeyFormatTransformer, readValueFormatTransformer,
-                    rawEntryBuffer, FormatTransformer.NO_OP, FormatTransformer.NO_OP);
+                merged = rawhide.merge(value,
+                    rawEntryBuffer);
 
             }
-            long timestamp = rawhide.timestamp(FormatTransformer.NO_OP, FormatTransformer.NO_OP, merged);
-            long version = rawhide.version(FormatTransformer.NO_OP, FormatTransformer.NO_OP, merged);
+            long timestamp = rawhide.timestamp(merged);
+            long version = rawhide.version( merged);
 
             synchronized (timestampLock) {
                 if (rawhide.isNewerThan(timestamp, version, maxTimestamp, maxVersion)) {
@@ -104,7 +102,7 @@ public class LABMemoryIndex implements RawAppendableIndex {
                         if (once) {
                             return Next.stopped;
                         }
-                        stream.stream(FormatTransformer.NO_OP, FormatTransformer.NO_OP, rawEntry);
+                        stream.stream(rawEntry);
                         once = true;
                         return Next.more;
                     }
@@ -150,9 +148,9 @@ public class LABMemoryIndex implements RawAppendableIndex {
     public boolean append(AppendEntries entries, BolBuffer keyBuffer) throws Exception {
         BolBuffer valueBuffer = new BolBuffer(); // Grrrr
 
-        AppendEntryStream appendEntryStream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntryBuffer) -> {
-            BolBuffer key = rawhide.key(readKeyFormatTransformer, readValueFormatTransformer, rawEntryBuffer, keyBuffer);
-            index.compute(readKeyFormatTransformer, readValueFormatTransformer, rawEntryBuffer, key, valueBuffer, compute, costChangeInBytes);
+        AppendEntryStream appendEntryStream = (rawEntryBuffer) -> {
+            BolBuffer key = rawhide.key(rawEntryBuffer, keyBuffer);
+            index.compute(rawEntryBuffer, key, valueBuffer, compute, costChangeInBytes);
             return true;
         };
         return entries.consume(appendEntryStream);

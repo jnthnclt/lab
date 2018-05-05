@@ -5,8 +5,6 @@ import com.github.jnthnclt.os.lab.core.LABEnvironment;
 import com.github.jnthnclt.os.lab.core.LABHeapPressure;
 import com.github.jnthnclt.os.lab.core.LABStats;
 import com.github.jnthnclt.os.lab.core.TestUtils;
-import com.github.jnthnclt.os.lab.core.api.NoOpFormatTransformerProvider;
-import com.github.jnthnclt.os.lab.core.api.RawEntryFormat;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABAppendOnlyAllocator;
@@ -56,8 +54,6 @@ public class IndexNGTest {
             64,
             10,
             rawhide,
-            new RawEntryFormat(0, 0),
-            NoOpFormatTransformerProvider.NO_OP,
             TestUtils.indexType,
             0.75d,
             Long.MAX_VALUE
@@ -71,7 +67,6 @@ public class IndexNGTest {
         ReadOnlyIndex leapsAndBoundsIndex = new ReadOnlyIndex(destroy,
             indexRangeId,
             new ReadOnlyFile(indexFiler),
-            NoOpFormatTransformerProvider.NO_OP,
             rawhide,
             leapsCache);
 
@@ -148,8 +143,6 @@ public class IndexNGTest {
             64,
             10,
             rawhide,
-            new RawEntryFormat(0, 0),
-            NoOpFormatTransformerProvider.NO_OP,
             TestUtils.indexType,
             0.75d,
             Long.MAX_VALUE);
@@ -157,9 +150,9 @@ public class IndexNGTest {
             ReadIndex reader = memoryIndex.acquireReader();
             try {
                 Scanner rowScan = reader.rowScan(new BolBuffer(), new BolBuffer());
-                RawEntryStream rawStream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
+                RawEntryStream rawStream = ( rawEntry) -> {
                     byte[] bytes = rawEntry.copy();
-                    return stream.stream(readKeyFormatTransformer, readValueFormatTransformer, new BolBuffer(bytes));
+                    return stream.stream(new BolBuffer(bytes));
                 };
                 while (rowScan.next(rawStream, null) == Next.more) {
                 }
@@ -172,7 +165,7 @@ public class IndexNGTest {
         disIndex.closeAppendable(false);
 
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-        assertions(new ReadOnlyIndex(destroy, indexRangeId, new ReadOnlyFile(indexFiler), NoOpFormatTransformerProvider.NO_OP, rawhide,
+        assertions(new ReadOnlyIndex(destroy, indexRangeId, new ReadOnlyFile(indexFiler),rawhide,
             leapsCache), count, step, desired);
 
     }
@@ -185,7 +178,7 @@ public class IndexNGTest {
         ReadIndex reader = memoryIndex.acquireReader();
         try {
             Scanner rowScan = reader.rowScan(new BolBuffer(), new BolBuffer());
-            RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
+            RawEntryStream stream = ( rawEntry) -> {
                 //System.out.println("rowScan:" + TestUtils.key(rawEntry));
                 Assert.assertEquals(UIO.bytesLong(keys.get(index[0])), TestUtils.key(rawEntry));
                 index[0]++;
@@ -203,7 +196,7 @@ public class IndexNGTest {
             reader = memoryIndex.acquireReader();
             try {
                 byte[] key = UIO.longBytes(k, new byte[8], 0);
-                RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
+                RawEntryStream stream = (rawEntry) -> {
 
                     //System.out.println("Got: " + TestUtils.toString(rawEntry));
                     if (rawEntry != null) {
@@ -236,7 +229,7 @@ public class IndexNGTest {
             int _i = i;
 
             int[] streamed = new int[1];
-            RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, entry) -> {
+            RawEntryStream stream = (entry) -> {
                 if (entry != null) {
                     //System.out.println("Streamed:" + TestUtils.toString(entry));
                     streamed[0]++;
@@ -260,7 +253,7 @@ public class IndexNGTest {
         for (int i = 0; i < keys.size() - 3; i++) {
             int _i = i;
             int[] streamed = new int[1];
-            RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, entry) -> {
+            RawEntryStream stream = (entry) -> {
                 if (entry != null) {
                     streamed[0]++;
                 }
@@ -289,7 +282,7 @@ public class IndexNGTest {
         ReadIndex reader = walIndex.acquireReader();
         try {
             Scanner rowScan = reader.rowScan(new BolBuffer(), new BolBuffer());
-            RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
+            RawEntryStream stream = (rawEntry) -> {
                 //System.out.println("rowScan: found:" + TestUtils.key(rawEntry) + " expected:" + UIO.bytesLong(keys.get(index[0])));
                 Assert.assertEquals(TestUtils.key(rawEntry), UIO.bytesLong(keys.get(index[0])));
                 index[0]++;
@@ -307,7 +300,7 @@ public class IndexNGTest {
             reader = walIndex.acquireReader();
             try {
                 byte[] key = UIO.longBytes(k, new byte[8], 0);
-                RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
+                RawEntryStream stream = (rawEntry) -> {
 
                     //System.out.println("Got: " + TestUtils.toString(rawEntry));
                     if (rawEntry != null) {
@@ -340,7 +333,7 @@ public class IndexNGTest {
             int _i = i;
 
             int[] streamed = new int[1];
-            RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, entry) -> {
+            RawEntryStream stream = (entry) -> {
                 if (entry != null) {
                     //System.out.println("Streamed:" + TestUtils.toString(entry));
                     streamed[0]++;
@@ -364,7 +357,7 @@ public class IndexNGTest {
         for (int i = 0; i < keys.size() - 3; i++) {
             int _i = i;
             int[] streamed = new int[1];
-            RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, entry) -> {
+            RawEntryStream stream = (entry) -> {
                 if (entry != null) {
                     streamed[0]++;
                 }

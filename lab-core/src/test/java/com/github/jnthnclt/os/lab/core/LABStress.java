@@ -17,7 +17,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import com.github.jnthnclt.os.lab.core.api.Keys.KeyStream;
-import com.github.jnthnclt.os.lab.core.api.NoOpFormatTransformerProvider;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABFixedWidthKeyFixedWidthValueRawhide;
@@ -35,7 +34,7 @@ public class LABStress {
 
     private static final LABLogger LOG = LABLoggerFactory.getLogger();;
 
-    @Test(enabled = true)
+    @Test(enabled = false)
     public void stressWritesTest() throws Exception {
 
         LABHashIndexType indexType = LABHashIndexType.cuckoo;
@@ -218,7 +217,7 @@ public class LABStress {
             -1, // splitWhenKeysTotalExceedsNBytes
             -1, // splitWhenValuesTotalExceedsNBytes
             1024 * 1024 * 64, // splitWhenValuesAndKeysTotalExceedsNBytes
-            NoOpFormatTransformerProvider.NAME,
+            "deprecated",
             "8x8fixedWidthRawhide", //new LABRawhide(),
             MemoryRawEntryFormat.NAME,
             24,

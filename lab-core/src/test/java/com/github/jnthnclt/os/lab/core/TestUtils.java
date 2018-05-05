@@ -1,6 +1,5 @@
 package com.github.jnthnclt.os.lab.core;
 
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
 import com.github.jnthnclt.os.lab.core.guts.ActiveScan;
 import com.github.jnthnclt.os.lab.core.guts.CompactableIndexes;
@@ -57,7 +56,7 @@ public class TestUtils {
                     });
                 }
                 byte[] rawEntry = rawEntry(k, time);
-                if (!stream.stream(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(rawEntry))) {
+                if (!stream.stream(new BolBuffer(rawEntry))) {
                     break;
                 }
             }
@@ -100,12 +99,12 @@ public class TestUtils {
     }
 
     public static String toString(byte[] entry) {
-        return "key:" + key(entry) + " value:" + value(entry) + " timestamp:" + LABRawhide.SINGLETON.timestamp(FormatTransformer.NO_OP, FormatTransformer.NO_OP,
+        return "key:" + key(entry) + " value:" + value(entry) + " timestamp:" + LABRawhide.SINGLETON.timestamp(
             new BolBuffer(entry));
     }
 
     public static String toString(BolBuffer entry) {
-        return "key:" + key(entry) + " value:" + value(entry) + " timestamp:" + LABRawhide.SINGLETON.timestamp(FormatTransformer.NO_OP, FormatTransformer.NO_OP,
+        return "key:" + key(entry) + " value:" + value(entry) + " timestamp:" + LABRawhide.SINGLETON.timestamp(
             entry);
     }
 
@@ -122,7 +121,7 @@ public class TestUtils {
             Scanner rowScan = new InterleaveStream(LABRawhide.SINGLETON,
                 ActiveScan.indexToFeeds(acquired, null, null, LABRawhide.SINGLETON));
             try {
-                RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
+                RawEntryStream stream = ( rawEntry) -> {
                     //System.out.println("scanned:" + UIO.bytesLong(keys.get(index[0])) + " " + key(rawEntry));
                     Assert.assertEquals(UIO.bytesLong(keys.get(index[0])), key(rawEntry));
                     index[0]++;
@@ -141,7 +140,7 @@ public class TestUtils {
             for (int i = 0; i < count * step; i++) {
                 long k = i;
                 PointInterleave pointInterleave = new PointInterleave(acquired, UIO.longBytes(k, new byte[8], 0), LABRawhide.SINGLETON, true);
-                RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
+                RawEntryStream stream = (rawEntry) -> {
                     byte[] expectedFP = desired.get(UIO.longBytes(key(rawEntry), new byte[8], 0));
                     if (expectedFP == null) {
                         Assert.assertTrue(expectedFP == null && value(rawEntry) == -1);
@@ -163,7 +162,7 @@ public class TestUtils {
                 int _i = i;
 
                 int[] streamed = new int[1];
-                RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
+                RawEntryStream stream = (rawEntry) -> {
                     if (value(rawEntry) > -1) {
                         //System.out.println("Streamed:" + key(rawEntry));
                         streamed[0]++;
@@ -191,7 +190,7 @@ public class TestUtils {
             for (int i = 0; i < keys.size() - 3; i++) {
                 int _i = i;
                 int[] streamed = new int[1];
-                RawEntryStream stream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
+                RawEntryStream stream = (rawEntry) -> {
                     if (value(rawEntry) > -1) {
                         streamed[0]++;
                     }

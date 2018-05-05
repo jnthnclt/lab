@@ -1,8 +1,6 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
-import com.github.jnthnclt.os.lab.core.api.FormatTransformerProvider;
 import com.github.jnthnclt.os.lab.core.api.Snapshot;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABCorruptedException;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
@@ -31,8 +29,6 @@ public class ReadOnlyIndex implements ReadIndex {
 
     private final Semaphore hideABone;
 
-    private final FormatTransformer readKeyFormatTransformer;
-    private final FormatTransformer readValueFormatTransformer;
     private final Rawhide rawhide;
     private LABHashIndexType hashIndexType;
     private byte hashIndexHashFunctionCount = 1;
@@ -46,7 +42,6 @@ public class ReadOnlyIndex implements ReadIndex {
     public ReadOnlyIndex(ExecutorService destroy,
         IndexRangeId id,
         ReadOnlyFile readOnlyFile,
-        FormatTransformerProvider formatTransformerProvider,
         Rawhide rawhide,
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache) throws Exception {
         this.destroy = destroy;
@@ -59,8 +54,6 @@ public class ReadOnlyIndex implements ReadIndex {
         }
         this.footer = readFooter(readOnlyFile.pointerReadable(-1));
         this.rawhide = rawhide;
-        this.readKeyFormatTransformer = formatTransformerProvider.read(footer.keyFormat);
-        this.readValueFormatTransformer = formatTransformerProvider.read(footer.valueFormat);
         this.leapsCache = leapsCache;
     }
 
@@ -183,7 +176,7 @@ public class ReadOnlyIndex implements ReadIndex {
                             readOnlyFile.length()
                     );
                 }
-                leaps = Leaps.read(readKeyFormatTransformer, readableIndex, seekTo);
+                leaps = Leaps.read(readableIndex, seekTo);
             }
 
 
@@ -252,8 +245,6 @@ public class ReadOnlyIndex implements ReadIndex {
 
     private ActiveScanRow setup(ActiveScanRow activeScan) throws IOException {
         activeScan.rawhide = rawhide;
-        activeScan.readKeyFormatTransformer = readKeyFormatTransformer;
-        activeScan.readValueFormatTransformer = readValueFormatTransformer;
         activeScan.leaps = leaps;
         activeScan.cacheKey = cacheKey;
         activeScan.leapsCache = leapsCache;
@@ -274,8 +265,6 @@ public class ReadOnlyIndex implements ReadIndex {
 
     private ActiveScanRange setup(ActiveScanRange activeScan) throws IOException {
         activeScan.rawhide = rawhide;
-        activeScan.readKeyFormatTransformer = readKeyFormatTransformer;
-        activeScan.readValueFormatTransformer = readValueFormatTransformer;
         activeScan.leaps = leaps;
         activeScan.cacheKey = cacheKey;
         activeScan.leapsCache = leapsCache;
@@ -296,8 +285,6 @@ public class ReadOnlyIndex implements ReadIndex {
 
     private ActiveScanPoint setup(ActiveScanPoint activeScan) throws IOException {
         activeScan.rawhide = rawhide;
-        activeScan.readKeyFormatTransformer = readKeyFormatTransformer;
-        activeScan.readValueFormatTransformer = readValueFormatTransformer;
         activeScan.leaps = leaps;
         activeScan.cacheKey = cacheKey;
         activeScan.leapsCache = leapsCache;

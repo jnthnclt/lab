@@ -1,6 +1,5 @@
 package com.github.jnthnclt.os.lab.core.api.rawhide;
 
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import java.io.IOException;
@@ -19,8 +18,8 @@ public class LABFixedWidthKeyRawhideNGTest {
         LABFixedWidthKeyRawhide rawhide = new LABFixedWidthKeyRawhide(8);
         BolBuffer rawEntry = rawhide.toRawEntry(UIO.longBytes(17), 1234, false, 687, UIO.longBytes(45), new BolBuffer());
 
-        Assert.assertEquals(1234, rawhide.timestamp(FormatTransformer.NO_OP, FormatTransformer.NO_OP, rawEntry));
-        Assert.assertEquals(687, rawhide.version(FormatTransformer.NO_OP, FormatTransformer.NO_OP, rawEntry));
+        Assert.assertEquals(1234, rawhide.timestamp( rawEntry));
+        Assert.assertEquals(687, rawhide.version( rawEntry));
 
     }
 
@@ -59,8 +58,8 @@ public class LABFixedWidthKeyRawhideNGTest {
     private void assertMergeCompare(Rawhide rawhide, BolBuffer a, BolBuffer b, int expected) throws Exception {
         Assert.assertEquals(
             rawhide.mergeCompare(
-                FormatTransformer.NO_OP, FormatTransformer.NO_OP, a, new BolBuffer(),
-                FormatTransformer.NO_OP, FormatTransformer.NO_OP, b, new BolBuffer()
+                 a, new BolBuffer(),
+                 b, new BolBuffer()
             ), expected
         );
     }
@@ -85,21 +84,20 @@ public class LABFixedWidthKeyRawhideNGTest {
     public void compareKeyTest() throws IOException {
 
         LABFixedWidthKeyRawhide rawhide = new LABFixedWidthKeyRawhide(8);
-        Assert.assertEquals(rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP,
+        Assert.assertEquals(rawhide.compareKey(
             new BolBuffer(toRawEntry(1).copy()), new BolBuffer(),
             new BolBuffer(UIO.longBytes(1))), 0);
-        Assert.assertEquals(rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP,
+        Assert.assertEquals(rawhide.compareKey(
             new BolBuffer(toRawEntry(0).copy()), new BolBuffer(),
             new BolBuffer(UIO.longBytes(1))), -1);
-        Assert.assertEquals(rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP,
+        Assert.assertEquals(rawhide.compareKey(
             new BolBuffer(toRawEntry(1).copy()), new BolBuffer(),
             new BolBuffer(UIO.longBytes(0))), 1);
 
         Long[] sort = new Long[]{new Long(9), new Long(5), new Long(6), new Long(3), new Long(4), new Long(5), new Long(1), new Long(2), new Long(9)};
         Arrays.sort(sort, (o1, o2) -> {
             try {
-                return rawhide.compareKey(FormatTransformer.NO_OP,
-                    FormatTransformer.NO_OP,
+                return rawhide.compareKey(
                     new BolBuffer(toRawEntry(o1).copy()), new BolBuffer(),
                     new BolBuffer(UIO.longBytes(o2)));
             } catch (IOException ex) {
@@ -122,26 +120,26 @@ public class LABFixedWidthKeyRawhideNGTest {
     @Test
     public void compareKey2Test() throws IOException, Exception {
         LABFixedWidthKeyRawhide rawhide = new LABFixedWidthKeyRawhide(8);
-        Assert.assertEquals(rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP,
+        Assert.assertEquals(rawhide.compareKey(
             new BolBuffer(toRawEntry(1).copy()), new BolBuffer(),
-            FormatTransformer.NO_OP, FormatTransformer.NO_OP,
+            
             new BolBuffer(toRawEntry(1).copy()), new BolBuffer()), 0);
 
-        Assert.assertEquals(rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP,
+        Assert.assertEquals(rawhide.compareKey(
             new BolBuffer(toRawEntry(0).copy()), new BolBuffer(),
-            FormatTransformer.NO_OP, FormatTransformer.NO_OP,
+            
             new BolBuffer(toRawEntry(1).copy()), new BolBuffer()), -1);
 
-        Assert.assertEquals(rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP,
+        Assert.assertEquals(rawhide.compareKey(
             new BolBuffer(toRawEntry(1).copy()), new BolBuffer(),
-            FormatTransformer.NO_OP, FormatTransformer.NO_OP,
+            
             new BolBuffer(toRawEntry(0).copy()), new BolBuffer()), 1);
 
         Long[] sort = new Long[]{new Long(9), new Long(5), new Long(6), new Long(3), new Long(4), new Long(5), new Long(1), new Long(2), new Long(9)};
         Arrays.sort(sort, (o1, o2) -> {
             try {
-                return rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(toRawEntry(o1).copy()), new BolBuffer(),
-                    FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(toRawEntry(o2).copy()), new BolBuffer());
+                return rawhide.compareKey( new BolBuffer(toRawEntry(o1).copy()), new BolBuffer(),
+                     new BolBuffer(toRawEntry(o2).copy()), new BolBuffer());
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
             }

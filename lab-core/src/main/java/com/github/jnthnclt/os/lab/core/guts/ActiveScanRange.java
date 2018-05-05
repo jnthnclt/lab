@@ -1,7 +1,6 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.api.Next;
 import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
@@ -15,8 +14,6 @@ import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
 public class ActiveScanRange implements Scanner {
 
     Rawhide rawhide;
-    FormatTransformer readKeyFormatTransformer;
-    FormatTransformer readValueFormatTransformer;
     Leaps leaps;
     long cacheKey;
     LRUConcurrentBAHLinkedHash<Leaps> leapsCache;
@@ -57,8 +54,6 @@ public class ActiveScanRange implements Scanner {
             hashIndexHeadOffset,
             hashIndexMaxCapacity,
             hashIndexLongPrecision,
-            readKeyFormatTransformer,
-            readValueFormatTransformer,
             bbKey,
             entryBuffer,
             entryKeyBuffer,
@@ -94,14 +89,14 @@ public class ActiveScanRange implements Scanner {
         while (!once[0] && more) {
             more = this.next(fp,
                 entryBuffer,
-                (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
-                    int c = rawhide.compareKey(readKeyFormatTransformer, readValueFormatTransformer, rawEntry, entryKeyBuffer, bbFrom);
+                (rawEntry) -> {
+                    int c = rawhide.compareKey( rawEntry, entryKeyBuffer, bbFrom);
                     if (c >= 0) {
-                        c = to == null ? -1 : rawhide.compareKey(readKeyFormatTransformer, readValueFormatTransformer, rawEntry, entryKeyBuffer, bbTo);
+                        c = to == null ? -1 : rawhide.compareKey( rawEntry, entryKeyBuffer, bbTo);
                         if (c < 0) {
                             once[0] = true;
                         }
-                        return c < 0 && stream.stream(readKeyFormatTransformer, readValueFormatTransformer, rawEntry);
+                        return c < 0 && stream.stream(rawEntry);
                     } else {
                         return true;
                     }
@@ -128,7 +123,7 @@ public class ActiveScanRange implements Scanner {
             activeOffset++;
             if (type == LABAppendableIndex.ENTRY) {
                 activeOffset += rawhide.rawEntryToBuffer(readable, activeOffset, entryBuffer);
-                activeResult = stream.stream(readKeyFormatTransformer, readValueFormatTransformer, entryBuffer);
+                activeResult = stream.stream( entryBuffer);
                 return false;
             } else if (type == LABAppendableIndex.LEAP) {
                 int length = readable.readInt(activeOffset); // entryLength

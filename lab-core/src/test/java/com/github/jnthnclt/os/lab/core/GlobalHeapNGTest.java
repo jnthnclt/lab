@@ -3,7 +3,6 @@ package com.github.jnthnclt.os.lab.core;
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.api.Keys.KeyStream;
 import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
-import com.github.jnthnclt.os.lab.core.api.NoOpFormatTransformerProvider;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
@@ -241,7 +240,7 @@ public class GlobalHeapNGTest {
             -1, // splitWhenKeysTotalExceedsNBytes
             -1, // splitWhenValuesTotalExceedsNBytes
             1024 * 1024 * 64, // splitWhenValuesAndKeysTotalExceedsNBytes
-            NoOpFormatTransformerProvider.NAME,
+            "deprecated",
             LABRawhide.NAME,
             MemoryRawEntryFormat.NAME,
             24,

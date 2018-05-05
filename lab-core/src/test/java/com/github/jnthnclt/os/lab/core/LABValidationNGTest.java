@@ -1,12 +1,19 @@
 package com.github.jnthnclt.os.lab.core;
 
+import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABClosedException;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
+import com.github.jnthnclt.os.lab.core.guts.LABCSLMIndex;
 import com.github.jnthnclt.os.lab.core.guts.LABIndexProvider;
+import com.github.jnthnclt.os.lab.core.guts.Leaps;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
+import com.github.jnthnclt.os.lab.core.guts.allocators.LABAppendOnlyAllocator;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABConcurrentSkipListMap;
+import com.github.jnthnclt.os.lab.core.guts.allocators.LABConcurrentSkipListMemory;
+import com.github.jnthnclt.os.lab.core.guts.allocators.LABIndexableMemory;
+import com.github.jnthnclt.os.lab.core.io.BolBuffer;
+import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
@@ -21,15 +28,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.io.FileUtils;
-import com.github.jnthnclt.os.lab.core.api.NoOpFormatTransformerProvider;
-import com.github.jnthnclt.os.lab.core.api.RawEntryFormat;
-import com.github.jnthnclt.os.lab.core.guts.LABCSLMIndex;
-import com.github.jnthnclt.os.lab.core.guts.Leaps;
-import com.github.jnthnclt.os.lab.core.guts.allocators.LABAppendOnlyAllocator;
-import com.github.jnthnclt.os.lab.core.guts.allocators.LABConcurrentSkipListMemory;
-import com.github.jnthnclt.os.lab.core.guts.allocators.LABIndexableMemory;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -79,10 +77,8 @@ public class LABValidationNGTest {
         };
 
         LAB lab = new LAB(labStats,
-            NoOpFormatTransformerProvider.NO_OP,
             LABRawhide.NAME,
             LABRawhide.SINGLETON,
-            new RawEntryFormat(0, 0),
             scheduler,
             compact,
             destroy,
@@ -227,9 +223,7 @@ public class LABValidationNGTest {
 
         LAB lab = new LAB(
             labStats,
-            NoOpFormatTransformerProvider.NO_OP,
             LABRawhide.NAME, rawhide,
-            new RawEntryFormat(0, 0),
             scheduler,
             compact,
             destroy,

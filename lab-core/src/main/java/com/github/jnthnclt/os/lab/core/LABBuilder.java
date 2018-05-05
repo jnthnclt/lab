@@ -3,7 +3,6 @@ package com.github.jnthnclt.os.lab.core;
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.LABHeapPressure.FreeHeapStrategy;
 import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
-import com.github.jnthnclt.os.lab.core.api.NoOpFormatTransformerProvider;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
@@ -63,7 +62,7 @@ public class LABBuilder<T> {
             -1,
             -1,
             64 * 1024 * 1024,
-            NoOpFormatTransformerProvider.NAME,
+            "deprecated",
             LABRawhide.NAME,
             MemoryRawEntryFormat.NAME,
             24,

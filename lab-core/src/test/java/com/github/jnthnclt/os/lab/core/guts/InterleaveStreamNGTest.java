@@ -4,7 +4,6 @@ import com.github.jnthnclt.os.lab.core.LABEnvironment;
 import com.github.jnthnclt.os.lab.core.LABHeapPressure;
 import com.github.jnthnclt.os.lab.core.LABStats;
 import com.github.jnthnclt.os.lab.core.TestUtils;
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABAppendOnlyAllocator;
@@ -172,7 +171,7 @@ public class InterleaveStreamNGTest {
 
                 readerIndexs[wi] = memoryIndexes[i].acquireReader();
                 Scanner nextRawEntry = readerIndexs[wi].rowScan(new BolBuffer(), new BolBuffer());
-                while (nextRawEntry.next((readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
+                while (nextRawEntry.next((rawEntry) -> {
                     //System.out.println(TestUtils.toString(rawEntry));
                     return true;
                 }, null) == Next.more) {
@@ -207,7 +206,7 @@ public class InterleaveStreamNGTest {
 
     private void assertExpected(InterleaveStream ips, List<Expected> expected) throws Exception {
         boolean[] passed = { true };
-        while (ips.next((readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
+        while (ips.next((rawEntry) -> {
             Expected expect = expected.remove(0);
             long key = TestUtils.key(rawEntry);
             long value = TestUtils.value(rawEntry);
@@ -255,7 +254,7 @@ public class InterleaveStreamNGTest {
             public Next next(RawEntryStream stream, BolBuffer nextHint) throws Exception {
                 if (index[0] < keys.length) {
                     byte[] rawEntry = TestUtils.rawEntry(keys[index[0]], values[index[0]]);
-                    if (!stream.stream(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(rawEntry))) {
+                    if (!stream.stream(new BolBuffer(rawEntry))) {
                         return Next.stopped;
                     }
                 }

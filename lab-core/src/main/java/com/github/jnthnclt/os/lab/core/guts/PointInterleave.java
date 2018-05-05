@@ -1,6 +1,5 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.guts.api.Next;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
@@ -11,8 +10,6 @@ import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 public class PointInterleave implements Scanner, RawEntryStream {
 
     private final Rawhide rawhide;
-    private FormatTransformer nextReadKeyFormatTransformer;
-    private FormatTransformer nextReadValueFormatTransformer;
     private boolean once;
     private BolBuffer nextRawEntry;
 
@@ -46,7 +43,7 @@ public class PointInterleave implements Scanner, RawEntryStream {
         if (once) {
             return Next.stopped;
         }
-        stream.stream(nextReadKeyFormatTransformer, nextReadValueFormatTransformer, nextRawEntry);
+        stream.stream(nextRawEntry);
         once = true;
         return Next.more;
     }
@@ -57,23 +54,21 @@ public class PointInterleave implements Scanner, RawEntryStream {
     }
 
     @Override
-    public boolean stream(FormatTransformer readKeyFormatTransformer, FormatTransformer readValueFormatTransformer, BolBuffer rawEntry) throws Exception {
+    public boolean stream(BolBuffer rawEntry) throws Exception {
         if (nextRawEntry != null) {
-            long leftTimestamp = rawhide.timestamp(nextReadKeyFormatTransformer, nextReadValueFormatTransformer, nextRawEntry);
-            long rightTimestamp = rawhide.timestamp(readKeyFormatTransformer, readValueFormatTransformer, rawEntry);
+            long leftTimestamp = rawhide.timestamp(nextRawEntry);
+            long rightTimestamp = rawhide.timestamp(rawEntry);
             if (leftTimestamp > rightTimestamp) {
                 return true;
             } else if (leftTimestamp == rightTimestamp) {
-                long leftVersion = rawhide.version(nextReadKeyFormatTransformer, nextReadValueFormatTransformer, nextRawEntry);
-                long rightVersion = rawhide.version(readKeyFormatTransformer, readValueFormatTransformer, rawEntry);
+                long leftVersion = rawhide.version(nextRawEntry);
+                long rightVersion = rawhide.version(rawEntry);
                 if (leftVersion >= rightVersion) {
                     return true;
                 }
             }
         }
         nextRawEntry = rawEntry;
-        nextReadKeyFormatTransformer = readKeyFormatTransformer;
-        nextReadValueFormatTransformer = readValueFormatTransformer;
         return true;
     }
 }

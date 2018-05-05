@@ -14,7 +14,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
-import com.github.jnthnclt.os.lab.core.api.NoOpFormatTransformerProvider;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
@@ -112,7 +111,7 @@ public class LABEnvironmentConcurrenyNGTest {
                 10 * 1024 * 1024,
                 0,
                 0,
-                NoOpFormatTransformerProvider.NAME,
+                "deprecated",
                 LABRawhide.NAME,
                 MemoryRawEntryFormat.NAME,
                 2,

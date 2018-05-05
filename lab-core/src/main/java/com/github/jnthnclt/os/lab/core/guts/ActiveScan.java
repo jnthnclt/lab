@@ -1,7 +1,6 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
@@ -58,8 +57,6 @@ public class ActiveScan {
         long hashIndexHeadOffset,
         long hashIndexMaxCapacity,
         byte hashIndexLongPrecision,
-        FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
         BolBuffer bbKey,
         BolBuffer entryBuffer,
         BolBuffer entryKeyBuffer,
@@ -81,8 +78,6 @@ public class ActiveScan {
                     bbKey,
                     entryBuffer,
                     entryKeyBuffer,
-                    readKeyFormatTransformer,
-                    readValueFormatTransformer,
                     rawhide);
                 if (exactRowIndex >= -1) {
                     return exactRowIndex > -1 ? exactRowIndex - 1 : -1;
@@ -96,8 +91,6 @@ public class ActiveScan {
                     bbKey,
                     entryBuffer,
                     entryKeyBuffer,
-                    readKeyFormatTransformer,
-                    readValueFormatTransformer,
                     rawhide);
                 if (exactRowIndex >= -1) {
                     return exactRowIndex > -1 ? exactRowIndex - 1 : -1;
@@ -113,8 +106,6 @@ public class ActiveScan {
             int index = Arrays.binarySearch(l.keys, bbKey, byteBufferKeyComparator);
             if (index == -(l.fps.length + 1)) {
                 rowIndex = binarySearchClosestFP(rawhide,
-                    readKeyFormatTransformer,
-                    readValueFormatTransformer,
                     readable,
                     l,
                     bbKey,
@@ -132,7 +123,7 @@ public class ActiveScan {
 
                 next = leapsCache.get(cacheKeyBuffer);
                 if (next == null) {
-                    next = Leaps.read(readKeyFormatTransformer, readable, l.fps[index]);
+                    next = Leaps.read(readable, l.fps[index]);
                     leapsCache.put(Arrays.copyOf(cacheKeyBuffer, 16), next);
                     cacheMisses++;
                 } else {
@@ -153,8 +144,6 @@ public class ActiveScan {
     }
 
     private static long binarySearchClosestFP(Rawhide rawhide,
-        FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
         PointerReadableByteBufferFile readable,
         Leaps leaps,
         BolBuffer key,
@@ -172,7 +161,7 @@ public class ActiveScan {
             long fp = startOfEntryBuffer.get(mid);
 
             rawhide.rawEntryToBuffer(readable, fp + 1, entryBuffer);
-            int cmp = rawhide.compareKey(readKeyFormatTransformer, readValueFormatTransformer, entryBuffer, entryKeyBuffer, key);
+            int cmp = rawhide.compareKey(entryBuffer, entryKeyBuffer, key);
             if (cmp < 0) {
                 low = mid + 1;
             } else if (cmp > 0) {
@@ -196,8 +185,6 @@ public class ActiveScan {
         BolBuffer compareKey,
         BolBuffer entryBuffer,
         BolBuffer keyBuffer,
-        FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
         Rawhide rawhide) throws Exception {
 
 
@@ -212,7 +199,7 @@ public class ActiveScan {
             } else {
                 // since we add one at creation time so zero can be null
                 rawhide.rawEntryToBuffer(readable, Math.abs(offset) - 1, entryBuffer);
-                int c = rawhide.compareKey(readKeyFormatTransformer, readValueFormatTransformer, entryBuffer, keyBuffer, compareKey);
+                int c = rawhide.compareKey(entryBuffer, keyBuffer, compareKey);
                 if (c > 0) {
                     return -1;
                 }
@@ -238,8 +225,6 @@ public class ActiveScan {
         BolBuffer compareKey,
         BolBuffer entryBuffer,
         BolBuffer keyBuffer,
-        FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
         Rawhide rawhide) throws Exception {
 
 
@@ -252,7 +237,7 @@ public class ActiveScan {
                 return -1L;
             }
             rawhide.rawEntryToBuffer(readable, Math.abs(offset) - 1, entryBuffer);
-            int c = rawhide.compareKey(readKeyFormatTransformer, readValueFormatTransformer, entryBuffer, keyBuffer, compareKey);
+            int c = rawhide.compareKey(entryBuffer, keyBuffer, compareKey);
             if (c == 0) {
                 return Math.abs(offset) - 1;
             }

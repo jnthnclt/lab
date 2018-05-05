@@ -1,6 +1,5 @@
 package com.github.jnthnclt.os.lab.core;
 
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
 import com.github.jnthnclt.os.lab.core.guts.LABIndex;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
@@ -44,8 +43,8 @@ public class LABIndexNGTest {
         BolBuffer key = new BolBuffer(UIO.longBytes(8));
         BolBuffer value1 = new BolBuffer(UIO.longBytes(10));
 
-        map.compute(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(), key, new BolBuffer(),
-            (t1, t2, b, existing) -> {
+        map.compute( new BolBuffer(), key, new BolBuffer(),
+            (b, existing) -> {
                 if (existing == null) {
                     return value1;
                 } else if (UIO.bytesLong(existing.copy()) > UIO.bytesLong(value1.copy())) {
@@ -61,9 +60,9 @@ public class LABIndexNGTest {
         Assert.assertEquals(UIO.bytesLong(got.copy()), 10L);
 
         BolBuffer value2 = new BolBuffer(UIO.longBytes(21));
-        map.compute(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(),
+        map.compute( new BolBuffer(),
             key,
-            new BolBuffer(), (t1, t2, b, existing) -> {
+            new BolBuffer(), (b, existing) -> {
                 if (existing == null) {
                     return value2;
                 } else if (UIO.bytesLong(existing.copy()) > UIO.bytesLong(value2.copy())) {
@@ -80,12 +79,11 @@ public class LABIndexNGTest {
 
         BolBuffer value3 = new BolBuffer(UIO.longBytes(10));
 
-        map.compute(FormatTransformer.NO_OP,
-            FormatTransformer.NO_OP,
+        map.compute(
             new BolBuffer(),
             key,
             new BolBuffer(),
-            (t1, t2, b, existing) -> {
+            ( b, existing) -> {
                 if (existing == null) {
                     return value3;
                 } else if (UIO.bytesLong(existing.copy()) > UIO.bytesLong(value3.copy())) {

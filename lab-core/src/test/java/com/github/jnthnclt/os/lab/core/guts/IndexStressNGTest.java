@@ -1,8 +1,15 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
-import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
-import com.google.common.io.Files;
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
+import com.github.jnthnclt.os.lab.core.LABEnvironment;
+import com.github.jnthnclt.os.lab.core.LABStats;
+import com.github.jnthnclt.os.lab.core.TestUtils;
+import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
+import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
+import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
+import com.github.jnthnclt.os.lab.core.io.BolBuffer;
+import com.github.jnthnclt.os.lab.core.io.api.UIO;
+import com.google.common.io.Files;
 import java.io.File;
 import java.text.NumberFormat;
 import java.util.Random;
@@ -14,15 +21,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableLong;
-import com.github.jnthnclt.os.lab.core.LABEnvironment;
-import com.github.jnthnclt.os.lab.core.LABStats;
-import com.github.jnthnclt.os.lab.core.TestUtils;
-import com.github.jnthnclt.os.lab.core.api.NoOpFormatTransformerProvider;
-import com.github.jnthnclt.os.lab.core.api.RawEntryFormat;
-import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
-import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import org.testng.annotations.Test;
 
 /**
@@ -77,8 +75,6 @@ public class IndexStressNGTest {
                                     maxLeaps,
                                     entriesBetweenLeaps,
                                     rawhide,
-                                    new RawEntryFormat(0, 0),
-                                    NoOpFormatTransformerProvider.NO_OP,
                                     TestUtils.indexType,
                                     0.75d,
                                     Long.MAX_VALUE);
@@ -86,7 +82,7 @@ public class IndexStressNGTest {
                             (ids) -> {
                                 File mergedFile = ids.get(0).toFile(root);
                                 LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-                                return new ReadOnlyIndex(destroy, ids.get(0), new ReadOnlyFile(mergedFile), NoOpFormatTransformerProvider.NO_OP,
+                                return new ReadOnlyIndex(destroy, ids.get(0), new ReadOnlyFile(mergedFile),
                                     rawhide, leapsCache);
                             }));
                     if (compactor != null) {
@@ -112,7 +108,7 @@ public class IndexStressNGTest {
 
             int[] hits = {0};
             int[] misses = {0};
-            RawEntryStream hitsAndMisses = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
+            RawEntryStream hitsAndMisses = (rawEntry) -> {
                 if (rawEntry != null) {
                     hits[0]++;
                 } else {
@@ -192,8 +188,6 @@ public class IndexStressNGTest {
                 maxLeaps,
                 entriesBetweenLeaps,
                 rawhide,
-                new RawEntryFormat(0, 0),
-                NoOpFormatTransformerProvider.NO_OP,
                 TestUtils.indexType,
                 0.75d,
                 Long.MAX_VALUE);
@@ -204,7 +198,7 @@ public class IndexStressNGTest {
             maxKey.setValue(Math.max(maxKey.longValue(), lastKey));
             LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
             indexs.append(
-                new ReadOnlyIndex(destroy, id, new ReadOnlyFile(indexFiler), NoOpFormatTransformerProvider.NO_OP, rawhide, leapsCache));
+                new ReadOnlyIndex(destroy, id, new ReadOnlyFile(indexFiler), rawhide, leapsCache));
 
             count += batchSize;
 

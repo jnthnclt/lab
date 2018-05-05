@@ -3,7 +3,6 @@ package com.github.jnthnclt.os.lab.core;
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.api.Keys.KeyStream;
 import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
-import com.github.jnthnclt.os.lab.core.api.NoOpFormatTransformerProvider;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABKeyValueRawhide;
@@ -64,7 +63,7 @@ public class LABNGTest {
             splitAfterSizeInBytes,
             -1,
             -1,
-            NoOpFormatTransformerProvider.NAME,
+            "deprecated",
             LABRawhide.NAME,
             MemoryRawEntryFormat.NAME,
             2,
@@ -213,7 +212,7 @@ public class LABNGTest {
             16,
             -1,
             -1,
-            NoOpFormatTransformerProvider.NAME,
+            "deprecated",
             LABRawhide.NAME,
             MemoryRawEntryFormat.NAME,
             2,
@@ -309,7 +308,7 @@ public class LABNGTest {
             16,
             -1,
             -1,
-            NoOpFormatTransformerProvider.NAME,
+           "deprecated",
             LABRawhide.NAME,
             MemoryRawEntryFormat.NAME,
             2,
@@ -393,7 +392,7 @@ public class LABNGTest {
             16,
             -1,
             -1,
-            NoOpFormatTransformerProvider.NAME,
+            "deprecated",
             LABRawhide.NAME,
             MemoryRawEntryFormat.NAME,
             2,
@@ -475,7 +474,7 @@ public class LABNGTest {
             16,
             -1,
             -1,
-            NoOpFormatTransformerProvider.NAME,
+            "deprecated",
             LABKeyValueRawhide.NAME,
             MemoryRawEntryFormat.NAME,
             2,

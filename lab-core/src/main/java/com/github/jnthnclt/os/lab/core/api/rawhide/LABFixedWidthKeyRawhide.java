@@ -1,7 +1,6 @@
 package com.github.jnthnclt.os.lab.core.api.rawhide;
 
 import com.github.jnthnclt.os.lab.core.LABUtils;
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.api.ValueStream;
 import com.github.jnthnclt.os.lab.core.guts.IndexUtil;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
@@ -22,14 +21,9 @@ public class LABFixedWidthKeyRawhide implements Rawhide {
     }
 
     @Override
-    public BolBuffer merge(FormatTransformer currentReadKeyFormatTransformer,
-        FormatTransformer currentReadValueFormatTransformer,
+    public BolBuffer merge(
         BolBuffer currentRawEntry,
-        FormatTransformer addingReadKeyFormatTransformer,
-        FormatTransformer addingReadValueFormatTransformer,
-        BolBuffer addingRawEntry,
-        FormatTransformer mergedReadKeyFormatTransformer,
-        FormatTransformer mergedReadValueFormatTransformer) {
+        BolBuffer addingRawEntry) {
 
         int currentKeyLength = keyLength;
         int addingKeyLength = keyLength;
@@ -48,21 +42,15 @@ public class LABFixedWidthKeyRawhide implements Rawhide {
     }
 
     @Override
-    public int mergeCompare(FormatTransformer aReadKeyFormatTransformer,
-        FormatTransformer aReadValueFormatTransformer,
+    public int mergeCompare(
         BolBuffer aRawEntry,
         BolBuffer aKeyBuffer,
-        FormatTransformer bReadKeyFormatTransformer,
-        FormatTransformer bReadValueFormatTransformer,
         BolBuffer bRawEntry,
         BolBuffer bKeyBuffer) throws Exception {
 
-        int c = compareKey(aReadKeyFormatTransformer,
-            aReadValueFormatTransformer,
+        int c = compareKey(
             aRawEntry,
             aKeyBuffer,
-            bReadKeyFormatTransformer,
-            bReadValueFormatTransformer,
             bRawEntry,
             bKeyBuffer);
         if (c != 0) {
@@ -103,30 +91,25 @@ public class LABFixedWidthKeyRawhide implements Rawhide {
     }
 
     @Override
-    public long timestamp(FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
+    public long timestamp(
         BolBuffer rawEntrys) {
         return rawEntrys.getLong(keyLength);
     }
 
     @Override
-    public long version(FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
+    public long version(
         BolBuffer rawEntrys) {
         return rawEntrys.getLong(keyLength + 8 + 1);
     }
 
     @Override
-    public boolean tombstone(FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
+    public boolean tombstone(
         BolBuffer rawEntrys) {
         return rawEntrys.get(keyLength + 8) != 0;
     }
 
     @Override
     public boolean streamRawEntry(int index,
-        FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
         BolBuffer rawEntry,
         BolBuffer keyBuffer,
         BolBuffer valueBuffer,
@@ -148,7 +131,7 @@ public class LABFixedWidthKeyRawhide implements Rawhide {
                 payload = rawEntry.sliceInto( keyLength + 8 + 1 + 8 + 4, payloadLength, valueBuffer);
             }
         }
-        return stream.stream(index, readKeyFormatTransformer.transform(key), timestamp, tombstone, version, readValueFormatTransformer.transform(payload));
+        return stream.stream(index, key, timestamp, tombstone, version, payload);
     }
 
     @Override
@@ -182,11 +165,8 @@ public class LABFixedWidthKeyRawhide implements Rawhide {
     }
 
     @Override
-    public void writeRawEntry(FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
+    public void writeRawEntry(
         BolBuffer rawEntryBuffer,
-        FormatTransformer writeKeyFormatTransformer,
-        FormatTransformer writeValueFormatTransformer,
         IAppendOnly appendOnly) throws Exception {
 
         int entryLength = 4 + rawEntryBuffer.length + 4;
@@ -196,8 +176,7 @@ public class LABFixedWidthKeyRawhide implements Rawhide {
     }
 
     @Override
-    public BolBuffer key(FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
+    public BolBuffer key(
         BolBuffer rawEntry,
         BolBuffer keyBuffer) {
         rawEntry.sliceInto(0, keyLength, keyBuffer);
@@ -205,13 +184,12 @@ public class LABFixedWidthKeyRawhide implements Rawhide {
     }
 
     @Override
-    public int compareKey(FormatTransformer readKeyFormatTransormer,
-        FormatTransformer readValueFormatTransformer,
+    public int compareKey(
         BolBuffer rawEntry,
         BolBuffer keyBuffer,
         BolBuffer compareKey
     ) {
-        return IndexUtil.compare(key(readKeyFormatTransormer, readValueFormatTransformer, rawEntry, keyBuffer), compareKey);
+        return IndexUtil.compare(key(rawEntry, keyBuffer), compareKey);
     }
 
     @Override

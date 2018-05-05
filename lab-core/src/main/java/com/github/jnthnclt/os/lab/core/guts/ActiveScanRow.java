@@ -1,7 +1,6 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.api.Next;
 import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
@@ -15,8 +14,6 @@ import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
 public class ActiveScanRow implements Scanner {
 
     Rawhide rawhide;
-    FormatTransformer readKeyFormatTransformer;
-    FormatTransformer readValueFormatTransformer;
     Leaps leaps;
     long cacheKey;
     LRUConcurrentBAHLinkedHash<Leaps> leapsCache;
@@ -70,7 +67,7 @@ public class ActiveScanRow implements Scanner {
             activeOffset++;
             if (type == LABAppendableIndex.ENTRY) {
                 activeOffset += rawhide.rawEntryToBuffer(readable, activeOffset, entryBuffer);
-                activeResult = stream.stream(readKeyFormatTransformer, readValueFormatTransformer, entryBuffer);
+                activeResult = stream.stream(entryBuffer);
                 return false;
             } else if (type == LABAppendableIndex.LEAP) {
                 int length = readable.readInt(activeOffset); // entryLength

@@ -1,6 +1,5 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
 import com.google.common.io.Files;
 import java.io.File;
@@ -31,13 +30,13 @@ public class LeapsNGTest {
         AppendOnlyFile appendOnlyFile = new AppendOnlyFile(file);
         IAppendOnly appendOnly = appendOnlyFile.appender();
 
-        write.write(FormatTransformer.NO_OP, appendOnly);
+        write.write(appendOnly);
         appendOnlyFile.flush(true);
         appendOnlyFile.close();
 
         ReadOnlyFile indexFile = new ReadOnlyFile(file);
         PointerReadableByteBufferFile pointerReadable = indexFile.pointerReadable(-1);
-        Leaps read = Leaps.read(FormatTransformer.NO_OP, pointerReadable, 0);
+        Leaps read = Leaps.read(pointerReadable, 0);
 
         System.out.println("write:" + write.toString(null));
         System.out.println("read:" + read.toString(pointerReadable));

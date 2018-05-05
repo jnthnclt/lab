@@ -1,7 +1,6 @@
 package com.github.jnthnclt.os.lab.core.api.rawhide;
 
 import com.github.jnthnclt.os.lab.core.LABUtils;
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.api.ValueStream;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
@@ -22,8 +21,6 @@ public class LABKeyValueRawhide implements Rawhide {
 
     @Override
     public boolean streamRawEntry(int index,
-        FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
         BolBuffer rawEntry,
         BolBuffer keyBuffer,
         BolBuffer valueBuffer,
@@ -61,19 +58,15 @@ public class LABKeyValueRawhide implements Rawhide {
     }
 
     @Override
-    public void writeRawEntry(FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
+    public void writeRawEntry(
         BolBuffer rawEntryBuffer,
-        FormatTransformer writeKeyFormatTransformer,
-        FormatTransformer writeValueFormatTransformer,
         IAppendOnly appendOnly) throws Exception {
         appendOnly.appendInt(rawEntryBuffer.length);
         appendOnly.append(rawEntryBuffer);
     }
 
     @Override
-    public BolBuffer key(FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
+    public BolBuffer key(
         BolBuffer rawEntry,
         BolBuffer keyBuffer) {
         rawEntry.sliceInto(4, rawEntry.getInt(0), keyBuffer);
@@ -86,17 +79,17 @@ public class LABKeyValueRawhide implements Rawhide {
     }
 
     @Override
-    public long timestamp(FormatTransformer readKeyFormatTransformer, FormatTransformer readValueFormatTransformer, BolBuffer rawEntry) {
+    public long timestamp(BolBuffer rawEntry) {
         return 0;
     }
 
     @Override
-    public long version(FormatTransformer readKeyFormatTransformer, FormatTransformer readValueFormatTransformer, BolBuffer rawEntry) {
+    public long version(BolBuffer rawEntry) {
         return 0;
     }
 
     @Override
-    public boolean tombstone(FormatTransformer readKeyFormatTransformer, FormatTransformer readValueFormatTransformer, BolBuffer rawEntry) {
+    public boolean tombstone(BolBuffer rawEntry) {
         return false;
     }
 

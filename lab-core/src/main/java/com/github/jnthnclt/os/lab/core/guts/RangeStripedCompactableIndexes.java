@@ -2,15 +2,19 @@ package com.github.jnthnclt.os.lab.core.guts;
 
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.LABStats;
-import com.github.jnthnclt.os.lab.core.api.FormatTransformerProvider;
+import com.github.jnthnclt.os.lab.core.api.Keys;
 import com.github.jnthnclt.os.lab.core.api.Snapshot;
+import com.github.jnthnclt.os.lab.core.api.exceptions.LABConcurrentSplitException;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.api.KeyToString;
 import com.github.jnthnclt.os.lab.core.guts.api.MergerBuilder;
 import com.github.jnthnclt.os.lab.core.guts.api.Next;
 import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
+import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.guts.api.SplitterBuilder;
+import com.github.jnthnclt.os.lab.core.io.BolBuffer;
+import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import com.github.jnthnclt.os.lab.core.util.LABLogger;
 import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
 import java.io.File;
@@ -32,14 +36,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.io.FileUtils;
-import com.github.jnthnclt.os.lab.core.api.Keys;
-import com.github.jnthnclt.os.lab.core.api.RawEntryFormat;
-import com.github.jnthnclt.os.lab.core.api.exceptions.LABConcurrentSplitException;
-import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 
 public class RangeStripedCompactableIndexes {
 
@@ -61,11 +58,9 @@ public class RangeStripedCompactableIndexes {
     private final long splitWhenKeysTotalExceedsNBytes;
     private final long splitWhenValuesTotalExceedsNBytes;
     private final long splitWhenValuesAndKeysTotalExceedsNBytes;
-    private final FormatTransformerProvider formatTransformerProvider;
     private final Rawhide rawhide;
     private final LRUConcurrentBAHLinkedHash<Leaps> leapsCache;
     private final Semaphore appendSemaphore = new Semaphore(Short.MAX_VALUE, true);
-    private final AtomicReference<RawEntryFormat> rawhideFormat;
     private final boolean fsyncFileRenames;
     private final LABHashIndexType hashIndexType;
     private final double hashIndexLoadFactor;
@@ -79,9 +74,7 @@ public class RangeStripedCompactableIndexes {
         long splitWhenKeysTotalExceedsNBytes,
         long splitWhenValuesTotalExceedsNBytes,
         long splitWhenValuesAndKeysTotalExceedsNBytes,
-        FormatTransformerProvider formatTransformerProvider,
         Rawhide rawhide,
-        AtomicReference<RawEntryFormat> rawhideFormat,
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache,
         boolean fsyncFileRenames,
         LABHashIndexType hashIndexType,
@@ -96,9 +89,7 @@ public class RangeStripedCompactableIndexes {
         this.splitWhenKeysTotalExceedsNBytes = splitWhenKeysTotalExceedsNBytes;
         this.splitWhenValuesTotalExceedsNBytes = splitWhenValuesTotalExceedsNBytes;
         this.splitWhenValuesAndKeysTotalExceedsNBytes = splitWhenValuesAndKeysTotalExceedsNBytes;
-        this.formatTransformerProvider = formatTransformerProvider;
         this.rawhide = rawhide;
-        this.rawhideFormat = rawhideFormat;
         this.leapsCache = leapsCache;
         this.fsyncFileRenames = fsyncFileRenames;
         this.hashIndexType = hashIndexType;
@@ -237,7 +228,7 @@ public class RangeStripedCompactableIndexes {
                         continue;
                     }
                     ReadOnlyFile indexFile = new ReadOnlyFile(file);
-                    ReadOnlyIndex lab = new ReadOnlyIndex(destroy, range, indexFile, formatTransformerProvider, rawhide, leapsCache);
+                    ReadOnlyIndex lab = new ReadOnlyIndex(destroy, range, indexFile, rawhide, leapsCache);
                     if (lab.minKey() != null && lab.maxKey() != null) {
                         if (keyRange == null) {
                             keyRange = new KeyRange(rawhide.getKeyComparator(), lab.minKey(), lab.maxKey());
@@ -362,15 +353,12 @@ public class RangeStripedCompactableIndexes {
             AppendOnlyFile appendOnlyFile = new AppendOnlyFile(commitingIndexFile);
             LABAppendableIndex appendableIndex = null;
             try {
-                RawEntryFormat format = rawhideFormat.get();
                 appendableIndex = new LABAppendableIndex(stats.bytesWrittenAsIndex,
                     indexRangeId,
                     appendOnlyFile,
                     maxLeaps,
                     entriesBetweenLeaps,
                     rawhide,
-                    format,
-                    formatTransformerProvider,
                     hashIndexType,
                     hashIndexLoadFactor,
                     deleteTombstonedVersionsAfterMillis);
@@ -380,8 +368,8 @@ public class RangeStripedCompactableIndexes {
                         Scanner scanner = reader.rangeScan(minKey, maxKey, entryBuffer, entryKeyBuffer);
                         if (scanner != null) {
                             try {
-                                RawEntryStream rawEntryStream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
-                                    return stream.stream(readKeyFormatTransformer, readValueFormatTransformer, rawEntry);
+                                RawEntryStream rawEntryStream = (rawEntry) -> {
+                                    return stream.stream(rawEntry);
                                 };
                                 while (scanner.next(rawEntryStream, null) == Next.more) {
                                 }
@@ -419,7 +407,7 @@ public class RangeStripedCompactableIndexes {
             FileUtils.forceMkdir(commitedIndexFile.getParentFile());
             Files.move(commitingIndexFile.toPath(), commitedIndexFile.toPath(), StandardCopyOption.ATOMIC_MOVE);
             ReadOnlyFile readOnlyFile = new ReadOnlyFile(commitedIndexFile);
-            ReadOnlyIndex reopenedIndex = new ReadOnlyIndex(destroy, indexRangeId, readOnlyFile, formatTransformerProvider, rawhide, leapsCache);
+            ReadOnlyIndex reopenedIndex = new ReadOnlyIndex(destroy, indexRangeId, readOnlyFile, rawhide, leapsCache);
             if (fsyncFileRenames) {
                 reopenedIndex.fsync();  // Sorry
                 // TODO Files.fsync index when java 9 supports it.
@@ -481,7 +469,6 @@ public class RangeStripedCompactableIndexes {
             return () -> {
                 appendSemaphore.acquire(Short.MAX_VALUE);
                 try {
-                    RawEntryFormat format = rawhideFormat.get();
 
                     return callback.call((IndexRangeId id, long worstCaseCount) -> {
                         int maxLeaps = calculateIdealMaxLeaps(worstCaseCount, entriesBetweenLeaps);
@@ -497,8 +484,6 @@ public class RangeStripedCompactableIndexes {
                             maxLeaps,
                             entriesBetweenLeaps,
                             rawhide,
-                            format,
-                            formatTransformerProvider,
                             hashIndexType,
                             hashIndexLoadFactor,
                             deleteTombstonedVersionsAfterMillis);
@@ -516,8 +501,6 @@ public class RangeStripedCompactableIndexes {
                             maxLeaps,
                             entriesBetweenLeaps,
                             rawhide,
-                            format,
-                            formatTransformerProvider,
                             hashIndexType,
                             hashIndexLoadFactor,
                             deleteTombstonedVersionsAfterMillis);
@@ -596,7 +579,6 @@ public class RangeStripedCompactableIndexes {
             File mergingRoot = new File(stripeRoot, "merging");
             FileUtils.forceMkdir(mergingRoot);
 
-            RawEntryFormat format = rawhideFormat.get();
 
             mergeCount.incrementAndGet();
             LOG.inc("merge");
@@ -611,8 +593,6 @@ public class RangeStripedCompactableIndexes {
                     maxLeaps,
                     entriesBetweenLeaps,
                     rawhide,
-                    format,
-                    formatTransformerProvider,
                     hashIndexType,
                     hashIndexLoadFactor,
                     deleteTombstonedVersionsAfterMillis);

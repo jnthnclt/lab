@@ -327,15 +327,15 @@ public class CompactableIndexes {
 
                                 leftAppendableIndex.append((leftStream) -> {
                                     return effectiveFinalRightAppenableIndex.append((rightStream) -> {
-                                        return feedInterleaver.stream((readKeyFormatTransformer, readValueFormatTransformer, entry) -> {
-                                            int c = rawhide.compareKey(readKeyFormatTransformer, readValueFormatTransformer, entry, entryKeyBuffer,
+                                        return feedInterleaver.stream((entry) -> {
+                                            int c = rawhide.compareKey(entry, entryKeyBuffer,
                                                 bbMiddle);
 
                                             if (c < 0) {
-                                                if (!leftStream.stream(readKeyFormatTransformer, readValueFormatTransformer, entry)) {
+                                                if (!leftStream.stream(entry)) {
                                                     return false;
                                                 }
-                                            } else if (!rightStream.stream(readKeyFormatTransformer, readValueFormatTransformer, entry)) {
+                                            } else if (!rightStream.stream(entry)) {
                                                 return false;
                                             }
                                             return true;
@@ -429,17 +429,16 @@ public class CompactableIndexes {
                                             catchupLeftAppendableIndex.append((leftStream) -> {
                                                 return effectivelyFinalCatchupRightAppendableIndex.append((rightStream) -> {
                                                     return catchupFeedInterleaver.stream(
-                                                        (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
-                                                            if (rawhide.compareKey(readKeyFormatTransformer,
-                                                                readValueFormatTransformer,
+                                                        (rawEntry) -> {
+                                                            if (rawhide.compareKey(
                                                                 rawEntry,
                                                                 entryKeyBuffer,
                                                                 bbMiddle) < 0) {
 
-                                                                if (!leftStream.stream(readKeyFormatTransformer, readValueFormatTransformer, rawEntry)) {
+                                                                if (!leftStream.stream(rawEntry)) {
                                                                     return false;
                                                                 }
-                                                            } else if (!rightStream.stream(readKeyFormatTransformer, readValueFormatTransformer, rawEntry)) {
+                                                            } else if (!rightStream.stream(rawEntry)) {
                                                                 return false;
                                                             }
                                                             return true;
@@ -614,8 +613,8 @@ public class CompactableIndexes {
                         ActiveScan.indexToFeeds(readers, null, null, rawhide));
                     try {
                         appendableIndex.append((stream) -> {
-                            return feedInterleaver.stream((readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
-                                return stream.stream(readKeyFormatTransformer, readValueFormatTransformer, rawEntry);
+                            return feedInterleaver.stream((rawEntry) -> {
+                                return stream.stream(rawEntry);
                             });
                         }, keyBuffer);
                     } finally {

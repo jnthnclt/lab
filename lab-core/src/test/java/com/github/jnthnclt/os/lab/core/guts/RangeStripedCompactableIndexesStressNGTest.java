@@ -1,5 +1,6 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
+import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.LABEnvironment;
 import com.github.jnthnclt.os.lab.core.LABHeapPressure;
 import com.github.jnthnclt.os.lab.core.LABStats;
@@ -10,10 +11,11 @@ import com.github.jnthnclt.os.lab.core.guts.allocators.LABConcurrentSkipListMap;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABConcurrentSkipListMemory;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABIndexableMemory;
 import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
+import com.github.jnthnclt.os.lab.core.io.BolBuffer;
+import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import com.github.jnthnclt.os.lab.core.util.LABLogger;
 import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
 import com.google.common.io.Files;
-import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import java.io.File;
 import java.text.NumberFormat;
 import java.util.List;
@@ -23,13 +25,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableLong;
-import com.github.jnthnclt.os.lab.core.api.NoOpFormatTransformerProvider;
-import com.github.jnthnclt.os.lab.core.api.RawEntryFormat;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import org.testng.annotations.Test;
 
 /**
@@ -65,9 +62,7 @@ public class RangeStripedCompactableIndexesStressNGTest {
             splitWhenKeysTotalExceedsNBytes,
             splitWhenValuesTotalExceedsNBytes,
             splitWhenValuesAndKeysTotalExceedsNBytes,
-            NoOpFormatTransformerProvider.NO_OP,
             LABRawhide.SINGLETON,
-            new AtomicReference<>(new RawEntryFormat(0, 0)),
             leapsCache,
             false,
             TestUtils.indexType,
@@ -93,7 +88,7 @@ public class RangeStripedCompactableIndexesStressNGTest {
 
             int[] hits = { 0 };
             int[] misses = { 0 };
-            RawEntryStream hitsAndMisses = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
+            RawEntryStream hitsAndMisses = (rawEntry) -> {
                 if (rawEntry != null) {
                     hits[0]++;
                 } else {

@@ -78,8 +78,7 @@ public class InterleaveStream implements Scanner {
 
         if (active != null) {
             if (active.nextRawEntry != null) {
-                if (!stream.stream(active.nextReadKeyFormatTransformer,
-                    active.nextReadValueFormatTransformer,
+                if (!stream.stream(
                     active.nextRawEntry)) {
                     return Next.stopped;
                 }
@@ -96,12 +95,9 @@ public class InterleaveStream implements Scanner {
     }
 
     private int compare(InterleavingStreamFeed left, InterleavingStreamFeed right) throws Exception {
-        return rawhide.compareKey(left.nextReadKeyFormatTransformer,
-            left.nextReadValueFormatTransformer,
+        return rawhide.compareKey(
             left.nextRawEntry,
             left.entryKeyBuffer,
-            right.nextReadKeyFormatTransformer,
-            right.nextReadValueFormatTransformer,
             right.nextRawEntry,
             right.entryKeyBuffer);
     }

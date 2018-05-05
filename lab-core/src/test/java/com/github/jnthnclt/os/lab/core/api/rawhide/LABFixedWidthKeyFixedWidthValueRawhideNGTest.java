@@ -1,6 +1,5 @@
 package com.github.jnthnclt.os.lab.core.api.rawhide;
 
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.guts.AppendOnlyFile;
 import com.github.jnthnclt.os.lab.core.guts.ReadOnlyFile;
 import com.github.jnthnclt.os.lab.core.io.AppendableHeap;
@@ -26,8 +25,8 @@ public class LABFixedWidthKeyFixedWidthValueRawhideNGTest {
     public void rawEntryTest() throws IOException, Exception {
         Rawhide rawhide = new LABFixedWidthKeyFixedWidthValueRawhide(8, 8);
         BolBuffer rawEntry = rawhide.toRawEntry(UIO.longBytes(17), 1234, false, 687, UIO.longBytes(45), new BolBuffer());
-        Assert.assertEquals(0, rawhide.timestamp(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer()));
-        Assert.assertEquals(0, rawhide.version(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer()));
+        Assert.assertEquals(0, rawhide.timestamp( new BolBuffer()));
+        Assert.assertEquals(0, rawhide.version( new BolBuffer()));
 
         Assert.assertEquals(true, rawhide.isNewerThan(0, 0, 0, 0));
 
@@ -38,9 +37,9 @@ public class LABFixedWidthKeyFixedWidthValueRawhideNGTest {
         Assert.assertEquals(45, rawEntry.getLong(8));
 
         AppendableHeap appendableHeap = new AppendableHeap(1);
-        rawhide.writeRawEntry(FormatTransformer.NO_OP, FormatTransformer.NO_OP, rawEntry, FormatTransformer.NO_OP, FormatTransformer.NO_OP, appendableHeap);
+        rawhide.writeRawEntry( rawEntry,  appendableHeap);
 
-        rawhide.streamRawEntry(0, FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(appendableHeap.getBytes()), new BolBuffer(),
+        rawhide.streamRawEntry(0,  new BolBuffer(appendableHeap.getBytes()), new BolBuffer(),
             new BolBuffer(),
             (int index, BolBuffer key, long timestamp, boolean tombstoned, long version, BolBuffer payload) -> {
                 Assert.assertEquals(17, key.getLong(0));
@@ -53,9 +52,9 @@ public class LABFixedWidthKeyFixedWidthValueRawhideNGTest {
 
         AppendOnlyFile appendOnlyFile = new AppendOnlyFile(file);
         IAppendOnly appender = appendOnlyFile.appender();
-        rawhide.writeRawEntry(FormatTransformer.NO_OP, FormatTransformer.NO_OP, rawEntry, FormatTransformer.NO_OP, FormatTransformer.NO_OP, appender);
+        rawhide.writeRawEntry( rawEntry,  appender);
         BolBuffer rawEntry2 = rawhide.toRawEntry(UIO.longBytes(33), 1234, false, 687, UIO.longBytes(99), new BolBuffer());
-        rawhide.writeRawEntry(FormatTransformer.NO_OP, FormatTransformer.NO_OP, rawEntry2, FormatTransformer.NO_OP, FormatTransformer.NO_OP, appender);
+        rawhide.writeRawEntry( rawEntry2,  appender);
         appender.flush(true);
         appender.close();
 
@@ -100,18 +99,18 @@ public class LABFixedWidthKeyFixedWidthValueRawhideNGTest {
     @Test
     public void compareKeyTest() throws Exception {
         LABFixedWidthKeyFixedWidthValueRawhide rawhide = new LABFixedWidthKeyFixedWidthValueRawhide(8, 8);
-        Assert.assertEquals(rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(UIO.longBytes(1)), new BolBuffer(),
+        Assert.assertEquals(rawhide.compareKey( new BolBuffer(UIO.longBytes(1)), new BolBuffer(),
             new BolBuffer(UIO.longBytes(1))), 0);
-        Assert.assertEquals(rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(UIO.longBytes(0)), new BolBuffer(),
+        Assert.assertEquals(rawhide.compareKey( new BolBuffer(UIO.longBytes(0)), new BolBuffer(),
             new BolBuffer(UIO.longBytes(1))), -1);
-        Assert.assertEquals(rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(UIO.longBytes(1)), new BolBuffer(),
+        Assert.assertEquals(rawhide.compareKey( new BolBuffer(UIO.longBytes(1)), new BolBuffer(),
             new BolBuffer(UIO.longBytes(0))), 1);
 
         Long[] sort = new Long[]{new Long(9), new Long(5), new Long(6), new Long(3), new Long(4), new Long(5), new Long(1), new Long(2), new Long(9)};
         Arrays.sort(sort,
             (Long o1, Long o2) -> {
                 try {
-                    return rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(UIO.longBytes(o1)), new BolBuffer(),
+                    return rawhide.compareKey( new BolBuffer(UIO.longBytes(o1)), new BolBuffer(),
                         new BolBuffer(UIO.longBytes(o2)));
                 } catch (Exception x) {
                     throw new RuntimeException(x);
@@ -127,18 +126,18 @@ public class LABFixedWidthKeyFixedWidthValueRawhideNGTest {
     @Test
     public void compareKey2Test() throws Exception {
         LABFixedWidthKeyFixedWidthValueRawhide rawhide = new LABFixedWidthKeyFixedWidthValueRawhide(8, 8);
-        Assert.assertEquals(rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(UIO.longBytes(1)), new BolBuffer(),
-            FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(UIO.longBytes(1)), new BolBuffer()), 0);
-        Assert.assertEquals(rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(UIO.longBytes(0)), new BolBuffer(),
-            FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(UIO.longBytes(1)), new BolBuffer()), -1);
-        Assert.assertEquals(rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(UIO.longBytes(1)), new BolBuffer(),
-            FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(UIO.longBytes(0)), new BolBuffer()), 1);
+        Assert.assertEquals(rawhide.compareKey( new BolBuffer(UIO.longBytes(1)), new BolBuffer(),
+             new BolBuffer(UIO.longBytes(1)), new BolBuffer()), 0);
+        Assert.assertEquals(rawhide.compareKey( new BolBuffer(UIO.longBytes(0)), new BolBuffer(),
+             new BolBuffer(UIO.longBytes(1)), new BolBuffer()), -1);
+        Assert.assertEquals(rawhide.compareKey( new BolBuffer(UIO.longBytes(1)), new BolBuffer(),
+             new BolBuffer(UIO.longBytes(0)), new BolBuffer()), 1);
 
         Long[] sort = new Long[]{new Long(9), new Long(5), new Long(6), new Long(3), new Long(4), new Long(5), new Long(1), new Long(2), new Long(9)};
         Arrays.sort(sort, (Long o1, Long o2) -> {
             try {
-                return rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(UIO.longBytes(o1)), new BolBuffer(),
-                    FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(UIO.longBytes(o2)), new BolBuffer());
+                return rawhide.compareKey( new BolBuffer(UIO.longBytes(o1)), new BolBuffer(),
+                     new BolBuffer(UIO.longBytes(o2)), new BolBuffer());
             } catch (Exception x) {
                 throw new RuntimeException(x);
             }

@@ -1,6 +1,5 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.api.Next;
 import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
@@ -14,8 +13,6 @@ class InterleavingStreamFeed implements Comparable<InterleavingStreamFeed>, RawE
     private final Rawhide rawhide;
 
     BolBuffer entryKeyBuffer = new BolBuffer();
-    FormatTransformer nextReadKeyFormatTransformer;
-    FormatTransformer nextReadValueFormatTransformer;
     BolBuffer nextRawEntry;
 
     public InterleavingStreamFeed(int index, Scanner scanner, Rawhide rawhide) {
@@ -33,22 +30,17 @@ class InterleavingStreamFeed implements Comparable<InterleavingStreamFeed>, RawE
     }
 
     @Override
-    public boolean stream(FormatTransformer readKeyFormatTransformer, FormatTransformer readValueFormatTransformer, BolBuffer rawEntry) throws Exception {
+    public boolean stream(BolBuffer rawEntry) throws Exception {
         nextRawEntry = rawEntry;
-        nextReadKeyFormatTransformer = readKeyFormatTransformer;
-        nextReadValueFormatTransformer = readValueFormatTransformer;
-        return true;
+         return true;
     }
 
     @Override
     public int compareTo(InterleavingStreamFeed o) {
         try {
-            int c = rawhide.mergeCompare(nextReadKeyFormatTransformer,
-                nextReadValueFormatTransformer,
+            int c = rawhide.mergeCompare(
                 nextRawEntry,
                 entryKeyBuffer,
-                o.nextReadKeyFormatTransformer,
-                o.nextReadValueFormatTransformer,
                 o.nextRawEntry,
                 o.entryKeyBuffer);
 

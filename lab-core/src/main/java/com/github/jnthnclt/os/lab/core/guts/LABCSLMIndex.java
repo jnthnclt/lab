@@ -15,7 +15,6 @@
  */
 package com.github.jnthnclt.os.lab.core.guts;
 
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABCostChangeInBytes;
 import com.github.jnthnclt.os.lab.core.guts.api.Next;
@@ -42,8 +41,7 @@ public class LABCSLMIndex implements LABIndex<BolBuffer, BolBuffer> {
     }
 
     @Override
-    public void compute(FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
+    public void compute(
         BolBuffer rawEntry,
         BolBuffer keyBytes,
         BolBuffer valueBuffer,
@@ -58,10 +56,10 @@ public class LABCSLMIndex implements LABIndex<BolBuffer, BolBuffer> {
                         BolBuffer apply;
                         if (v != null) {
                             valueBuffer.force(v, 0, v.length);
-                            apply = remappingFunction.apply(readKeyFormatTransformer, readValueFormatTransformer, rawEntry, valueBuffer);
+                            apply = remappingFunction.apply(rawEntry, valueBuffer);
                             cost = ((apply == null || apply.length == -1) ? 0 : apply.length) - v.length;
                         } else {
-                            apply = remappingFunction.apply(readKeyFormatTransformer, readValueFormatTransformer, rawEntry, null);
+                            apply = remappingFunction.apply(rawEntry, null);
                             if (apply != null && apply.length > -1) {
                                 cost = k.length + apply.length;
                             }
@@ -117,7 +115,7 @@ public class LABCSLMIndex implements LABIndex<BolBuffer, BolBuffer> {
                     Map.Entry<byte[], byte[]> next = iterator.next();
                     byte[] value = next.getValue();
                     entryBuffer.force(value, 0, value.length);
-                    boolean more = stream.stream(FormatTransformer.NO_OP, FormatTransformer.NO_OP, entryBuffer);
+                    boolean more = stream.stream(entryBuffer);
                     return more ? Next.more : Next.stopped;
                 }
                 return Next.eos;

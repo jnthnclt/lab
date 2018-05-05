@@ -1,21 +1,32 @@
 package com.github.jnthnclt.os.lab.core;
 
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
+import com.github.jnthnclt.os.lab.core.api.AppendValues;
+import com.github.jnthnclt.os.lab.core.api.Keys;
+import com.github.jnthnclt.os.lab.core.api.Ranges;
 import com.github.jnthnclt.os.lab.core.api.Snapshot;
+import com.github.jnthnclt.os.lab.core.api.ValueIndex;
+import com.github.jnthnclt.os.lab.core.api.ValueStream;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABClosedException;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABCorruptedException;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.ActiveScan;
 import com.github.jnthnclt.os.lab.core.guts.InterleaveStream;
 import com.github.jnthnclt.os.lab.core.guts.LABHashIndexType;
+import com.github.jnthnclt.os.lab.core.guts.LABIndex;
 import com.github.jnthnclt.os.lab.core.guts.LABIndexProvider;
+import com.github.jnthnclt.os.lab.core.guts.LABMemoryIndex;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
 import com.github.jnthnclt.os.lab.core.guts.PointInterleave;
+import com.github.jnthnclt.os.lab.core.guts.RangeStripedCompactableIndexes;
+import com.github.jnthnclt.os.lab.core.guts.ReaderTx;
 import com.github.jnthnclt.os.lab.core.guts.api.KeyToString;
 import com.github.jnthnclt.os.lab.core.guts.api.Next;
+import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
+import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.util.LABLogger;
+import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,21 +37,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
-import com.github.jnthnclt.os.lab.core.api.AppendValues;
-import com.github.jnthnclt.os.lab.core.api.FormatTransformerProvider;
-import com.github.jnthnclt.os.lab.core.api.Keys;
-import com.github.jnthnclt.os.lab.core.api.Ranges;
-import com.github.jnthnclt.os.lab.core.api.RawEntryFormat;
-import com.github.jnthnclt.os.lab.core.api.ValueIndex;
-import com.github.jnthnclt.os.lab.core.api.ValueStream;
-import com.github.jnthnclt.os.lab.core.guts.LABIndex;
-import com.github.jnthnclt.os.lab.core.guts.LABMemoryIndex;
-import com.github.jnthnclt.os.lab.core.guts.RangeStripedCompactableIndexes;
-import com.github.jnthnclt.os.lab.core.guts.ReaderTx;
-import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
 
 /**
  * @author jonathan.colt
@@ -87,10 +83,8 @@ public class LAB implements ValueIndex<byte[]> {
     private volatile long lastCommitTimestamp = System.currentTimeMillis();
 
     public LAB(LABStats stats,
-        FormatTransformerProvider formatTransformerProvider,
         String rawhideName,
         Rawhide rawhide,
-        RawEntryFormat rawEntryFormat,
         ExecutorService schedule,
         ExecutorService compact,
         ExecutorService destroy,
@@ -136,9 +130,7 @@ public class LAB implements ValueIndex<byte[]> {
             splitWhenKeysTotalExceedsNBytes,
             splitWhenValuesTotalExceedsNBytes,
             splitWhenValuesAndKeysTotalExceedsNBytes,
-            formatTransformerProvider,
             rawhide,
-            new AtomicReference<>(rawEntryFormat),
             leapsCache,
             fsyncFileRenames,
             hashIndexType,
@@ -539,7 +531,7 @@ public class LAB implements ValueIndex<byte[]> {
                                     stats.journaledAppend.increment();
 
                                     count[0]++;
-                                    return stream.stream(FormatTransformer.NO_OP, FormatTransformer.NO_OP, rawEntry);
+                                    return stream.stream( rawEntry);
                                 }
                             );
                         }, keyBuffer
@@ -554,7 +546,7 @@ public class LAB implements ValueIndex<byte[]> {
                                 BolBuffer rawEntry = rawhide.toRawEntry(key, timestamp, tombstoned, version, value, rawEntryBuffer);
                                 stats.append.increment();
                                 count[0]++;
-                                return stream.stream(FormatTransformer.NO_OP, FormatTransformer.NO_OP, rawEntry);
+                                return stream.stream(rawEntry);
                             }
                         );
                     }, keyBuffer
@@ -756,10 +748,8 @@ public class LAB implements ValueIndex<byte[]> {
         ValueStream valueStream) throws Exception {
 
         while (true) {
-            Next next = nextRawEntry.next((readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
+            Next next = nextRawEntry.next((rawEntry) -> {
                 return rawhide.streamRawEntry(index,
-                    readKeyFormatTransformer,
-                    readValueFormatTransformer,
                     rawEntry,
                     streamKeyBuffer,
                     streamValueBuffer,

@@ -1,6 +1,5 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
 import com.google.common.base.Preconditions;
 import java.io.IOException;
@@ -63,9 +62,9 @@ public class Leaps {
             + '}';
     }
 
-    public void write(FormatTransformer keyFormatTransformer, IAppendOnly writeable) throws Exception {
-        BolBuffer writeLastKey = keyFormatTransformer.transform(lastKey);
-        BolBuffer[] writeKeys = keyFormatTransformer.transform(keys);
+    public void write(IAppendOnly writeable) throws Exception {
+        BolBuffer writeLastKey = lastKey;
+        BolBuffer[] writeKeys = keys;
 
         LongBuffer startOfEntryBuffer = startOfEntry.get(null);
         int entryLength = 4 + 4 + 4 + writeLastKey.length + 4 + (startOfEntryBuffer.limit() * 8) + 4;
@@ -94,7 +93,7 @@ public class Leaps {
         writeable.appendInt(entryLength);
     }
 
-    static Leaps read(FormatTransformer keyFormatTransformer, PointerReadableByteBufferFile readable, long offset) throws Exception {
+    static Leaps read(PointerReadableByteBufferFile readable, long offset) throws Exception {
         int entryLength = readable.readInt(offset);
         offset += 4;
         int index = readable.readInt(offset);
@@ -133,7 +132,7 @@ public class Leaps {
         if (readable.readInt(offset) != entryLength) {
             throw new RuntimeException("Encountered length corruption. ");
         }
-        return new Leaps(index, keyFormatTransformer.transform(new BolBuffer(lastKey)), fpIndex, keyFormatTransformer.transform(keys), startOfEntry);
+        return new Leaps(index, new BolBuffer(lastKey), fpIndex,keys, startOfEntry);
     }
 
 }

@@ -10,7 +10,6 @@ import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongArray;
 import com.github.jnthnclt.os.lab.core.LABStats;
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.guts.LABIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
@@ -692,8 +691,7 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
     }
 
     @Override
-    public void compute(FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
+    public void compute(
         BolBuffer rawEntry,
         BolBuffer keyBytes,
         BolBuffer valueBuffer,
@@ -712,7 +710,7 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
                     long v;
                     BolBuffer r;
                     if ((n = findNode(keyBytes)) == NIL) {
-                        if ((r = remappingFunction.apply(readKeyFormatTransformer, readValueFormatTransformer, rawEntry, null)) == null) {
+                        if ((r = remappingFunction.apply(rawEntry, null)) == null) {
                             break;
                         }
                         if (!doPut(keyBytes, r, true, changeInBytes)) {
@@ -726,7 +724,7 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
                                 BolBuffer acquired = memory.acquireBytes(va, valueBuffer);
                                 //memory.release(va);
 
-                                r = remappingFunction.apply(readKeyFormatTransformer, readValueFormatTransformer, rawEntry, acquired);
+                                r = remappingFunction.apply(rawEntry, acquired);
                                 if (r == null) {
                                     rid = NIL;
                                 } else {
@@ -1056,7 +1054,7 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
             } finally {
                 growSemaphore.release();
             }
-            return entryStream.stream(FormatTransformer.NO_OP, FormatTransformer.NO_OP, acquired);
+            return entryStream.stream(acquired);
         }
 
         void advance() throws InterruptedException {
@@ -1182,7 +1180,7 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
             } finally {
                 m.growSemaphore.release();
             }
-            return stream.stream(FormatTransformer.NO_OP, FormatTransformer.NO_OP, acquired);
+            return stream.stream(acquired);
         }
 
         @Override

@@ -1,6 +1,5 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
-import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABCostChangeInBytes;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
@@ -13,14 +12,12 @@ public interface LABIndex<E, B> {
 
     interface Compute<E, B> {
 
-        BolBuffer apply(FormatTransformer readKeyFormatTransformer,
-            FormatTransformer readValueFormatTransformer,
+        BolBuffer apply(
             E apply,
             E existing);
     }
 
-    void compute(FormatTransformer readKeyFormatTransformer,
-        FormatTransformer readValueFormatTransformer,
+    void compute(
         E entry,
         B keyBuffer,
         B valueBuffer,

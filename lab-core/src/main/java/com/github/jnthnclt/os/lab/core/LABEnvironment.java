@@ -2,7 +2,6 @@ package com.github.jnthnclt.os.lab.core;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.jnthnclt.os.lab.core.api.FormatTransformerProvider;
 import com.github.jnthnclt.os.lab.core.api.JournalStream;
 import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
@@ -15,7 +14,6 @@ import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABAppendOnlyAllocator;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABConcurrentSkipListMap;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABConcurrentSkipListMemory;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
@@ -29,7 +27,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.io.FileUtils;
-import com.github.jnthnclt.os.lab.core.api.NoOpFormatTransformerProvider;
 import com.github.jnthnclt.os.lab.core.api.RawEntryFormat;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.guts.LABCSLMIndex;
@@ -52,7 +49,7 @@ public class LABEnvironment {
     private final ExecutorService scheduler;
     private final ExecutorService compact;
     private final ExecutorService destroy;
-    private final LABHeapPressure LABHeapPressure;
+    private final LABHeapPressure labHeapPressure;
     private final int minMergeDebt;
     private final int maxMergeDebt;
     private final LRUConcurrentBAHLinkedHash<Leaps> leapsCache;
@@ -64,7 +61,6 @@ public class LABEnvironment {
 
     private final String walName;
     private final LABWAL wal;
-    private final Map<String, FormatTransformerProvider> formatTransformerProviderRegistry = Maps.newConcurrentMap();
     private final Map<String, Rawhide> rawhideRegistry = Maps.newConcurrentMap();
     private final Map<String, RawEntryFormat> rawEntryFormatRegistry = Maps.newConcurrentMap();
 
@@ -96,7 +92,7 @@ public class LABEnvironment {
         final ExecutorService destroy,
         LABWALConfig walConfig,
         File labRoot,
-        LABHeapPressure LABHeapPressure,
+        LABHeapPressure labHeapPressure,
         int minMergeDebt,
         int maxMergeDebt,
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache,
@@ -104,7 +100,6 @@ public class LABEnvironment {
         boolean useIndexableMemory,
         boolean fsyncFileRenames) throws Exception {
 
-        register(NoOpFormatTransformerProvider.NAME, NoOpFormatTransformerProvider.NO_OP);
         register(LABKeyValueRawhide.NAME, LABKeyValueRawhide.SINGLETON);
         register(LABRawhide.NAME, LABRawhide.SINGLETON);
         register(MemoryRawEntryFormat.NAME, MemoryRawEntryFormat.SINGLETON);
@@ -114,7 +109,7 @@ public class LABEnvironment {
         this.compact = compact;
         this.destroy = destroy;
         this.labRoot = labRoot;
-        this.LABHeapPressure = LABHeapPressure;
+        this.labHeapPressure = labHeapPressure;
         this.minMergeDebt = minMergeDebt;
         this.maxMergeDebt = maxMergeDebt;
         this.leapsCache = leapsCache;
@@ -143,17 +138,6 @@ public class LABEnvironment {
 
     LABWAL getLabWAL() {
         return wal;
-    }
-
-    public void register(String name, FormatTransformerProvider formatTransformerProvider) {
-        FormatTransformerProvider had = formatTransformerProviderRegistry.putIfAbsent(name, formatTransformerProvider);
-        if (had != null) {
-            throw new IllegalArgumentException("FormatTransformerProvider:" + had + " is already register under the name:" + name);
-        }
-    }
-
-    FormatTransformerProvider formatTransformerProvider(String name) {
-        return formatTransformerProviderRegistry.get(name);
     }
 
     public void register(String name, Rawhide rawhide) {
@@ -256,12 +240,7 @@ public class LABEnvironment {
             throw new IllegalStateException("primaryName:" + config.primaryName + " cannot collide with metaName");
         }
 
-        FormatTransformerProvider formatTransformerProvider = formatTransformerProviderRegistry.get(config.formatTransformerProviderName);
-        Preconditions.checkNotNull(formatTransformerProvider, "No FormatTransformerProvider registered for " + config.formatTransformerProviderName);
         Rawhide rawhide = rawhideRegistry.get(config.rawhideName);
-        Preconditions.checkNotNull(formatTransformerProvider, "No Rawhide registered for " + config.rawhideName);
-        RawEntryFormat rawEntryFormat = rawEntryFormatRegistry.get(config.rawEntryFormatName);
-        Preconditions.checkNotNull(formatTransformerProvider, "No RawEntryFormat registered for " + config.rawEntryFormatName);
 
         byte[] valueIndexId = config.primaryName.getBytes(StandardCharsets.UTF_8);
         if (meta != null) {
@@ -303,10 +282,8 @@ public class LABEnvironment {
         };
 
         return new LAB(stats,
-            formatTransformerProvider,
             config.rawhideName,
             rawhide,
-            rawEntryFormat,
             scheduler,
             compact,
             destroy,
@@ -315,7 +292,7 @@ public class LABEnvironment {
             valueIndexId,
             config.primaryName,
             config.entriesBetweenLeaps,
-            LABHeapPressure,
+            labHeapPressure,
             config.maxHeapPressureInBytes,
             minMergeDebt,
             maxMergeDebt,

@@ -12,7 +12,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
-import com.github.jnthnclt.os.lab.core.api.NoOpFormatTransformerProvider;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
@@ -66,7 +65,7 @@ public class LABEnvironmentNGTest {
                 -1,
                 -1,
                 -1,
-                NoOpFormatTransformerProvider.NAME,
+                "deprecated",
                 LABRawhide.NAME,
                 MemoryRawEntryFormat.NAME,
                 2,
@@ -139,7 +138,7 @@ public class LABEnvironmentNGTest {
                 -1,
                 -1,
                 -1,
-                NoOpFormatTransformerProvider.NAME,
+                "deprecated",
                 LABRawhide.NAME,
                 MemoryRawEntryFormat.NAME,
                 2,
@@ -266,7 +265,7 @@ public class LABEnvironmentNGTest {
             -1,
             -1,
             -1,
-            NoOpFormatTransformerProvider.NAME,
+            "deprecated",
             LABRawhide.NAME,
             MemoryRawEntryFormat.NAME,
             2,
@@ -353,7 +352,7 @@ public class LABEnvironmentNGTest {
             -1,
             -1,
             -1,
-            NoOpFormatTransformerProvider.NAME,
+            "deprecated",
             LABRawhide.NAME,
             MemoryRawEntryFormat.NAME,
             2,
