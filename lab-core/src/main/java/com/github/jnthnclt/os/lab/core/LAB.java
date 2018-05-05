@@ -757,7 +757,7 @@ public class LAB implements ValueIndex<byte[]> {
                     streamKeyBuffer,
                     streamValueBuffer,
                     valueStream);
-            });
+            }, null);
             if (next == Next.stopped) {
                 return false;
             } else if (next == Next.eos) {

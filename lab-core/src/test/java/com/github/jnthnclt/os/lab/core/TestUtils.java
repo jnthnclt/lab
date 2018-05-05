@@ -126,7 +126,7 @@ public class TestUtils {
                     index[0]++;
                     return true;
                 };
-                while (rowScan.next(stream) == Next.more) {
+                while (rowScan.next(stream,null) == Next.more) {
                 }
             } finally {
                 rowScan.close();
@@ -149,7 +149,7 @@ public class TestUtils {
                     return true;
                 };
 
-                while (pointInterleave.next(stream) == Next.more) {
+                while (pointInterleave.next(stream,null) == Next.more) {
                 }
             }
             //System.out.println("gets PASSED");
@@ -172,7 +172,7 @@ public class TestUtils {
                 //System.out.println("Asked:" + UIO.bytesLong(keys.get(_i)) + " to " + UIO.bytesLong(keys.get(_i + 3)));
                 Scanner rangeScan = new InterleaveStream(acquired, keys.get(_i), keys.get(_i + 3), LABRawhide.SINGLETON);
                 try {
-                    while (rangeScan.next(stream) == Next.more) {
+                    while (rangeScan.next(stream,null) == Next.more) {
                     }
                 } finally {
                     rangeScan.close();
@@ -197,7 +197,7 @@ public class TestUtils {
                 Scanner rangeScan = new InterleaveStream(acquired, UIO.longBytes(UIO.bytesLong(keys.get(_i)) + 1, new byte[8], 0), keys.get(_i + 3),
                     LABRawhide.SINGLETON);
                 try {
-                    while (rangeScan.next(stream) == Next.more) {
+                    while (rangeScan.next(stream,null) == Next.more) {
                     }
                 } finally {
                     rangeScan.close();

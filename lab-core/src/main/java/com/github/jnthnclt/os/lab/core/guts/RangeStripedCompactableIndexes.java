@@ -377,14 +377,14 @@ public class RangeStripedCompactableIndexes {
                 appendableIndex.append((stream) -> {
                     ReadIndex reader = memoryIndex.acquireReader();
                     try {
-                        ActiveScan activeScan = new ActiveScan(false);
+                        ActiveScanRange activeScan = new ActiveScanRange(false);
                         Scanner scanner = reader.rangeScan(activeScan, minKey, maxKey, entryBuffer, entryKeyBuffer);
                         if (scanner != null) {
                             try {
                                 RawEntryStream rawEntryStream = (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
                                     return stream.stream(readKeyFormatTransformer, readValueFormatTransformer, rawEntry);
                                 };
-                                while (scanner.next(rawEntryStream) == Next.more) {
+                                while (scanner.next(rawEntryStream, null) == Next.more) {
                                 }
                             } finally {
                                 scanner.close();

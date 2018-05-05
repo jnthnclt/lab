@@ -1394,7 +1394,7 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
         BolBuffer keyBuffer = new BolBuffer();
         return new Scanner() {
             @Override
-            public Next next(RawEntryStream stream) throws Exception {
+            public Next next(RawEntryStream stream,  BolBuffer nextHint) throws Exception {
                 if (entryStream.hasNext()) {
                     boolean more = entryStream.next(stream, keyBuffer, entryBuffer);
                     return more ? Next.more : Next.stopped;

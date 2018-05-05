@@ -23,9 +23,9 @@ public class PointInterleave implements Scanner, RawEntryStream {
             Scanner scanner = null;
             try {
                 BolBuffer entryBuffer = new BolBuffer(); // must be new since we retain a reference
-                scanner = index.pointScan(new ActiveScan(hashIndexEnabled), key, entryBuffer, entryKeyBuffer);
+                scanner = index.pointScan(new ActiveScanPoint(hashIndexEnabled), key, entryBuffer, entryKeyBuffer);
                 if (scanner != null) {
-                    scanner.next(this);
+                    scanner.next(this, null);
                     scanner.close();
                 }
                 if (!rawhide.hasTimestampVersion() && nextRawEntry != null) {
@@ -42,7 +42,7 @@ public class PointInterleave implements Scanner, RawEntryStream {
     }
 
     @Override
-    public Next next(RawEntryStream stream) throws Exception {
+    public Next next(RawEntryStream stream,  BolBuffer nextHint) throws Exception {
         if (once) {
             return Next.stopped;
         }

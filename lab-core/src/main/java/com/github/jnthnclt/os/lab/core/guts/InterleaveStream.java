@@ -27,9 +27,9 @@ public class InterleaveStream implements Scanner {
             Scanner scanner = null;
             try {
                 if (rowScan) {
-                    scanner = indexs[i].rowScan(new ActiveScan(false), new BolBuffer(), new BolBuffer());
+                    scanner = indexs[i].rowScan(new ActiveScanRow(), new BolBuffer(), new BolBuffer());
                 } else {
-                    scanner = indexs[i].rangeScan(new ActiveScan(false), from, to, new BolBuffer(), new BolBuffer());
+                    scanner = indexs[i].rangeScan(new ActiveScanRange(false), from, to, new BolBuffer(), new BolBuffer());
                 }
                 if (scanner != null) {
                     Feed feed = new Feed(i, scanner, rawhide);
@@ -59,13 +59,13 @@ public class InterleaveStream implements Scanner {
 
         Next more = Next.more;
         while (more == Next.more) {
-            more = next(stream);
+            more = next(stream, null);
         }
         return more != Next.stopped;
     }
 
     @Override
-    public Next next(RawEntryStream stream) throws Exception {
+    public Next next(RawEntryStream stream, BolBuffer nextHint) throws Exception {
 
         // 0.     3, 5, 7, 9
         // 1.     3, 4, 7, 10
@@ -146,7 +146,7 @@ public class InterleaveStream implements Scanner {
         }
 
         private BolBuffer feedNext() throws Exception {
-            Next hadNext = scanner.next(this);
+            Next hadNext = scanner.next(this, null);
             if (hadNext != Next.more) {
                 nextRawEntry = null;
             }

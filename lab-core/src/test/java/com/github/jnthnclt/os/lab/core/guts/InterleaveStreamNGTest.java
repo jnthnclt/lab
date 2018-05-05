@@ -104,17 +104,17 @@ public class InterleaveStreamNGTest {
             }
 
             @Override
-            public Scanner rangeScan(ActiveScan activeScan, byte[] from, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+            public Scanner rangeScan(ActiveScanRange activeScan, byte[] from, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
                 throw new UnsupportedOperationException("Not supported.");
             }
 
             @Override
-            public Scanner rowScan(ActiveScan activeScan, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+            public Scanner rowScan(ActiveScanRow activeScan, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
                 return nextEntrySequence(keys, values);
             }
 
             @Override
-            public Scanner pointScan(ActiveScan activeScen, byte[] key, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+            public Scanner pointScan(ActiveScanPoint activeScen, byte[] key, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
                 throw new UnsupportedOperationException("Not supported.");
             }
 
@@ -168,11 +168,11 @@ public class InterleaveStreamNGTest {
                 //System.out.println("Index " + i);
 
                 readerIndexs[wi] = memoryIndexes[i].acquireReader();
-                Scanner nextRawEntry = readerIndexs[wi].rowScan(new ActiveScan(false), new BolBuffer(), new BolBuffer());
+                Scanner nextRawEntry = readerIndexs[wi].rowScan(new ActiveScanRow(), new BolBuffer(), new BolBuffer());
                 while (nextRawEntry.next((readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
                     //System.out.println(TestUtils.toString(rawEntry));
                     return true;
-                }) == Next.more) {
+                },null) == Next.more) {
                 }
                 //System.out.println("\n");
 
@@ -216,7 +216,7 @@ public class InterleaveStreamNGTest {
                 passed[0] = false;
             }
             return true;
-        }) == Next.more) {
+        },null) == Next.more) {
         }
         Assert.assertTrue(passed[0], "key or value miss match");
         Assert.assertTrue(expected.isEmpty(), "failed to remove all");
@@ -248,7 +248,7 @@ public class InterleaveStreamNGTest {
 
         return new Scanner() {
             @Override
-            public Next next(RawEntryStream stream) throws Exception {
+            public Next next(RawEntryStream stream, BolBuffer nextHint) throws Exception {
                 if (index[0] < keys.length) {
                     byte[] rawEntry = TestUtils.rawEntry(keys[index[0]], values[index[0]]);
                     if (!stream.stream(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(rawEntry))) {

@@ -145,7 +145,7 @@ public class IndexStressNGTest {
 
                         int longKey = rand.nextInt(maxKey.intValue());
                         UIO.longBytes(longKey, key, 0);
-                        pointInterleave.next(hitsAndMisses);
+                        pointInterleave.next(hitsAndMisses, null);
 
                         if ((hits[0] + misses[0]) % logInterval == 0) {
                             return false;

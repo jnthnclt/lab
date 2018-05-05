@@ -128,7 +128,7 @@ public class RangeStripedCompactableIndexesStressNGTest {
                     try {
 
                         UIO.longBytes(longKey, key, 0);
-                        pointInterleave.next( hitsAndMisses);
+                        pointInterleave.next( hitsAndMisses,null);
 
                         if ((hits[0] + misses[0]) % logInterval == 0) {
                             return true;

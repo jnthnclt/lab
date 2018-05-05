@@ -112,7 +112,7 @@ public class LABCSLMIndex implements LABIndex<BolBuffer, BolBuffer> {
             .iterator();
         return new Scanner() {
             @Override
-            public Next next(RawEntryStream stream) throws Exception {
+            public Next next(RawEntryStream stream, BolBuffer nextHint) throws Exception {
                 if (iterator.hasNext()) {
                     Map.Entry<byte[], byte[]> next = iterator.next();
                     byte[] value = next.getValue();

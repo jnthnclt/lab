@@ -43,7 +43,7 @@ public class LABConcurrentSkipListMapNGTest {
         while (scanner.next((FormatTransformer readKeyFormatTransformer, FormatTransformer readValueFormatTransformer, BolBuffer rawEntry) -> {
             //System.out.println("Keys:" + UIO.bytesLong(rawEntry.copy()));
             return true;
-        }) == Next.more) {
+        }, null) == Next.more) {
         }
 
     }

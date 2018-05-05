@@ -250,7 +250,7 @@ public class ReadOnlyIndex implements ReadIndex {
         }
     }
 
-    private ActiveScan setup(ActiveScan activeScan) throws IOException {
+    private ActiveScanRow setup(ActiveScanRow activeScan) throws IOException {
         activeScan.rawhide = rawhide;
         activeScan.readKeyFormatTransformer = readKeyFormatTransformer;
         activeScan.readValueFormatTransformer = readValueFormatTransformer;
@@ -272,18 +272,63 @@ public class ReadOnlyIndex implements ReadIndex {
         return activeScan;
     }
 
+    private ActiveScanRange setup(ActiveScanRange activeScan) throws IOException {
+        activeScan.rawhide = rawhide;
+        activeScan.readKeyFormatTransformer = readKeyFormatTransformer;
+        activeScan.readValueFormatTransformer = readValueFormatTransformer;
+        activeScan.leaps = leaps;
+        activeScan.cacheKey = cacheKey;
+        activeScan.leapsCache = leapsCache;
+        activeScan.readable = readOnlyFile.pointerReadable(-1);
+        activeScan.cacheKeyBuffer = new byte[16];
+
+        activeScan.hashIndexType = hashIndexType;
+        activeScan.hashIndexHashFunctionCount = hashIndexHashFunctionCount;
+        activeScan.hashIndexHeadOffset = hashIndexHeadOffset;
+        activeScan.hashIndexMaxCapacity = hashIndexMaxCapacity;
+        activeScan.hashIndexLongPrecision = hashIndexLongPrecision;
+
+        activeScan.activeFp = Long.MAX_VALUE;
+        activeScan.activeOffset = -1;
+        activeScan.activeResult = false;
+        return activeScan;
+    }
+
+    private ActiveScanPoint setup(ActiveScanPoint activeScan) throws IOException {
+        activeScan.rawhide = rawhide;
+        activeScan.readKeyFormatTransformer = readKeyFormatTransformer;
+        activeScan.readValueFormatTransformer = readValueFormatTransformer;
+        activeScan.leaps = leaps;
+        activeScan.cacheKey = cacheKey;
+        activeScan.leapsCache = leapsCache;
+        activeScan.readable = readOnlyFile.pointerReadable(-1);
+        activeScan.cacheKeyBuffer = new byte[16];
+
+        activeScan.hashIndexType = hashIndexType;
+        activeScan.hashIndexHashFunctionCount = hashIndexHashFunctionCount;
+        activeScan.hashIndexHeadOffset = hashIndexHeadOffset;
+        activeScan.hashIndexMaxCapacity = hashIndexMaxCapacity;
+        activeScan.hashIndexLongPrecision = hashIndexLongPrecision;
+
+        activeScan.activeFp = Long.MAX_VALUE;
+        activeScan.activeOffset = -1;
+        activeScan.activeResult = false;
+        return activeScan;
+    }
+
+
     @Override
     public void release() {
         hideABone.release();
     }
 
     @Override
-    public Scanner rangeScan(ActiveScan activeScan, byte[] from, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+    public Scanner rangeScan(ActiveScanRange activeScan, byte[] from, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
 
         BolBuffer bbFrom = from == null ? null : new BolBuffer(from);
         BolBuffer bbTo = to == null ? null : new BolBuffer(to);
 
-        ActiveScan scan = setup(activeScan);
+        ActiveScanRange scan = setup(activeScan);
         long fp = scan.getInclusiveStartOfRow(new BolBuffer(from), entryBuffer, entryKeyBuffer, false);
         if (fp < 0) {
             return null;
@@ -293,15 +338,15 @@ public class ReadOnlyIndex implements ReadIndex {
     }
 
     @Override
-    public Scanner rowScan(ActiveScan activeScan, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
-        ActiveScan scan = setup(activeScan);
+    public Scanner rowScan(ActiveScanRow activeScan, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+        ActiveScanRow scan = setup(activeScan);
         scan.setupRowScan(entryBuffer);
         return scan;
     }
 
     @Override
-    public Scanner pointScan(ActiveScan activeScan, byte[] key, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
-        ActiveScan pointScan = setup(activeScan);
+    public Scanner pointScan(ActiveScanPoint activeScan, byte[] key, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+        ActiveScanPoint pointScan = setup(activeScan);
         long fp = pointScan.getInclusiveStartOfRow(new BolBuffer(key), entryBuffer, entryKeyBuffer, true);
         if (fp < 0) {
             return null;

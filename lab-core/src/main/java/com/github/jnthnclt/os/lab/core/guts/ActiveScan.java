@@ -3,9 +3,6 @@ package com.github.jnthnclt.os.lab.core.guts;
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.api.FormatTransformer;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
-import com.github.jnthnclt.os.lab.core.guts.api.Next;
-import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
-import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
 import com.github.jnthnclt.os.lab.core.io.api.UIO;
@@ -15,53 +12,29 @@ import java.nio.LongBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
 
-/**
- * @author jonathan.colt
- */
-public class ActiveScan implements Scanner {
+public class ActiveScan {
 
     private static final LABLogger LOG = LABLoggerFactory.getLogger();
 
-    private final boolean hashIndexEnabled;
+    public static long getInclusiveStartOfRow(PointerReadableByteBufferFile readable,
+        Leaps l,
+        long cacheKey,
+        LRUConcurrentBAHLinkedHash<Leaps>leapsCache,
+        byte[] cacheKeyBuffer,
+        Rawhide rawhide,
+        boolean hashIndexEnabled,
+        LABHashIndexType hashIndexType,
+        byte hashIndexHashFunctionCount,
+        long hashIndexHeadOffset,
+        long hashIndexMaxCapacity,
+        byte hashIndexLongPrecision,
+        FormatTransformer readKeyFormatTransformer,
+        FormatTransformer readValueFormatTransformer,
+        BolBuffer bbKey,
+        BolBuffer entryBuffer,
+        BolBuffer entryKeyBuffer,
+        boolean exact) throws Exception {
 
-    Rawhide rawhide;
-    FormatTransformer readKeyFormatTransformer;
-    FormatTransformer readValueFormatTransformer;
-    Leaps leaps;
-    long cacheKey;
-    LRUConcurrentBAHLinkedHash<Leaps> leapsCache;
-    PointerReadableByteBufferFile readable;
-    byte[] cacheKeyBuffer;
-
-    LABHashIndexType hashIndexType;
-    byte hashIndexHashFunctionCount;
-    long hashIndexHeadOffset;
-    long hashIndexMaxCapacity;
-    byte hashIndexLongPrecision;
-    long activeFp = Long.MAX_VALUE;
-    long activeOffset = -1;
-    boolean activeResult;
-
-
-    private enum ScanType {
-        point, range, row
-    }
-
-    private ScanType scanType;
-    private long fp;
-    private byte[] to;
-    private BolBuffer entryBuffer;
-    private BolBuffer entryKeyBuffer;
-    private BolBuffer bbFrom;
-    private BolBuffer bbTo;
-
-
-    public ActiveScan(boolean hashIndexEnabled) {
-        this.hashIndexEnabled = hashIndexEnabled;
-    }
-
-    public long getInclusiveStartOfRow(BolBuffer bbKey, BolBuffer entryBuffer, BolBuffer entryKeyBuffer, boolean exact) throws Exception {
-        Leaps l = leaps;
         long rowIndex = -1;
 
         if (rawhide.compare(l.lastKey, bbKey) < 0) {
@@ -70,12 +43,32 @@ public class ActiveScan implements Scanner {
 
         if (exact && hashIndexEnabled && hashIndexMaxCapacity > 0) {
             if (hashIndexType == LABHashIndexType.linearProbe) {
-                long exactRowIndex = getLinearProbe(bbKey, entryBuffer, entryKeyBuffer, readKeyFormatTransformer, readValueFormatTransformer, rawhide);
+                long exactRowIndex = getLinearProbe(readable,
+                    hashIndexHashFunctionCount,
+                    hashIndexHeadOffset,
+                    hashIndexMaxCapacity,
+                    hashIndexLongPrecision,
+                    bbKey,
+                    entryBuffer,
+                    entryKeyBuffer,
+                    readKeyFormatTransformer,
+                    readValueFormatTransformer,
+                    rawhide);
                 if (exactRowIndex >= -1) {
                     return exactRowIndex > -1 ? exactRowIndex - 1 : -1;
                 }
             } else if (hashIndexType == LABHashIndexType.cuckoo) {
-                long exactRowIndex = getCuckoo(bbKey, entryBuffer, entryKeyBuffer, readKeyFormatTransformer, readValueFormatTransformer, rawhide);
+                long exactRowIndex = getCuckoo(readable,
+                    hashIndexHashFunctionCount,
+                    hashIndexHeadOffset,
+                    hashIndexMaxCapacity,
+                    hashIndexLongPrecision,
+                    bbKey,
+                    entryBuffer,
+                    entryKeyBuffer,
+                    readKeyFormatTransformer,
+                    readValueFormatTransformer,
+                    rawhide);
                 if (exactRowIndex >= -1) {
                     return exactRowIndex > -1 ? exactRowIndex - 1 : -1;
                 }
@@ -167,7 +160,12 @@ public class ActiveScan implements Scanner {
         }
     }
 
-    private long getLinearProbe(BolBuffer compareKey,
+    static private long getLinearProbe(PointerReadableByteBufferFile readable,
+        byte hashIndexHashFunctionCount,
+        long hashIndexHeadOffset,
+        long hashIndexMaxCapacity,
+        byte hashIndexLongPrecision,
+        BolBuffer compareKey,
         BolBuffer entryBuffer,
         BolBuffer keyBuffer,
         FormatTransformer readKeyFormatTransformer,
@@ -204,7 +202,12 @@ public class ActiveScan implements Scanner {
 
     }
 
-    private long getCuckoo(BolBuffer compareKey,
+    static private long getCuckoo(PointerReadableByteBufferFile readable,
+        byte hashIndexHashFunctionCount,
+        long hashIndexHeadOffset,
+        long hashIndexMaxCapacity,
+        byte hashIndexLongPrecision,
+        BolBuffer compareKey,
         BolBuffer entryBuffer,
         BolBuffer keyBuffer,
         FormatTransformer readKeyFormatTransformer,
@@ -232,103 +235,4 @@ public class ActiveScan implements Scanner {
         }
         return -1;
     }
-
-
-    public void setupAsRangeScanner(long fp, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer, BolBuffer bbFrom, BolBuffer bbTo) {
-        this.scanType = ScanType.range;
-        this.fp = fp;
-        this.to = to;
-        this.entryBuffer = entryBuffer;
-        this.entryKeyBuffer = entryKeyBuffer;
-        this.bbFrom = bbFrom;
-        this.bbTo = bbTo;
-    }
-
-    public void setupRowScan(BolBuffer entryBuffer) {
-        this.scanType = ScanType.row;
-        this.entryBuffer = entryBuffer;
-    }
-
-    public void setupPointScan(long fp, BolBuffer entryBuffer) {
-        this.scanType = ScanType.point;
-        this.entryBuffer = entryBuffer;
-        this.fp = fp;
-    }
-
-    private boolean result() {
-        return activeResult;
-    }
-
-
-    @Override
-    public Next next(RawEntryStream stream) throws Exception {
-        if (scanType == ScanType.point) {
-            if (activeOffset != -1) {
-                return Next.stopped;
-            }
-            this.next(fp, entryBuffer, stream);
-            return Next.more;
-        } else if (scanType == ScanType.range) {
-            BolBuffer entryBuffer = new BolBuffer();
-            boolean[] once = new boolean[] { false };
-            boolean more = true;
-            while (!once[0] && more) {
-                more = this.next(fp,
-                    entryBuffer,
-                    (readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
-                        int c = rawhide.compareKey(readKeyFormatTransformer, readValueFormatTransformer, rawEntry, entryKeyBuffer, bbFrom);
-                        if (c >= 0) {
-                            c = to == null ? -1 : rawhide.compareKey(readKeyFormatTransformer, readValueFormatTransformer, rawEntry, entryKeyBuffer, bbTo);
-                            if (c < 0) {
-                                once[0] = true;
-                            }
-                            return c < 0 && stream.stream(readKeyFormatTransformer, readValueFormatTransformer, rawEntry);
-                        } else {
-                            return true;
-                        }
-                    });
-            }
-            more = this.result();
-            return more ? Next.more : Next.stopped;
-        } else if (scanType == ScanType.row) {
-            this.next(0, entryBuffer, stream);
-            boolean more = this.result();
-            return more ? Next.more : Next.stopped;
-        } else {
-            throw new IllegalStateException("This has not been setup as a scanner.");
-        }
-    }
-
-    @Override
-    public void close() throws Exception {
-    }
-
-
-    private boolean next(long fp, BolBuffer entryBuffer, RawEntryStream stream) throws Exception {
-
-        if (activeFp == Long.MAX_VALUE || activeFp != fp) {
-            activeFp = fp;
-            activeOffset = fp;
-        }
-        activeResult = false;
-        int type;
-        while ((type = readable.read(activeOffset)) >= 0) {
-            activeOffset++;
-            if (type == LABAppendableIndex.ENTRY) {
-                activeOffset += rawhide.rawEntryToBuffer(readable, activeOffset, entryBuffer);
-                activeResult = stream.stream(readKeyFormatTransformer, readValueFormatTransformer, entryBuffer);
-                return false;
-            } else if (type == LABAppendableIndex.LEAP) {
-                int length = readable.readInt(activeOffset); // entryLength
-                activeOffset += (length);
-            } else if (type == LABAppendableIndex.FOOTER) {
-                activeResult = false;
-                return false;
-            } else {
-                throw new IllegalStateException("Bad row type:" + type + " at fp:" + (activeOffset - 1));
-            }
-        }
-        throw new IllegalStateException("Missing footer");
-    }
-
 }
