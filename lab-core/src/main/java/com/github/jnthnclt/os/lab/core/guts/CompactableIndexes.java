@@ -33,7 +33,8 @@ public class CompactableIndexes {
     static private class IndexesLock {
     }
 
-    private static final LABLogger LOG = LABLoggerFactory.getLogger();;
+    private static final LABLogger LOG = LABLoggerFactory.getLogger();
+    ;
 
     // newest to oldest
     private final LABStats stats;
@@ -48,7 +49,7 @@ public class CompactableIndexes {
     private final AtomicBoolean compacting = new AtomicBoolean();
     private volatile TimestampAndVersion maxTimestampAndVersion = TimestampAndVersion.NULL;
 
-    public CompactableIndexes(LABStats stats,Rawhide rawhide) {
+    public CompactableIndexes(LABStats stats, Rawhide rawhide) {
         this.stats = stats;
         this.rawhide = rawhide;
     }
@@ -327,19 +328,21 @@ public class CompactableIndexes {
 
                                 leftAppendableIndex.append((leftStream) -> {
                                     return effectiveFinalRightAppenableIndex.append((rightStream) -> {
-                                        return feedInterleaver.stream((entry) -> {
-                                            int c = rawhide.compareKey(entry, entryKeyBuffer,
+
+                                        BolBuffer rawEntry = new BolBuffer();
+                                        while ((rawEntry = feedInterleaver.next(rawEntry, null)) != null) {
+                                            int c = rawhide.compareKey(rawEntry, entryKeyBuffer,
                                                 bbMiddle);
 
                                             if (c < 0) {
-                                                if (!leftStream.stream(entry)) {
+                                                if (!leftStream.stream(rawEntry)) {
                                                     return false;
                                                 }
-                                            } else if (!rightStream.stream(entry)) {
+                                            } else if (!rightStream.stream(rawEntry)) {
                                                 return false;
                                             }
-                                            return true;
-                                        });
+                                        }
+                                        return true;
                                     }, rightKeyBuffer);
                                 }, leftKeyBuffer);
                             } finally {
@@ -423,26 +426,26 @@ public class CompactableIndexes {
                                     ReadIndex catchupReader = catchup.acquireReader();
                                     try {
                                         InterleaveStream catchupFeedInterleaver = new InterleaveStream(rawhide,
-                                            ActiveScan.indexToFeeds(new ReadIndex[]{catchup}, null, null, rawhide));
+                                            ActiveScan.indexToFeeds(new ReadIndex[] { catchup }, null, null, rawhide));
                                         try {
                                             LOG.debug("Doing a catchup split for a middle of:{}", Arrays.toString(middle));
                                             catchupLeftAppendableIndex.append((leftStream) -> {
                                                 return effectivelyFinalCatchupRightAppendableIndex.append((rightStream) -> {
-                                                    return catchupFeedInterleaver.stream(
-                                                        (rawEntry) -> {
-                                                            if (rawhide.compareKey(
-                                                                rawEntry,
-                                                                entryKeyBuffer,
-                                                                bbMiddle) < 0) {
 
-                                                                if (!leftStream.stream(rawEntry)) {
-                                                                    return false;
-                                                                }
-                                                            } else if (!rightStream.stream(rawEntry)) {
+                                                    BolBuffer rawEntry = new BolBuffer();
+                                                    while ((rawEntry = catchupFeedInterleaver.next(rawEntry, null)) != null) {
+                                                        if (rawhide.compareKey(
+                                                            rawEntry,
+                                                            entryKeyBuffer,
+                                                            bbMiddle) < 0) {
+                                                            if (!leftStream.stream(rawEntry)) {
                                                                 return false;
                                                             }
-                                                            return true;
-                                                        });
+                                                        } else if (!rightStream.stream(rawEntry)) {
+                                                            return false;
+                                                        }
+                                                    }
+                                                    return true;
                                                 }, rightKeyBuffer);
                                             }, leftKeyBuffer);
                                         } finally {
@@ -613,9 +616,15 @@ public class CompactableIndexes {
                         ActiveScan.indexToFeeds(readers, null, null, rawhide));
                     try {
                         appendableIndex.append((stream) -> {
-                            return feedInterleaver.stream((rawEntry) -> {
-                                return stream.stream(rawEntry);
-                            });
+
+                            BolBuffer rawEntry = new BolBuffer();
+                            while ((rawEntry = feedInterleaver.next(rawEntry, null)) != null) {
+                                if (!stream.stream(rawEntry)) {
+                                    return false;
+                                }
+                            }
+                            return true;
+
                         }, keyBuffer);
                     } finally {
                         feedInterleaver.close();

@@ -245,21 +245,7 @@ public class ReadOnlyIndex implements ReadIndex {
 
     private ActiveScanRow setup(ActiveScanRow activeScan) throws IOException {
         activeScan.rawhide = rawhide;
-        activeScan.leaps = leaps;
-        activeScan.cacheKey = cacheKey;
-        activeScan.leapsCache = leapsCache;
         activeScan.readable = readOnlyFile.pointerReadable(-1);
-        activeScan.cacheKeyBuffer = new byte[16];
-
-        activeScan.hashIndexType = hashIndexType;
-        activeScan.hashIndexHashFunctionCount = hashIndexHashFunctionCount;
-        activeScan.hashIndexHeadOffset = hashIndexHeadOffset;
-        activeScan.hashIndexMaxCapacity = hashIndexMaxCapacity;
-        activeScan.hashIndexLongPrecision = hashIndexLongPrecision;
-
-        activeScan.activeFp = Long.MAX_VALUE;
-        activeScan.activeOffset = -1;
-        activeScan.activeResult = false;
         return activeScan;
     }
 
@@ -277,9 +263,7 @@ public class ReadOnlyIndex implements ReadIndex {
         activeScan.hashIndexMaxCapacity = hashIndexMaxCapacity;
         activeScan.hashIndexLongPrecision = hashIndexLongPrecision;
 
-        activeScan.activeFp = Long.MAX_VALUE;
         activeScan.activeOffset = -1;
-        activeScan.activeResult = false;
         return activeScan;
     }
 
@@ -297,9 +281,7 @@ public class ReadOnlyIndex implements ReadIndex {
         activeScan.hashIndexMaxCapacity = hashIndexMaxCapacity;
         activeScan.hashIndexLongPrecision = hashIndexLongPrecision;
 
-        activeScan.activeFp = Long.MAX_VALUE;
         activeScan.activeOffset = -1;
-        activeScan.activeResult = false;
         return activeScan;
     }
 
@@ -326,19 +308,17 @@ public class ReadOnlyIndex implements ReadIndex {
 
     @Override
     public Scanner rowScan(BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
-        ActiveScanRow scan = setup(new ActiveScanRow());
-        scan.setupRowScan(entryBuffer);
-        return scan;
+        return setup(new ActiveScanRow());
     }
 
     @Override
-    public Scanner pointScan(boolean hashIndexEnabled, byte[] key, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+    public Scanner pointScan(boolean hashIndexEnabled, byte[] key) throws Exception {
         ActiveScanPoint pointScan = setup(new ActiveScanPoint(hashIndexEnabled));
-        long fp = pointScan.getInclusiveStartOfRow(new BolBuffer(key), entryBuffer, entryKeyBuffer, true);
+        long fp = pointScan.getInclusiveStartOfRow(new BolBuffer(key), new BolBuffer(), new BolBuffer(), true);
         if (fp < 0) {
             return null;
         }
-        pointScan.setupPointScan(fp, entryBuffer);
+        pointScan.setupPointScan(fp);
         return pointScan;
     }
 

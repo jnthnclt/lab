@@ -1,12 +1,10 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
-import com.github.jnthnclt.os.lab.core.guts.api.Next;
-import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 
-class InterleavingStreamFeed implements Comparable<InterleavingStreamFeed>, RawEntryStream {
+public class InterleavingStreamFeed implements Comparable<InterleavingStreamFeed> {
 
     private final int index;
     private final Scanner scanner;
@@ -21,19 +19,11 @@ class InterleavingStreamFeed implements Comparable<InterleavingStreamFeed>, RawE
         this.rawhide = rawhide;
     }
 
-    public BolBuffer feedNext() throws Exception {
-        Next hadNext = scanner.next(this, null);
-        if (hadNext != Next.more) {
-            nextRawEntry = null;
-        }
+    BolBuffer feedNext() throws Exception {
+        nextRawEntry = scanner.next(new BolBuffer(), null);
         return nextRawEntry;
     }
 
-    @Override
-    public boolean stream(BolBuffer rawEntry) throws Exception {
-        nextRawEntry = rawEntry;
-         return true;
-    }
 
     @Override
     public int compareTo(InterleavingStreamFeed o) {

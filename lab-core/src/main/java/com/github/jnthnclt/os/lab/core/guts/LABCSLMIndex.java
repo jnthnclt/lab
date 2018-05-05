@@ -17,8 +17,6 @@ package com.github.jnthnclt.os.lab.core.guts;
 
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABCostChangeInBytes;
-import com.github.jnthnclt.os.lab.core.guts.api.Next;
-import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import java.util.Iterator;
@@ -110,15 +108,14 @@ public class LABCSLMIndex implements LABIndex<BolBuffer, BolBuffer> {
             .iterator();
         return new Scanner() {
             @Override
-            public Next next(RawEntryStream stream, BolBuffer nextHint) throws Exception {
+            public BolBuffer next(BolBuffer rawEntry, BolBuffer nextHint) throws Exception {
                 if (iterator.hasNext()) {
                     Map.Entry<byte[], byte[]> next = iterator.next();
                     byte[] value = next.getValue();
                     entryBuffer.force(value, 0, value.length);
-                    boolean more = stream.stream(entryBuffer);
-                    return more ? Next.more : Next.stopped;
+                    return entryBuffer;
                 }
-                return Next.eos;
+                return null;
             }
 
             @Override

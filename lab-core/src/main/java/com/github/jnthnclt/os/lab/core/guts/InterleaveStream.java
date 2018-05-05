@@ -1,8 +1,6 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
-import com.github.jnthnclt.os.lab.core.guts.api.Next;
-import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import java.util.PriorityQueue;
@@ -33,36 +31,24 @@ public class InterleaveStream implements Scanner {
         }
     }
 
-    public boolean stream(RawEntryStream stream) throws Exception {
-
-        Next more = Next.more;
-        while (more == Next.more) {
-            more = next(stream, null);
-        }
-        return more != Next.stopped;
-    }
-
     @Override
-    public Next next(RawEntryStream stream, BolBuffer nextHint) throws Exception {
+    public BolBuffer next(BolBuffer rawEntry, BolBuffer nextHint) throws Exception {
 
-        // 0.     3, 5, 7, 9
-        // 1.     3, 4, 7, 10
-        // 2.     3, 6, 8, 11
+
+
         if (active == null || until != null && compare(active, until) >= 0) {
 
-            if (active != null) {
+            if (active == null) {
+                active = interleavingStreamFeeds.poll();
+            } else {
                 interleavingStreamFeeds.add(active);
+                active = interleavingStreamFeeds.poll();
             }
 
-            active = interleavingStreamFeeds.poll();
-            if (active == null) {
-                return Next.eos;
-            }
 
             while (true) {
                 InterleavingStreamFeed first = interleavingStreamFeeds.peek();
-                if (first == null
-                    || compare(first, active) != 0) {
+                if (first == null || compare(first, active) != 0) {
                     until = first;
                     break;
                 }
@@ -77,20 +63,16 @@ public class InterleaveStream implements Scanner {
         }
 
         if (active != null) {
-            if (active.nextRawEntry != null) {
-                if (!stream.stream(
-                    active.nextRawEntry)) {
-                    return Next.stopped;
-                }
-            }
+            BolBuffer next = active.nextRawEntry;
             if (active.feedNext() == null) {
                 active.close();
                 active = null;
                 until = null;
             }
-            return Next.more;
+            return next;
         } else {
-            return Next.eos;
+            close();
+            return null;
         }
     }
 

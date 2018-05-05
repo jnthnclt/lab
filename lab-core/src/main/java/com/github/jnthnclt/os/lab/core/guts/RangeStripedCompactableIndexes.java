@@ -8,8 +8,6 @@ import com.github.jnthnclt.os.lab.core.api.exceptions.LABConcurrentSplitExceptio
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.api.KeyToString;
 import com.github.jnthnclt.os.lab.core.guts.api.MergerBuilder;
-import com.github.jnthnclt.os.lab.core.guts.api.Next;
-import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
 import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.guts.api.SplitterBuilder;
@@ -368,10 +366,9 @@ public class RangeStripedCompactableIndexes {
                         Scanner scanner = reader.rangeScan(minKey, maxKey, entryBuffer, entryKeyBuffer);
                         if (scanner != null) {
                             try {
-                                RawEntryStream rawEntryStream = (rawEntry) -> {
-                                    return stream.stream(rawEntry);
-                                };
-                                while (scanner.next(rawEntryStream, null) == Next.more) {
+                                BolBuffer rawEntry = new BolBuffer();
+                                while((rawEntry = scanner.next(rawEntry, null)) != null) {
+                                    stream.stream(rawEntry);
                                 }
                             } finally {
                                 scanner.close();

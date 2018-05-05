@@ -2,8 +2,6 @@ package com.github.jnthnclt.os.lab.core.guts;
 
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
-import com.github.jnthnclt.os.lab.core.guts.api.Next;
-import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
@@ -27,13 +25,7 @@ public class ActiveScanPoint implements Scanner {
     long hashIndexHeadOffset;
     long hashIndexMaxCapacity;
     byte hashIndexLongPrecision;
-    long activeFp = Long.MAX_VALUE;
     long activeOffset = -1;
-    boolean activeResult;
-
-
-    private long fp;
-    private BolBuffer entryBuffer;
 
 
     public ActiveScanPoint(boolean hashIndexEnabled) {
@@ -59,50 +51,46 @@ public class ActiveScanPoint implements Scanner {
             exact);
     }
 
-    public void setupPointScan(long fp, BolBuffer entryBuffer) {
-        this.entryBuffer = entryBuffer;
-        this.fp = fp;
+    public void setupPointScan(long fp) {
+        this.activeOffset = fp;
     }
+
+    private boolean once = false;
 
     @Override
-    public Next next(RawEntryStream stream, BolBuffer nextHint) throws Exception {
-        if (activeOffset != -1) {
-            return Next.stopped;
+    public BolBuffer next(BolBuffer rawEntry, BolBuffer nextHint) throws Exception {
+        if (once) {
+            return null;
         }
-        this.next(fp, entryBuffer, stream);
-        return Next.more;
-    }
-
-    @Override
-    public void close() throws Exception {
+        BolBuffer next = next(rawEntry);
+        once = true;
+        return next;
     }
 
 
-    private boolean next(long fp, BolBuffer entryBuffer, RawEntryStream stream) throws Exception {
+    private BolBuffer next(BolBuffer entryBuffer) throws Exception {
 
-        if (activeFp == Long.MAX_VALUE || activeFp != fp) {
-            activeFp = fp;
-            activeOffset = fp;
-        }
-        activeResult = false;
         int type;
         while ((type = readable.read(activeOffset)) >= 0) {
             activeOffset++;
             if (type == LABAppendableIndex.ENTRY) {
                 activeOffset += rawhide.rawEntryToBuffer(readable, activeOffset, entryBuffer);
-                activeResult = stream.stream(entryBuffer);
-                return false;
+                return entryBuffer;
             } else if (type == LABAppendableIndex.LEAP) {
                 int length = readable.readInt(activeOffset); // entryLength
                 activeOffset += (length);
             } else if (type == LABAppendableIndex.FOOTER) {
-                activeResult = false;
-                return false;
+                return null;
             } else {
                 throw new IllegalStateException("Bad row type:" + type + " at fp:" + (activeOffset - 1));
             }
         }
         throw new IllegalStateException("Missing footer");
+    }
+
+
+    @Override
+    public void close() throws Exception {
     }
 
 }

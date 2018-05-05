@@ -1,10 +1,9 @@
 package com.github.jnthnclt.os.lab.core.guts.allocators;
 
 import com.github.jnthnclt.os.lab.core.LABStats;
-import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
-import com.github.jnthnclt.os.lab.core.guts.api.Next;
-import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABFixedWidthKeyFixedWidthValueRawhide;
+import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
+import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import org.testng.annotations.Test;
@@ -38,10 +37,10 @@ public class LABConcurrentSkipListMapNGTest {
         //System.out.println("last:" + UIO.bytesLong(map.lastKey()));
 
         Scanner scanner = map.scanner(null, null, new BolBuffer(), new BolBuffer());
-        while (scanner.next((rawEntry) -> {
-            //System.out.println("Keys:" + UIO.bytesLong(rawEntry.copy()));
-            return true;
-        }, null) == Next.more) {
+
+        BolBuffer rawEntry = new BolBuffer();
+        while ((rawEntry =scanner.next(rawEntry,null)) != null) {
+
         }
 
     }

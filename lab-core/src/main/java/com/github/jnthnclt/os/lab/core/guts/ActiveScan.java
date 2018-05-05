@@ -22,7 +22,7 @@ public class ActiveScan {
 
         PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds = new PriorityQueue<>();
 
-        boolean rowScan = from == null && to == null;
+        boolean rowScan = (from == null || from.length == 0) && (to == null || to.length == 0);
         for (int i = 0; i < indexs.length; i++) {
             Scanner scanner = null;
             try {
@@ -32,8 +32,13 @@ public class ActiveScan {
                     scanner = indexs[i].rangeScan(from, to, new BolBuffer(), new BolBuffer());
                 }
                 if (scanner != null) {
-                    InterleavingStreamFeed interleavingStreamFeed = new InterleavingStreamFeed(i, scanner, rawhide);
-                    interleavingStreamFeeds.add(interleavingStreamFeed);
+                    InterleavingStreamFeed e = new InterleavingStreamFeed(i, scanner, rawhide);
+                    e.feedNext();
+                    if (e.nextRawEntry != null) {
+                        interleavingStreamFeeds.add(e);
+                    } else {
+                        e.close();
+                    }
                 }
             } catch (Throwable t) {
                 if (scanner != null) {
@@ -48,7 +53,7 @@ public class ActiveScan {
     public static long getInclusiveStartOfRow(PointerReadableByteBufferFile readable,
         Leaps l,
         long cacheKey,
-        LRUConcurrentBAHLinkedHash<Leaps>leapsCache,
+        LRUConcurrentBAHLinkedHash<Leaps> leapsCache,
         byte[] cacheKeyBuffer,
         Rawhide rawhide,
         boolean hashIndexEnabled,

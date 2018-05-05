@@ -14,7 +14,7 @@ public interface ReadIndex {
 
     Scanner rowScan(BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception;
 
-    Scanner pointScan(boolean hashIndexEnabled, byte[] key, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception;
+    Scanner pointScan(boolean hashIndexEnabled, byte[] key) throws Exception;
 
     long count() throws Exception;
 

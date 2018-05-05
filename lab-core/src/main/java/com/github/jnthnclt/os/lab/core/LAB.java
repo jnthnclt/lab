@@ -12,6 +12,7 @@ import com.github.jnthnclt.os.lab.core.api.exceptions.LABCorruptedException;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.ActiveScan;
 import com.github.jnthnclt.os.lab.core.guts.InterleaveStream;
+import com.github.jnthnclt.os.lab.core.guts.InterleavingStreamFeed;
 import com.github.jnthnclt.os.lab.core.guts.LABHashIndexType;
 import com.github.jnthnclt.os.lab.core.guts.LABIndex;
 import com.github.jnthnclt.os.lab.core.guts.LABIndexProvider;
@@ -21,9 +22,7 @@ import com.github.jnthnclt.os.lab.core.guts.PointInterleave;
 import com.github.jnthnclt.os.lab.core.guts.RangeStripedCompactableIndexes;
 import com.github.jnthnclt.os.lab.core.guts.ReaderTx;
 import com.github.jnthnclt.os.lab.core.guts.api.KeyToString;
-import com.github.jnthnclt.os.lab.core.guts.api.Next;
 import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
-import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.util.LABLogger;
 import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
@@ -31,6 +30,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.PriorityQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -47,7 +47,8 @@ public class LAB implements ValueIndex<byte[]> {
     static private class CompactLock {
     }
 
-    private static final LABLogger LOG = LABLoggerFactory.getLogger();;
+    private static final LABLogger LOG = LABLoggerFactory.getLogger();
+    ;
 
     private final static byte[] SMALLEST_POSSIBLE_KEY = new byte[0];
 
@@ -163,7 +164,15 @@ public class LAB implements ValueIndex<byte[]> {
             (index, fromKey, toKey, readIndexes, hydrateValues1) -> {
                 PointInterleave pointInterleave = new PointInterleave(readIndexes, fromKey, rawhide, hashIndexEnabled);
                 try {
-                    return rawToReal(index, pointInterleave, streamKeyBuffer, streamValueBuffer, stream);
+                    BolBuffer next = pointInterleave.next(new BolBuffer(), null);
+                    if (!rawhide.streamRawEntry(index,
+                        next,
+                        streamKeyBuffer,
+                        streamValueBuffer,
+                        stream)) {
+                        return false;
+                    }
+                    return true;
                 } finally {
                     pointInterleave.close();
                 }
@@ -182,12 +191,24 @@ public class LAB implements ValueIndex<byte[]> {
         boolean r = rangeTx(true, -1, from, to, -1, -1,
             (index, fromKey, toKey, readIndexes, hydrateValues1) -> {
 
-
-                ;
                 InterleaveStream interleaveStream = new InterleaveStream(rawhide,
                     ActiveScan.indexToFeeds(readIndexes, fromKey, toKey, rawhide));
                 try {
-                    return rawToReal(index, interleaveStream, streamKeyBuffer, streamValueBuffer, stream);
+
+                    while (true) {
+                        BolBuffer next = interleaveStream.next(new BolBuffer(), null);
+                        if (next == null) {
+                            break;
+                        }
+                        if (!rawhide.streamRawEntry(index,
+                            next,
+                            streamKeyBuffer,
+                            streamValueBuffer,
+                            stream)) {
+                            return false;
+                        }
+                    }
+                    return true;
                 } finally {
                     interleaveStream.close();
                 }
@@ -205,10 +226,24 @@ public class LAB implements ValueIndex<byte[]> {
         boolean r = ranges.ranges((index, from, to) -> {
             return rangeTx(true, index, from, to, -1, -1,
                 (index1, fromKey, toKey, readIndexes, hydrateValues1) -> {
+
                     InterleaveStream interleaveStream = new InterleaveStream(rawhide,
                         ActiveScan.indexToFeeds(readIndexes, fromKey, toKey, rawhide));
                     try {
-                        return rawToReal(index1, interleaveStream, streamKeyBuffer, streamValueBuffer, stream);
+                        while (true) {
+                            BolBuffer next = interleaveStream.next(new BolBuffer(), null);
+                            if (next == null) {
+                                break;
+                            }
+                            if (!rawhide.streamRawEntry(index,
+                                next,
+                                streamKeyBuffer,
+                                streamValueBuffer,
+                                stream)) {
+                                return false;
+                            }
+                        }
+                        return true;
                     } finally {
                         interleaveStream.close();
                     }
@@ -247,12 +282,31 @@ public class LAB implements ValueIndex<byte[]> {
     public boolean rowScan(ValueStream stream, boolean hydrateValues) throws Exception {
         BolBuffer streamKeyBuffer = new BolBuffer();
         BolBuffer streamValueBuffer = hydrateValues ? new BolBuffer() : null;
-        boolean r = rangeTx(true, -1, SMALLEST_POSSIBLE_KEY, null, -1, -1,
+        boolean r = rangeTx(true,
+            -1,
+            SMALLEST_POSSIBLE_KEY,
+            null,
+            -1,
+            -1,
             (index, fromKey, toKey, readIndexes, hydrateValues1) -> {
-                InterleaveStream interleaveStream = new InterleaveStream(rawhide,
-                    ActiveScan.indexToFeeds(readIndexes, fromKey, toKey, rawhide));
+
+                PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds = ActiveScan.indexToFeeds(readIndexes, fromKey, toKey, rawhide);
+                InterleaveStream interleaveStream = new InterleaveStream(rawhide, interleavingStreamFeeds);
                 try {
-                    return rawToReal(index, interleaveStream, streamKeyBuffer, streamValueBuffer, stream);
+                    BolBuffer rawEntry = new BolBuffer();
+                    while (true) {
+                        BolBuffer next = interleaveStream.next(rawEntry, null);
+                        if (next == null) {
+                            return true;
+                        }
+                        if (!rawhide.streamRawEntry(index,
+                            next,
+                            streamKeyBuffer,
+                            streamValueBuffer,
+                            stream)) {
+                            return false;
+                        }
+                    }
                 } finally {
                     interleaveStream.close();
                 }
@@ -531,7 +585,7 @@ public class LAB implements ValueIndex<byte[]> {
                                     stats.journaledAppend.increment();
 
                                     count[0]++;
-                                    return stream.stream( rawEntry);
+                                    return stream.stream(rawEntry);
                                 }
                             );
                         }, keyBuffer
@@ -741,27 +795,6 @@ public class LAB implements ValueIndex<byte[]> {
             + '}';
     }
 
-    private boolean rawToReal(int index,
-        Scanner nextRawEntry,
-        BolBuffer streamKeyBuffer,
-        BolBuffer streamValueBuffer,
-        ValueStream valueStream) throws Exception {
-
-        while (true) {
-            Next next = nextRawEntry.next((rawEntry) -> {
-                return rawhide.streamRawEntry(index,
-                    rawEntry,
-                    streamKeyBuffer,
-                    streamValueBuffer,
-                    valueStream);
-            }, null);
-            if (next == Next.stopped) {
-                return false;
-            } else if (next == Next.eos) {
-                return true;
-            }
-        }
-    }
 
     public void auditRanges(KeyToString keyToString) throws Exception {
         rangeStripedCompactableIndexes.auditRanges(keyToString);

@@ -1,4 +1,4 @@
-package com.github.jnthnclt.os.lab.core.guts;
+package com.github.jnthnclt.os.lab.core.stress;
 
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.LABEnvironment;
@@ -6,7 +6,15 @@ import com.github.jnthnclt.os.lab.core.LABStats;
 import com.github.jnthnclt.os.lab.core.TestUtils;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
-import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
+import com.github.jnthnclt.os.lab.core.guts.AppendOnlyFile;
+import com.github.jnthnclt.os.lab.core.guts.CompactableIndexes;
+import com.github.jnthnclt.os.lab.core.guts.IndexRangeId;
+import com.github.jnthnclt.os.lab.core.guts.LABAppendableIndex;
+import com.github.jnthnclt.os.lab.core.guts.Leaps;
+import com.github.jnthnclt.os.lab.core.guts.PointInterleave;
+import com.github.jnthnclt.os.lab.core.guts.RangeStripedCompactableIndexes;
+import com.github.jnthnclt.os.lab.core.guts.ReadOnlyFile;
+import com.github.jnthnclt.os.lab.core.guts.ReadOnlyIndex;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import com.google.common.io.Files;
@@ -108,14 +116,7 @@ public class IndexStressNGTest {
 
             int[] hits = {0};
             int[] misses = {0};
-            RawEntryStream hitsAndMisses = (rawEntry) -> {
-                if (rawEntry != null) {
-                    hits[0]++;
-                } else {
-                    misses[0]++;
-                }
-                return true;
-            };
+
             long best = Long.MAX_VALUE;
             long total = 0;
             long samples = 0;
@@ -141,7 +142,16 @@ public class IndexStressNGTest {
 
                         int longKey = rand.nextInt(maxKey.intValue());
                         UIO.longBytes(longKey, key, 0);
-                        pointInterleave.next(hitsAndMisses, null);
+
+                        BolBuffer rawEntry = new BolBuffer();
+                        while ((rawEntry =pointInterleave.next(rawEntry,null)) != null) {
+                            if (rawEntry != null) {
+                                hits[0]++;
+                            } else {
+                                misses[0]++;
+                            }
+                        }
+
 
                         if ((hits[0] + misses[0]) % logInterval == 0) {
                             return false;

@@ -182,6 +182,65 @@ public class LABNGTest {
     }
 
     @Test
+    public void testRowScan() throws Exception {
+
+        boolean fsync = true;
+        File root = Files.createTempDir();
+        LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
+        LABHeapPressure labHeapPressure = new LABHeapPressure(new LABStats(),
+            LABEnvironment.buildLABHeapSchedulerThreadPool(1),
+            "default",
+            1024 * 1024 * 10,
+            1024 * 1024 * 10,
+            new AtomicLong(),
+            LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
+        LABEnvironment env = new LABEnvironment(
+            new LABStats(),
+            LABEnvironment.buildLABSchedulerThreadPool(1),
+            LABEnvironment.buildLABCompactorThreadPool(4),
+            LABEnvironment.buildLABDestroyThreadPool(1),
+            null,
+            root,
+            labHeapPressure, 1, 2, leapsCache,
+            new StripingBolBufferLocks(1024),
+            true,
+            false);
+
+        ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo",
+            4096,
+            1024 * 1024 * 10,
+            16,
+            -1,
+            -1,
+            "deprecated",
+            LABRawhide.NAME,
+            MemoryRawEntryFormat.NAME,
+            2,
+            TestUtils.indexType,
+            0.1d,
+            false,
+            Long.MAX_VALUE);
+
+        ValueIndex index = env.open(valueIndexConfig);
+        BolBuffer rawEntryBuffer = new BolBuffer();
+        BolBuffer keyBuffer = new BolBuffer();
+        index.append((stream) -> {
+            stream.stream(-1, UIO.longBytes(1, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(1, new byte[8], 0));
+            stream.stream(-1, UIO.longBytes(2, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(2, new byte[8], 0));
+            stream.stream(-1, UIO.longBytes(3, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(3, new byte[8], 0));
+            return true;
+        }, fsync, rawEntryBuffer, keyBuffer);
+        commitAndWait(index, fsync);
+
+        Assert.assertFalse(index.isEmpty());
+        long[] expected = new long[] { 1, 2, 3};
+        testScanExpected(index, expected);
+        env.shutdown();
+
+    }
+
+
+    @Test
     public void testEnv() throws Exception {
 
         boolean fsync = true;
@@ -591,18 +650,21 @@ public class LABNGTest {
     }
 
     private void testScanExpected(ValueIndex index, long[] expected) throws Exception {
-       // System.out.println("Checking full scan");
+
+        System.out.println("Checking full scan");
         List<Long> scanned = new ArrayList<>();
         index.rowScan((index1, key, timestamp, tombstoned, version, payload) -> {
-            //System.out.println("scan:" + IndexUtil.toString(key) + " " + timestamp + " " + tombstoned + " " + version + " " + IndexUtil.toString(payload));
             if (!tombstoned) {
+                System.out.println("scan:" + IndexUtil.toString(key) + " " + timestamp + " " + tombstoned + " " + version + " " + IndexUtil.toString(payload));
                 scanned.add(payload.getLong(0));
             }
             return true;
         }, true);
+
         assertEquals(scanned.size(), expected.length);
+
         for (int i = 0; i < expected.length; i++) {
-            //System.out.println((long) scanned.get(i) + " vs " + expected[i]);
+            System.out.println((long) scanned.get(i) + " vs " + expected[i]);
             assertEquals((long) scanned.get(i), expected[i]);
         }
     }

@@ -8,7 +8,7 @@ import com.github.jnthnclt.os.lab.core.io.BolBuffer;
  */
 public interface Scanner {
 
-    Next next(RawEntryStream stream, BolBuffer nextHint) throws Exception;
+    BolBuffer next(BolBuffer rawEntry, BolBuffer nextHint) throws Exception;
 
     void close() throws Exception;
 }

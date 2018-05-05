@@ -2,8 +2,6 @@ package com.github.jnthnclt.os.lab.core.guts;
 
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
-import com.github.jnthnclt.os.lab.core.guts.api.Next;
-import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
@@ -25,12 +23,9 @@ public class ActiveScanRange implements Scanner {
     long hashIndexHeadOffset;
     long hashIndexMaxCapacity;
     byte hashIndexLongPrecision;
-    long activeFp = Long.MAX_VALUE;
+
     long activeOffset = -1;
-    boolean activeResult;
 
-
-    private long fp;
     private byte[] to;
     private BolBuffer entryKeyBuffer;
     private BolBuffer bbFrom;
@@ -69,41 +64,63 @@ public class ActiveScanRange implements Scanner {
         BolBuffer bbFrom,
         BolBuffer bbTo) {
 
-        this.fp = fp;
+        this.activeOffset = fp;
         this.to = to;
         this.entryKeyBuffer = entryKeyBuffer;
         this.bbFrom = bbFrom;
         this.bbTo = bbTo;
     }
 
-    private boolean result() {
-        return activeResult;
+    private boolean bbFromPasses = false;
+
+    @Override
+    public BolBuffer next(BolBuffer rawEntry, BolBuffer nextHint) throws Exception {
+        while(true) {
+            BolBuffer next = next(rawEntry);
+            if (next == null) {
+                return null;
+            }
+            if (bbFromPasses) {
+                int c = to == null ? -1 : rawhide.compareKey(next, entryKeyBuffer, bbTo);
+                if (c < 0) {
+                    return next;
+                } else {
+                    return null;
+                }
+            } else {
+                int c = rawhide.compareKey(next, entryKeyBuffer, bbFrom);
+                if (c >= 0) {
+                    bbFromPasses = true;
+                    c = to == null ? -1 : rawhide.compareKey(next, entryKeyBuffer, bbTo);
+                    if (c < 0) {
+                        return next;
+                    } else {
+                        return null;
+                    }
+                }
+            }
+        }
     }
 
 
-    @Override
-    public Next next(RawEntryStream stream, BolBuffer nextHint) throws Exception {
-        BolBuffer entryBuffer = new BolBuffer();
-        boolean[] once = new boolean[] { false };
-        boolean more = true;
-        while (!once[0] && more) {
-            more = this.next(fp,
-                entryBuffer,
-                (rawEntry) -> {
-                    int c = rawhide.compareKey( rawEntry, entryKeyBuffer, bbFrom);
-                    if (c >= 0) {
-                        c = to == null ? -1 : rawhide.compareKey( rawEntry, entryKeyBuffer, bbTo);
-                        if (c < 0) {
-                            once[0] = true;
-                        }
-                        return c < 0 && stream.stream(rawEntry);
-                    } else {
-                        return true;
-                    }
-                });
+    private BolBuffer next(BolBuffer entryBuffer) throws Exception {
+
+        int type;
+        while ((type = readable.read(activeOffset)) >= 0) {
+            activeOffset++;
+            if (type == LABAppendableIndex.ENTRY) {
+                activeOffset += rawhide.rawEntryToBuffer(readable, activeOffset, entryBuffer);
+                return entryBuffer;
+            } else if (type == LABAppendableIndex.LEAP) {
+                int length = readable.readInt(activeOffset); // entryLength
+                activeOffset += (length);
+            } else if (type == LABAppendableIndex.FOOTER) {
+                return null;
+            } else {
+                throw new IllegalStateException("Bad row type:" + type + " at fp:" + (activeOffset - 1));
+            }
         }
-        more = this.result();
-        return more ? Next.more : Next.stopped;
+        throw new IllegalStateException("Missing footer");
     }
 
     @Override
@@ -111,31 +128,5 @@ public class ActiveScanRange implements Scanner {
     }
 
 
-    private boolean next(long fp, BolBuffer entryBuffer, RawEntryStream stream) throws Exception {
-
-        if (activeFp == Long.MAX_VALUE || activeFp != fp) {
-            activeFp = fp;
-            activeOffset = fp;
-        }
-        activeResult = false;
-        int type;
-        while ((type = readable.read(activeOffset)) >= 0) {
-            activeOffset++;
-            if (type == LABAppendableIndex.ENTRY) {
-                activeOffset += rawhide.rawEntryToBuffer(readable, activeOffset, entryBuffer);
-                activeResult = stream.stream( entryBuffer);
-                return false;
-            } else if (type == LABAppendableIndex.LEAP) {
-                int length = readable.readInt(activeOffset); // entryLength
-                activeOffset += (length);
-            } else if (type == LABAppendableIndex.FOOTER) {
-                activeResult = false;
-                return false;
-            } else {
-                throw new IllegalStateException("Bad row type:" + type + " at fp:" + (activeOffset - 1));
-            }
-        }
-        throw new IllegalStateException("Missing footer");
-    }
 
 }

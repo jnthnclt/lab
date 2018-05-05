@@ -1,4 +1,4 @@
-package com.github.jnthnclt.os.lab.core.guts;
+package com.github.jnthnclt.os.lab.core.stress;
 
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.LABEnvironment;
@@ -6,11 +6,15 @@ import com.github.jnthnclt.os.lab.core.LABHeapPressure;
 import com.github.jnthnclt.os.lab.core.LABStats;
 import com.github.jnthnclt.os.lab.core.TestUtils;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
+import com.github.jnthnclt.os.lab.core.guts.LABMemoryIndex;
+import com.github.jnthnclt.os.lab.core.guts.Leaps;
+import com.github.jnthnclt.os.lab.core.guts.PointInterleave;
+import com.github.jnthnclt.os.lab.core.guts.RangeStripedCompactableIndexes;
+import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABAppendOnlyAllocator;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABConcurrentSkipListMap;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABConcurrentSkipListMemory;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABIndexableMemory;
-import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import com.github.jnthnclt.os.lab.core.util.LABLogger;
@@ -88,14 +92,7 @@ public class RangeStripedCompactableIndexesStressNGTest {
 
             int[] hits = { 0 };
             int[] misses = { 0 };
-            RawEntryStream hitsAndMisses = (rawEntry) -> {
-                if (rawEntry != null) {
-                    hits[0]++;
-                } else {
-                    misses[0]++;
-                }
-                return true;
-            };
+
             long best = Long.MAX_VALUE;
             long total = 0;
             long samples = 0;
@@ -123,7 +120,16 @@ public class RangeStripedCompactableIndexesStressNGTest {
                     try {
 
                         UIO.longBytes(longKey, key, 0);
-                        pointInterleave.next( hitsAndMisses,null);
+
+                        BolBuffer rawEntry = new BolBuffer();
+                        while ((rawEntry =pointInterleave.next(rawEntry,null)) != null) {
+                            if (rawEntry != null) {
+                                hits[0]++;
+                            } else {
+                                misses[0]++;
+                            }
+                        }
+
 
                         if ((hits[0] + misses[0]) % logInterval == 0) {
                             return true;

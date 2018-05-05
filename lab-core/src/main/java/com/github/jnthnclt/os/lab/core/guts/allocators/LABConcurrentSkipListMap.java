@@ -1,7 +1,10 @@
 package com.github.jnthnclt.os.lab.core.guts.allocators;
 
+import com.github.jnthnclt.os.lab.core.LABStats;
+import com.github.jnthnclt.os.lab.core.guts.LABIndex;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
-import com.github.jnthnclt.os.lab.core.guts.api.Next;
+import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
+import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.concurrent.Semaphore;
@@ -9,11 +12,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongArray;
-import com.github.jnthnclt.os.lab.core.LABStats;
-import com.github.jnthnclt.os.lab.core.guts.LABIndex;
-import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
-import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 
 public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> {
 
@@ -1044,7 +1042,7 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
         }
 
         @Override
-        public boolean next(RawEntryStream entryStream, BolBuffer keyBuffer, BolBuffer valueBuffer) throws Exception {
+        public BolBuffer next(BolBuffer rawEntry, BolBuffer keyBuffer, BolBuffer valueBuffer) throws Exception {
             BolBuffer acquired = memory.acquireBytes(nextValue, valueBuffer);
             //memory.release(nextValue);
 
@@ -1054,7 +1052,7 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
             } finally {
                 growSemaphore.release();
             }
-            return entryStream.stream(acquired);
+            return acquired;
         }
 
         void advance() throws InterruptedException {
@@ -1171,7 +1169,7 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
         }
 
         @Override
-        public boolean next(RawEntryStream stream, BolBuffer keyBuffer, BolBuffer valueBuffer) throws Exception {
+        public BolBuffer next(BolBuffer stream, BolBuffer keyBuffer, BolBuffer valueBuffer) throws Exception {
             BolBuffer acquired = m.memory.acquireBytes(nextValue, valueBuffer);
             //m.memory.release(nextValue);
             m.growSemaphore.acquire();
@@ -1180,7 +1178,7 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
             } finally {
                 m.growSemaphore.release();
             }
-            return stream.stream(acquired);
+            return acquired;
         }
 
         @Override
@@ -1392,12 +1390,11 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
         BolBuffer keyBuffer = new BolBuffer();
         return new Scanner() {
             @Override
-            public Next next(RawEntryStream stream,  BolBuffer nextHint) throws Exception {
+            public BolBuffer next(BolBuffer entryBuffer,  BolBuffer nextHint) throws Exception {
                 if (entryStream.hasNext()) {
-                    boolean more = entryStream.next(stream, keyBuffer, entryBuffer);
-                    return more ? Next.more : Next.stopped;
+                    return entryStream.next(entryBuffer, keyBuffer, entryBuffer);
                 }
-                return Next.eos;
+                return null;
             }
 
             @Override
@@ -1411,7 +1408,7 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
 
         boolean hasNext();
 
-        boolean next(RawEntryStream stream, BolBuffer keyBuffer, BolBuffer valueBuffer) throws Exception;
+        BolBuffer next(BolBuffer entryBuffer, BolBuffer keyBuffer, BolBuffer valueBuffer) throws Exception;
 
         void close() throws Exception;
     }

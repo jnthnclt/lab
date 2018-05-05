@@ -181,7 +181,8 @@ public class LABRawhide implements Rawhide {
     public BolBuffer key(
         BolBuffer rawEntry,
         BolBuffer keyBuffer) {
-        rawEntry.sliceInto(4, rawEntry.getInt(0), keyBuffer);
+        int length = rawEntry.getInt(0);
+        rawEntry.sliceInto(4, length, keyBuffer);
         return keyBuffer;
     }
 

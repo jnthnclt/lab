@@ -6,8 +6,6 @@ import com.github.jnthnclt.os.lab.core.LABStats;
 import com.github.jnthnclt.os.lab.core.TestUtils;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
-import com.github.jnthnclt.os.lab.core.guts.api.Next;
-import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
 import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
@@ -85,29 +83,14 @@ public class CompactableIndexsNGTest {
             indexs.tx(-1, null, null, (index, fromKey, toKey, readIndexs, hydrateValues) -> {
 
                 PointInterleave pointInterleave = new PointInterleave(readIndexs, k, rawhide, true);
-                pointInterleave.next((rawEntry) -> {
-                        //System.out.println("\t\tGot:" + UIO.bytesLong(rawEntry.copy(), 4));
-                        if (UIO.bytesLong(rawEntry.copy(), 4) == g) {
-                            passed[0] = true;
-                        }
-                        return true;
-                    },null
-                );
 
-                /*for (ReadIndex raw : readIndexs) {
-                    System.out.println("\tIndex:" + raw);
-                    Scanner scanner = raw.pointScan(new ActiveScan(true), k, new BolBuffer(), new BolBuffer());
-                    if (scanner != null) {
-                        scanner.next((readKeyFormatTransformer, readValueFormatTransformer, rawEntry) -> {
-                                System.out.println("\t\tGot:" + UIO.bytesLong(rawEntry.copy(), 4));
-                                if (UIO.bytesLong(rawEntry.copy(), 4) == g) {
-                                    passed[0] = true;
-                                }
-                                return true;
-                            }
-                        );
+                BolBuffer rawEntry = new BolBuffer();
+                while ((rawEntry = pointInterleave.next(rawEntry,null)) != null) {
+                    if (UIO.bytesLong(rawEntry.copy(), 4) == g) {
+                        passed[0] = true;
                     }
-                }*/
+                }
+
                 return true;
             }, true);
             if (!passed[0]) {
@@ -236,11 +219,9 @@ public class CompactableIndexsNGTest {
             ReadOnlyIndex readOnlyIndex = new ReadOnlyIndex(destroy, indexRangeId, readOnlyFile,  rawhide, leapsCache);
             ReadIndex readIndex = readOnlyIndex.acquireReader();
             Scanner scanner = readIndex.rowScan( new BolBuffer(), new BolBuffer());
-            RawEntryStream stream = (rawEntry) -> {
-                //System.out.println(" Dump:" + TestUtils.toString(rawEntry));
-                return true;
-            };
-            while (scanner.next(stream ,null) == Next.more) {
+
+            BolBuffer rawEntry = new BolBuffer();
+            while ((rawEntry =scanner.next(rawEntry,null)) != null) {
             }
             readIndex.release();
             indexs.append(readOnlyIndex);
@@ -248,13 +229,10 @@ public class CompactableIndexsNGTest {
 
         indexs.tx(-1, null, null, (index1, fromKey, toKey, readIndexs, hydrateValues) -> {
             for (ReadIndex readIndex : readIndexs) {
-                //System.out.println("---------------------");
                 Scanner rowScan = readIndex.rowScan( new BolBuffer(), new BolBuffer());
-                RawEntryStream stream = (rawEntry) -> {
-                    //System.out.println(" Found:" + TestUtils.toString(rawEntry));
-                    return true;
-                };
-                while (rowScan.next(stream,null) == Next.more) {
+                BolBuffer rawEntry = new BolBuffer();
+                while ((rawEntry = rowScan.next(rawEntry,null)) != null) {
+
                 }
             }
             return true;
@@ -294,11 +272,11 @@ public class CompactableIndexsNGTest {
             for (ReadIndex readIndex : readIndexs) {
                 //System.out.println("---------------------");
                 Scanner rowScan = readIndex.rowScan( new BolBuffer(), new BolBuffer());
-                RawEntryStream stream = (rawEntry) -> {
-                    //System.out.println(" Found:" + TestUtils.toString(rawEntry));
-                    return true;
-                };
-                while (rowScan.next(stream,null) == Next.more) {
+
+
+                BolBuffer rawEntry = new BolBuffer();
+                while ((rawEntry =rowScan.next(rawEntry,null)) != null) {
+
                 }
             }
             return true;
@@ -326,16 +304,12 @@ public class CompactableIndexsNGTest {
             Scanner rowScan = new InterleaveStream(rawhide,
                 ActiveScan.indexToFeeds(acquired, null, null, rawhide));
             try {
-                RawEntryStream stream = (rawEntry) -> {
-                    //System.out.println("Expected:key:" + UIO.bytesLong(keys.get(index[0])) + " Found:" + TestUtils.toString(rawEntry));
-                    //Assert.assertEquals(UIO.bytesLong(keys.get(index[0])), SimpleRawEntry.key(rawEntry));
+                BolBuffer rawEntry = new BolBuffer();
+                while ((rawEntry =rowScan.next(rawEntry,null)) != null) {
                     if (UIO.bytesLong(keys.get(index[0])) != TestUtils.key(rawEntry)) {
                         failed.set(true);
                     }
                     index[0]++;
-                    return true;
-                };
-                while (rowScan.next(stream,null) == Next.more) {
                 }
             } finally {
                 rowScan.close();
@@ -353,8 +327,9 @@ public class CompactableIndexsNGTest {
                 byte[] key = UIO.longBytes(k, new byte[8], 0);
                 PointInterleave pointInterleave = new PointInterleave(acquired, key, rawhide, true);
 
-                RawEntryStream stream = ( rawEntry) -> {
-                    //System.out.println("->" + TestUtils.key(rawEntry) + " " + TestUtils.value(rawEntry));
+
+                BolBuffer rawEntry = new BolBuffer();
+                while ((rawEntry =pointInterleave.next(rawEntry,null)) != null) {
                     if (rawEntry != null) {
                         //System.out.println("Got: " + TestUtils.toString(rawEntry));
                         byte[] rawKey = UIO.longBytes(TestUtils.key(rawEntry), new byte[8], 0);
@@ -368,9 +343,8 @@ public class CompactableIndexsNGTest {
                     } else {
                         Assert.assertFalse(desired.containsKey(key), "Desired doesn't contain:" + UIO.bytesLong(key));
                     }
-                    return rawEntry != null;
-                };
-                pointInterleave.next(stream,null);
+                }
+
 
             }
             //System.out.println("gets PASSED");
@@ -382,19 +356,18 @@ public class CompactableIndexsNGTest {
                 int _i = i;
 
                 int[] streamed = new int[1];
-                RawEntryStream stream = (rawEntry) -> {
-                    if (TestUtils.value(rawEntry.copy()) > -1) {
-                        //System.out.println("Streamed:" + TestUtils.toString(rawEntry));
-                        streamed[0]++;
-                    }
-                    return true;
-                };
+
 
                 //System.out.println("Asked index:" + _i + " key:" + UIO.bytesLong(keys.get(_i)) + " to:" + UIO.bytesLong(keys.get(_i + 3)));
                 Scanner rangeScan = new InterleaveStream(rawhide,
                     ActiveScan.indexToFeeds(acquired, keys.get(_i), keys.get(_i + 3), rawhide));
                 try {
-                    while (rangeScan.next(stream,null) == Next.more) {
+                    BolBuffer rawEntry = new BolBuffer();
+                    while ((rawEntry =rangeScan.next(rawEntry,null)) != null) {
+                        if (TestUtils.value(rawEntry.copy()) > -1) {
+                            //System.out.println("Streamed:" + TestUtils.toString(rawEntry));
+                            streamed[0]++;
+                        }
                     }
                 } finally {
                     rangeScan.close();
@@ -410,17 +383,17 @@ public class CompactableIndexsNGTest {
             for (int i = 0; i < keys.size() - 3; i++) {
                 int _i = i;
                 int[] streamed = new int[1];
-                RawEntryStream stream = (rawEntry) -> {
-                    if (TestUtils.value(rawEntry.copy()) > -1) {
-                        streamed[0]++;
-                    }
-                    return true;
-                };
+
                 Scanner rangeScan = new InterleaveStream(rawhide,
                     ActiveScan.indexToFeeds(acquired, UIO.longBytes(UIO.bytesLong(keys.get(_i)) + 1, new byte[8], 0), keys.get(_i + 3),
                     rawhide));
                 try {
-                    while (rangeScan.next(stream,null) == Next.more) {
+
+                    BolBuffer rawEntry = new BolBuffer();
+                    while ((rawEntry =rangeScan.next(rawEntry,null)) != null) {
+                        if (TestUtils.value(rawEntry.copy()) > -1) {
+                            streamed[0]++;
+                        }
                     }
                 } finally {
                     rangeScan.close();

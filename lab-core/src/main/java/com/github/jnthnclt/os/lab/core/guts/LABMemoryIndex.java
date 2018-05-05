@@ -4,21 +4,19 @@ import com.github.jnthnclt.os.lab.core.LABHeapPressure;
 import com.github.jnthnclt.os.lab.core.LABStats;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.LABIndex.Compute;
+import com.github.jnthnclt.os.lab.core.guts.allocators.LABCostChangeInBytes;
 import com.github.jnthnclt.os.lab.core.guts.api.AppendEntries;
 import com.github.jnthnclt.os.lab.core.guts.api.AppendEntryStream;
-import com.github.jnthnclt.os.lab.core.guts.api.Next;
 import com.github.jnthnclt.os.lab.core.guts.api.RawAppendableIndex;
-import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
+import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
+import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.util.LABLogger;
 import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import com.github.jnthnclt.os.lab.core.guts.allocators.LABCostChangeInBytes;
-import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 
 /**
  * @author jonathan.colt
@@ -90,21 +88,20 @@ public class LABMemoryIndex implements RawAppendableIndex {
         this.reader = new ReadIndex() {
 
             @Override
-            public Scanner pointScan(boolean hashIndexEnabled, byte[] key, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
-                BolBuffer rawEntry = index.get(new BolBuffer(key), entryBuffer);
-                if (rawEntry == null) {
+            public Scanner pointScan(boolean hashIndexEnabled, byte[] key) throws Exception {
+                BolBuffer got = index.get(new BolBuffer(key), new BolBuffer());
+                if (got == null) {
                     return null;
                 }
                 return new Scanner() {
                     boolean once = false;
                     @Override
-                    public Next next(RawEntryStream stream,  BolBuffer nextHint) throws Exception {
+                    public BolBuffer next(BolBuffer entryBuffer,  BolBuffer nextHint) throws Exception {
                         if (once) {
-                            return Next.stopped;
+                            return null;
                         }
-                        stream.stream(rawEntry);
                         once = true;
-                        return Next.more;
+                        return got;
                     }
 
                     @Override

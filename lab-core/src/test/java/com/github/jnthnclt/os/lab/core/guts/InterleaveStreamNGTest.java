@@ -9,9 +9,11 @@ import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABAppendOnlyAllocator;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABConcurrentSkipListMap;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABConcurrentSkipListMemory;
-import com.github.jnthnclt.os.lab.core.guts.api.Next;
-import com.github.jnthnclt.os.lab.core.guts.api.RawEntryStream;
+import com.github.jnthnclt.os.lab.core.guts.allocators.LABIndexableMemory;
+import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
+import com.github.jnthnclt.os.lab.core.io.BolBuffer;
+import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -20,10 +22,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
-import com.github.jnthnclt.os.lab.core.guts.allocators.LABIndexableMemory;
-import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -38,6 +36,26 @@ public class InterleaveStreamNGTest {
         InterleaveStream ips = new InterleaveStream(LABRawhide.SINGLETON,
             ActiveScan.indexToFeeds(new ReadIndex[] {
                 sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 3, 3, 3, 3, 3 })
+            }, null, null, LABRawhide.SINGLETON));
+
+        List<Expected> expected = new ArrayList<>();
+        expected.add(new Expected(1, 3));
+        expected.add(new Expected(2, 3));
+        expected.add(new Expected(3, 3));
+        expected.add(new Expected(4, 3));
+        expected.add(new Expected(5, 3));
+
+        assertExpected(ips, expected);
+        ips.close();
+    }
+
+    @Test
+    public void testNext0() throws Exception {
+
+        InterleaveStream ips = new InterleaveStream(LABRawhide.SINGLETON,
+            ActiveScan.indexToFeeds(new ReadIndex[] {
+                sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 3, 3, 3, 3, 3 }),
+                sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 1, 1, 1, 1, 1 })
             }, null, null, LABRawhide.SINGLETON));
 
         List<Expected> expected = new ArrayList<>();
@@ -98,6 +116,125 @@ public class InterleaveStreamNGTest {
 
     }
 
+    @Test
+    public void testNext3() throws Exception {
+
+        InterleaveStream ips = new InterleaveStream(LABRawhide.SINGLETON,
+            ActiveScan.indexToFeeds(new ReadIndex[] {
+                sequenceIndex(new long[] { 10, 21, 29, 41, 50 }, new long[] { 1, 0, 0, 0, 1 }),
+                sequenceIndex(new long[] { 10, 20, 30, 39, 50 }, new long[] { 0, 1, 1, 0, 0 }),
+                sequenceIndex(new long[] { 10, 21, 29, 40, 50 }, new long[] { 0, 0, 0, 1, 0 })
+            }, null, null, LABRawhide.SINGLETON));
+
+        List<Expected> expected = new ArrayList<>();
+        expected.add(new Expected(10, 1));
+        expected.add(new Expected(20, 1));
+        expected.add(new Expected(21, 0));
+        expected.add(new Expected(29, 0));
+        expected.add(new Expected(30, 1));
+        expected.add(new Expected(39, 0));
+        expected.add(new Expected(40, 1));
+        expected.add(new Expected(41, 0));
+        expected.add(new Expected(50, 1));
+
+        assertExpected(ips, expected);
+        ips.close();
+
+    }
+
+    @Test
+    public void testNext4() throws Exception {
+
+        InterleaveStream ips = new InterleaveStream(LABRawhide.SINGLETON,
+            ActiveScan.indexToFeeds(new ReadIndex[] {
+                sequenceIndex(new long[] { 9, 20, 30, 39, 50 }, new long[] { 0, 1, 1, 0, 0 }),
+                sequenceIndex(new long[] { 10, 21, 29, 41, 50 }, new long[] { 1, 0, 0, 0, 1 }),
+                sequenceIndex(new long[] { 10, 21, 31, 40, 50 }, new long[] { 0, 0, 0, 1, 0 })
+            }, null, null, LABRawhide.SINGLETON));
+
+        List<Expected> expected = new ArrayList<>();
+        expected.add(new Expected(9, 0));
+        expected.add(new Expected(10, 1));
+        expected.add(new Expected(20, 1));
+        expected.add(new Expected(21, 0));
+        expected.add(new Expected(29, 0));
+        expected.add(new Expected(30, 1));
+        expected.add(new Expected(31, 0));
+        expected.add(new Expected(39, 0));
+        expected.add(new Expected(40, 1));
+        expected.add(new Expected(41, 0));
+        expected.add(new Expected(50, 1));
+
+        assertExpected(ips, expected);
+        ips.close();
+
+    }
+
+    @Test
+    public void testNext5() throws Exception {
+
+        InterleaveStream ips = new InterleaveStream(LABRawhide.SINGLETON,
+            ActiveScan.indexToFeeds(new ReadIndex[] {
+                sequenceIndex(new long[] { 1,2,3 }, new long[] { 1,2,3 }),
+                sequenceIndex(new long[] { 4,5,6 }, new long[] { 4,5,6 }),
+                sequenceIndex(new long[] { 7,8,9 }, new long[] { 7,8,9 })
+            }, null, null, LABRawhide.SINGLETON));
+
+        List<Expected> expected = new ArrayList<>();
+        expected.add(new Expected(1, 1));
+        expected.add(new Expected(2, 2));
+        expected.add(new Expected(3, 3));
+        expected.add(new Expected(4, 4));
+        expected.add(new Expected(5, 5));
+        expected.add(new Expected(6, 6));
+        expected.add(new Expected(7, 7));
+        expected.add(new Expected(8, 8));
+        expected.add(new Expected(9, 9));
+
+        assertExpected(ips, expected);
+        ips.close();
+
+    }
+
+    @Test
+    public void testNext6() throws Exception {
+
+        InterleaveStream ips = new InterleaveStream(LABRawhide.SINGLETON,
+            ActiveScan.indexToFeeds(new ReadIndex[] {
+                sequenceIndex(new long[] { 1 }, new long[] { 1 }),
+                sequenceIndex(new long[] { 4 }, new long[] { 4 }),
+                sequenceIndex(new long[] { 7 }, new long[] { 7 })
+            }, null, null, LABRawhide.SINGLETON));
+
+        List<Expected> expected = new ArrayList<>();
+        expected.add(new Expected(1, 1));
+        expected.add(new Expected(4, 4));
+        expected.add(new Expected(7, 7));
+
+        assertExpected(ips, expected);
+        ips.close();
+
+    }
+
+    @Test
+    public void testNext7() throws Exception {
+
+        InterleaveStream ips = new InterleaveStream(LABRawhide.SINGLETON,
+            ActiveScan.indexToFeeds(new ReadIndex[] {
+                sequenceIndex(new long[] { 1 }, new long[] { 3 }),
+                sequenceIndex(new long[] { 1 }, new long[] { 1 }),
+                sequenceIndex(new long[] { 1 }, new long[] { 2 })
+            }, null, null, LABRawhide.SINGLETON));
+
+        List<Expected> expected = new ArrayList<>();
+        expected.add(new Expected(1, 3));
+
+        assertExpected(ips, expected);
+        ips.close();
+
+    }
+
+
     private ReadIndex sequenceIndex(long[] keys, long[] values) {
         return new ReadIndex() {
             @Override
@@ -116,7 +253,7 @@ public class InterleaveStreamNGTest {
             }
 
             @Override
-            public Scanner pointScan(boolean hashIndexEnabled, byte[] key, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+            public Scanner pointScan(boolean hashIndexEnabled, byte[] key) throws Exception {
                 throw new UnsupportedOperationException("Not supported.");
             }
 
@@ -128,7 +265,7 @@ public class InterleaveStreamNGTest {
     }
 
     @Test
-    public void testNext3() throws Exception {
+    public void testNext10() throws Exception {
 
         int count = 10;
         int step = 100;
@@ -167,17 +304,7 @@ public class InterleaveStreamNGTest {
                         new StripingBolBufferLocks(1024)
                     ));
                 TestUtils.append(rand, memoryIndexes[i], 0, step, count, desired, keyBuffer);
-                //System.out.println("Index " + i);
-
                 readerIndexs[wi] = memoryIndexes[i].acquireReader();
-                Scanner nextRawEntry = readerIndexs[wi].rowScan(new BolBuffer(), new BolBuffer());
-                while (nextRawEntry.next((rawEntry) -> {
-                    //System.out.println(TestUtils.toString(rawEntry));
-                    return true;
-                }, null) == Next.more) {
-                }
-                //System.out.println("\n");
-
                 reorderIndexReaders[i] = readerIndexs[wi];
             }
 
@@ -190,7 +317,7 @@ public class InterleaveStreamNGTest {
                 long key = UIO.bytesLong(entry.getKey());
                 long value = TestUtils.value(entry.getValue());
                 expected.add(new Expected(key, value));
-                //System.out.println(key + " timestamp:" + value);
+                System.out.println(key + " timestamp:" + value);
             }
             //System.out.println("\n");
 
@@ -206,20 +333,21 @@ public class InterleaveStreamNGTest {
 
     private void assertExpected(InterleaveStream ips, List<Expected> expected) throws Exception {
         boolean[] passed = { true };
-        while (ips.next((rawEntry) -> {
+
+        BolBuffer rawEntry = new BolBuffer();
+        while ((rawEntry = ips.next(rawEntry,null)) != null) {
+
             Expected expect = expected.remove(0);
             long key = TestUtils.key(rawEntry);
             long value = TestUtils.value(rawEntry);
 
-            //System.out.println("key:" + key + " vs " + expect.key + " value:" + value + " vs " + expect.value);
+            System.out.println("key:" + key + " vs " + expect.key + " value:" + value + " vs " + expect.value);
             if (key != expect.key) {
                 passed[0] = false;
             }
             if (value != expect.value) {
                 passed[0] = false;
             }
-            return true;
-        }, null) == Next.more) {
         }
         Assert.assertTrue(passed[0], "key or value miss match");
         Assert.assertTrue(expected.isEmpty(), "failed to remove all");
@@ -251,15 +379,13 @@ public class InterleaveStreamNGTest {
 
         return new Scanner() {
             @Override
-            public Next next(RawEntryStream stream, BolBuffer nextHint) throws Exception {
+            public BolBuffer next(BolBuffer rawEntry, BolBuffer nextHint) throws Exception {
                 if (index[0] < keys.length) {
-                    byte[] rawEntry = TestUtils.rawEntry(keys[index[0]], values[index[0]]);
-                    if (!stream.stream(new BolBuffer(rawEntry))) {
-                        return Next.stopped;
-                    }
+                    byte[] rawEntryBytes = TestUtils.rawEntry(keys[index[0]], values[index[0]]);
+                    index[0]++;
+                    return new BolBuffer(rawEntryBytes);
                 }
-                index[0]++;
-                return index[0] <= keys.length ? Next.more : Next.eos;
+                return null;
             }
 
             @Override
