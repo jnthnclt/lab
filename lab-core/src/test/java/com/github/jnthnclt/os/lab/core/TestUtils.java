@@ -117,7 +117,7 @@ public class TestUtils {
 
         indexes.tx(-1, null, null, (index1, fromKey, toKey, acquired, hydrateValues) -> {
             Scanner rowScan = new InterleaveStream(LABRawhide.SINGLETON,
-                ActiveScan.indexToFeeds(acquired, null, null, LABRawhide.SINGLETON));
+                ActiveScan.indexToFeeds(acquired, null, null, LABRawhide.SINGLETON, null));
             try {
 
 
@@ -162,7 +162,7 @@ public class TestUtils {
 
                 //System.out.println("Asked:" + UIO.bytesLong(keys.get(_i)) + " to " + UIO.bytesLong(keys.get(_i + 3)));
                 Scanner rangeScan = new InterleaveStream(LABRawhide.SINGLETON,
-                    ActiveScan.indexToFeeds(acquired, keys.get(_i), keys.get(_i + 3), LABRawhide.SINGLETON));
+                    ActiveScan.indexToFeeds(acquired, keys.get(_i), keys.get(_i + 3), LABRawhide.SINGLETON, null));
                 try {
                     BolBuffer rawEntry = new BolBuffer();
                     while ((rawEntry =rangeScan.next(rawEntry,null)) != null) {
@@ -189,7 +189,7 @@ public class TestUtils {
 
                 Scanner rangeScan = new InterleaveStream(LABRawhide.SINGLETON,
                     ActiveScan.indexToFeeds(acquired, UIO.longBytes(UIO.bytesLong(keys.get(_i)) + 1, new byte[8], 0), keys.get(_i + 3),
-                    LABRawhide.SINGLETON));
+                    LABRawhide.SINGLETON, null));
                 try {
 
                     BolBuffer rawEntry = new BolBuffer();

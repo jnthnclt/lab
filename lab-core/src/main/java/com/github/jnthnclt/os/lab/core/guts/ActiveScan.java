@@ -18,7 +18,11 @@ public class ActiveScan {
 
     private static final LABLogger LOG = LABLoggerFactory.getLogger();
 
-    public static PriorityQueue<InterleavingStreamFeed> indexToFeeds(ReadIndex[] indexs, byte[] from, byte[] to, Rawhide rawhide) throws Exception {
+    public static PriorityQueue<InterleavingStreamFeed> indexToFeeds(ReadIndex[] indexs,
+        byte[] from,
+        byte[] to,
+        Rawhide rawhide,
+        BolBuffer firstKeyHint) throws Exception {
 
         PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds = new PriorityQueue<>();
 
@@ -33,7 +37,7 @@ public class ActiveScan {
                 }
                 if (scanner != null) {
                     InterleavingStreamFeed e = new InterleavingStreamFeed(i, scanner, rawhide);
-                    e.feedNext();
+                    e.feedNext(firstKeyHint);
                     if (e.nextRawEntry != null) {
                         interleavingStreamFeeds.add(e);
                     } else {
@@ -67,16 +71,13 @@ public class ActiveScan {
         BolBuffer entryKeyBuffer,
         boolean exact) throws Exception {
 
-        long rowIndex = -1;
-
         if (rawhide.compare(l.lastKey, bbKey) < 0) {
-            return rowIndex;
+            return -1;
         }
 
         if (exact && hashIndexEnabled && hashIndexMaxCapacity > 0) {
             if (hashIndexType == LABHashIndexType.linearProbe) {
                 long exactRowIndex = getLinearProbe(readable,
-                    hashIndexHashFunctionCount,
                     hashIndexHeadOffset,
                     hashIndexMaxCapacity,
                     hashIndexLongPrecision,
@@ -103,6 +104,30 @@ public class ActiveScan {
             }
         }
 
+        return findInclusiveStartOfRow(readable,
+            l,
+            cacheKey,
+            leapsCache,
+            cacheKeyBuffer,
+            rawhide,
+            bbKey,
+            entryBuffer,
+            entryKeyBuffer,
+            exact);
+    }
+
+    public static long findInclusiveStartOfRow(PointerReadableByteBufferFile readable,
+        Leaps l,
+        long cacheKey,
+        LRUConcurrentBAHLinkedHash<Leaps> leapsCache,
+        byte[] cacheKeyBuffer,
+        Rawhide rawhide,
+        BolBuffer bbKey,
+        BolBuffer entryBuffer,
+        BolBuffer entryKeyBuffer,
+        boolean exact) throws Exception {
+
+        long rowIndex = -1;
         Comparator<BolBuffer> byteBufferKeyComparator = rawhide.getBolBufferKeyComparator();
         int cacheMisses = 0;
         int cacheHits = 0;
@@ -183,7 +208,6 @@ public class ActiveScan {
     }
 
     static private long getLinearProbe(PointerReadableByteBufferFile readable,
-        byte hashIndexHashFunctionCount,
         long hashIndexHeadOffset,
         long hashIndexMaxCapacity,
         byte hashIndexLongPrecision,

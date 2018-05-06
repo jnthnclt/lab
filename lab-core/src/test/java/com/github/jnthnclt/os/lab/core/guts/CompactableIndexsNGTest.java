@@ -302,7 +302,7 @@ public class CompactableIndexsNGTest {
         indexs.tx(-1, null, null, (index1, fromKey, toKey, acquired, hydrateValues) -> {
             AtomicBoolean failed = new AtomicBoolean();
             Scanner rowScan = new InterleaveStream(rawhide,
-                ActiveScan.indexToFeeds(acquired, null, null, rawhide));
+                ActiveScan.indexToFeeds(acquired, null, null, rawhide, null));
             try {
                 BolBuffer rawEntry = new BolBuffer();
                 while ((rawEntry =rowScan.next(rawEntry,null)) != null) {
@@ -360,7 +360,7 @@ public class CompactableIndexsNGTest {
 
                 //System.out.println("Asked index:" + _i + " key:" + UIO.bytesLong(keys.get(_i)) + " to:" + UIO.bytesLong(keys.get(_i + 3)));
                 Scanner rangeScan = new InterleaveStream(rawhide,
-                    ActiveScan.indexToFeeds(acquired, keys.get(_i), keys.get(_i + 3), rawhide));
+                    ActiveScan.indexToFeeds(acquired, keys.get(_i), keys.get(_i + 3), rawhide, null));
                 try {
                     BolBuffer rawEntry = new BolBuffer();
                     while ((rawEntry =rangeScan.next(rawEntry,null)) != null) {
@@ -386,7 +386,7 @@ public class CompactableIndexsNGTest {
 
                 Scanner rangeScan = new InterleaveStream(rawhide,
                     ActiveScan.indexToFeeds(acquired, UIO.longBytes(UIO.bytesLong(keys.get(_i)) + 1, new byte[8], 0), keys.get(_i + 3),
-                    rawhide));
+                    rawhide, null));
                 try {
 
                     BolBuffer rawEntry = new BolBuffer();

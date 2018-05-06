@@ -192,7 +192,7 @@ public class LAB implements ValueIndex<byte[]> {
             (index, fromKey, toKey, readIndexes, hydrateValues1) -> {
 
                 InterleaveStream interleaveStream = new InterleaveStream(rawhide,
-                    ActiveScan.indexToFeeds(readIndexes, fromKey, toKey, rawhide));
+                    ActiveScan.indexToFeeds(readIndexes, fromKey, toKey, rawhide, null));
                 try {
 
                     while (true) {
@@ -228,7 +228,7 @@ public class LAB implements ValueIndex<byte[]> {
                 (index1, fromKey, toKey, readIndexes, hydrateValues1) -> {
 
                     InterleaveStream interleaveStream = new InterleaveStream(rawhide,
-                        ActiveScan.indexToFeeds(readIndexes, fromKey, toKey, rawhide));
+                        ActiveScan.indexToFeeds(readIndexes, fromKey, toKey, rawhide, null));
                     try {
                         while (true) {
                             BolBuffer next = interleaveStream.next(new BolBuffer(), null);
@@ -258,24 +258,88 @@ public class LAB implements ValueIndex<byte[]> {
 
     @Override
     public boolean rowScan(Keys keys, ValueStream stream, boolean hydrateValues) throws Exception {
-//        BolBuffer streamKeyBuffer = new BolBuffer();
-//        BolBuffer streamValueBuffer = hydrateValues ? new BolBuffer() : null;
-//        boolean r = rangeTx(true, -1, SMALLEST_POSSIBLE_KEY, null, -1, -1,
-//            (index, fromKey, toKey, readIndexes, hydrateValues1) -> {
-//
-//
-//                InterleaveStream interleaveStream = new InterleaveStream(readIndexes, fromKey, toKey, rawhide);
-//                try {
-//                    return rawToReal(index, interleaveStream, streamKeyBuffer, streamValueBuffer, stream);
-//                } finally {
-//                    interleaveStream.close();
-//                }
-//            },
-//            hydrateValues
-//        );
-//        stats.rowScan.increment();
-//        return r;
-        return false;
+        BolBuffer streamKeyBuffer = new BolBuffer();
+        BolBuffer streamValueBuffer = hydrateValues ? new BolBuffer() : null;
+        boolean r = rangeTx(true,
+            -1,
+            SMALLEST_POSSIBLE_KEY,
+            null,
+            -1,
+            -1,
+            (index, fromKey, toKey, readIndexes, hydrateValues1) -> {
+                InterleaveStream[] interleaveStream = new InterleaveStream[1];
+                try {
+                    BolBuffer[] lastNext = new BolBuffer[1];
+                    BolBuffer keyBuffer = new BolBuffer();
+
+                   return keys.keys((index1, key, offset, length) -> {
+
+                        BolBuffer keyHint = new BolBuffer(key, offset, length);
+
+                        if (interleaveStream[0] == null) {
+                            PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds = ActiveScan.indexToFeeds(readIndexes,
+                                fromKey, toKey, rawhide, keyHint);
+                            interleaveStream[0] = new InterleaveStream(rawhide, interleavingStreamFeeds);
+                        }
+
+                        if (lastNext[0] != null) {
+                            int c = rawhide.compareKey(lastNext[0], keyBuffer, keyHint);
+                            if (c == 0) {
+                                BolBuffer next = lastNext[0];
+                                lastNext[0] = null;
+                                if (!rawhide.streamRawEntry(index,
+                                    next,
+                                    streamKeyBuffer,
+                                    streamValueBuffer,
+                                    stream)) {
+                                    return false;
+                                }
+                                return true;
+                            } else if (c > 0) {
+                                if (!rawhide.streamRawEntry(index,
+                                    null,
+                                    streamKeyBuffer,
+                                    streamValueBuffer,
+                                    stream)) {
+                                    return false;
+                                }
+                                return true;
+                            }
+                        }
+
+                        BolBuffer rawEntry = new BolBuffer();
+                        lastNext[0] = interleaveStream[0].next(rawEntry, keyHint);
+                        if (lastNext[0] == null || rawhide.compareKey(lastNext[0], keyBuffer, keyHint) == 0) {
+                            BolBuffer next = lastNext[0];
+                            lastNext[0] = null;
+                            if (!rawhide.streamRawEntry(index,
+                                next,
+                                streamKeyBuffer,
+                                streamValueBuffer,
+                                stream)) {
+                                return false;
+                            }
+                        } else {
+                            if (!rawhide.streamRawEntry(index,
+                                null,
+                                streamKeyBuffer,
+                                streamValueBuffer,
+                                stream)) {
+                                return false;
+                            }
+                        }
+                        return true;
+                    });
+
+
+                } finally {
+                    interleaveStream[0].close();
+                }
+            },
+            hydrateValues
+        );
+        stats.rowScan.increment();
+        return r;
     }
 
     @Override
@@ -290,7 +354,7 @@ public class LAB implements ValueIndex<byte[]> {
             -1,
             (index, fromKey, toKey, readIndexes, hydrateValues1) -> {
 
-                PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds = ActiveScan.indexToFeeds(readIndexes, fromKey, toKey, rawhide);
+                PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds = ActiveScan.indexToFeeds(readIndexes, fromKey, toKey, rawhide, null);
                 InterleaveStream interleaveStream = new InterleaveStream(rawhide, interleavingStreamFeeds);
                 try {
                     BolBuffer rawEntry = new BolBuffer();

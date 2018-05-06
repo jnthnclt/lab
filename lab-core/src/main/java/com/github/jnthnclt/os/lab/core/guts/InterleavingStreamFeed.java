@@ -19,8 +19,8 @@ public class InterleavingStreamFeed implements Comparable<InterleavingStreamFeed
         this.rawhide = rawhide;
     }
 
-    BolBuffer feedNext() throws Exception {
-        nextRawEntry = scanner.next(new BolBuffer(), null);
+    BolBuffer feedNext(BolBuffer nextHint) throws Exception {
+        nextRawEntry = scanner.next(new BolBuffer(), nextHint);
         return nextRawEntry;
     }
 

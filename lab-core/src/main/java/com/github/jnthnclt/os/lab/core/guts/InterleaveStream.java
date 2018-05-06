@@ -32,47 +32,54 @@ public class InterleaveStream implements Scanner {
     }
 
     @Override
-    public BolBuffer next(BolBuffer rawEntry, BolBuffer nextHint) throws Exception {
+    public BolBuffer next(BolBuffer rawEntry, BolBuffer nextKeyHint) throws Exception {
+        while(true) {
+            if (active == null || until != null && compare(active, until) >= 0) {
 
-
-
-        if (active == null || until != null && compare(active, until) >= 0) {
-
-            if (active == null) {
-                active = interleavingStreamFeeds.poll();
-            } else {
-                interleavingStreamFeeds.add(active);
-                active = interleavingStreamFeeds.poll();
-            }
-
-
-            while (true) {
-                InterleavingStreamFeed first = interleavingStreamFeeds.peek();
-                if (first == null || compare(first, active) != 0) {
-                    until = first;
-                    break;
-                }
-
-                interleavingStreamFeeds.poll();
-                if (first.feedNext() != null) {
-                    interleavingStreamFeeds.add(first);
+                if (active == null) {
+                    active = interleavingStreamFeeds.poll();
                 } else {
-                    first.close();
+                    interleavingStreamFeeds.add(active);
+                    active = interleavingStreamFeeds.poll();
+                }
+
+                while (true) {
+                    InterleavingStreamFeed first = interleavingStreamFeeds.peek();
+                    if (first == null || compare(first, active) != 0) {
+                        until = first;
+                        break;
+                    }
+
+                    interleavingStreamFeeds.poll();
+                    if (first.feedNext(nextKeyHint) != null) {
+                        interleavingStreamFeeds.add(first);
+                    } else {
+                        first.close();
+                    }
                 }
             }
-        }
 
-        if (active != null) {
-            BolBuffer next = active.nextRawEntry;
-            if (active.feedNext() == null) {
-                active.close();
-                active = null;
-                until = null;
+            if (active != null) {
+                BolBuffer next = active.nextRawEntry;
+                if (nextKeyHint != null && compare(active, nextKeyHint) < 0) {
+                    if (active.feedNext(nextKeyHint) == null) {
+                        active.close();
+                        active = null;
+                        until = null;
+                    }
+                    continue;
+                } else {
+                    if (active.feedNext(nextKeyHint) == null) {
+                        active.close();
+                        active = null;
+                        until = null;
+                    }
+                }
+                return next;
+            } else {
+                close();
+                return null;
             }
-            return next;
-        } else {
-            close();
-            return null;
         }
     }
 
@@ -82,6 +89,13 @@ public class InterleaveStream implements Scanner {
             left.entryKeyBuffer,
             right.nextRawEntry,
             right.entryKeyBuffer);
+    }
+
+    private int compare(InterleavingStreamFeed left, BolBuffer right) throws Exception {
+        return rawhide.compareKey(
+            left.nextRawEntry,
+            left.entryKeyBuffer,
+            right);
     }
 
 }

@@ -14,6 +14,7 @@ import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.api.UIO;
+import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +37,7 @@ public class InterleaveStreamNGTest {
         InterleaveStream ips = new InterleaveStream(LABRawhide.SINGLETON,
             ActiveScan.indexToFeeds(new ReadIndex[] {
                 sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 3, 3, 3, 3, 3 })
-            }, null, null, LABRawhide.SINGLETON));
+            }, null, null, LABRawhide.SINGLETON, null));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(1, 3));
@@ -56,7 +57,7 @@ public class InterleaveStreamNGTest {
             ActiveScan.indexToFeeds(new ReadIndex[] {
                 sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 3, 3, 3, 3, 3 }),
                 sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 1, 1, 1, 1, 1 })
-            }, null, null, LABRawhide.SINGLETON));
+            }, null, null, LABRawhide.SINGLETON, null));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(1, 3));
@@ -77,7 +78,7 @@ public class InterleaveStreamNGTest {
                 sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 3, 3, 3, 3, 3 }),
                 sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 2, 2, 2, 2, 2 }),
                 sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 1, 1, 1, 1, 1 })
-            }, null, null, LABRawhide.SINGLETON));
+            }, null, null, LABRawhide.SINGLETON, null));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(1, 3));
@@ -98,7 +99,7 @@ public class InterleaveStreamNGTest {
                 sequenceIndex(new long[] { 10, 21, 29, 41, 50 }, new long[] { 1, 0, 0, 0, 1 }),
                 sequenceIndex(new long[] { 10, 21, 29, 40, 50 }, new long[] { 0, 0, 0, 1, 0 }),
                 sequenceIndex(new long[] { 10, 20, 30, 39, 50 }, new long[] { 0, 1, 1, 0, 0 })
-            }, null, null, LABRawhide.SINGLETON));
+            }, null, null, LABRawhide.SINGLETON, null));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(10, 1));
@@ -124,7 +125,7 @@ public class InterleaveStreamNGTest {
                 sequenceIndex(new long[] { 10, 21, 29, 41, 50 }, new long[] { 1, 0, 0, 0, 1 }),
                 sequenceIndex(new long[] { 10, 20, 30, 39, 50 }, new long[] { 0, 1, 1, 0, 0 }),
                 sequenceIndex(new long[] { 10, 21, 29, 40, 50 }, new long[] { 0, 0, 0, 1, 0 })
-            }, null, null, LABRawhide.SINGLETON));
+            }, null, null, LABRawhide.SINGLETON, null));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(10, 1));
@@ -150,7 +151,7 @@ public class InterleaveStreamNGTest {
                 sequenceIndex(new long[] { 9, 20, 30, 39, 50 }, new long[] { 0, 1, 1, 0, 0 }),
                 sequenceIndex(new long[] { 10, 21, 29, 41, 50 }, new long[] { 1, 0, 0, 0, 1 }),
                 sequenceIndex(new long[] { 10, 21, 31, 40, 50 }, new long[] { 0, 0, 0, 1, 0 })
-            }, null, null, LABRawhide.SINGLETON));
+            }, null, null, LABRawhide.SINGLETON, null));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(9, 0));
@@ -178,7 +179,7 @@ public class InterleaveStreamNGTest {
                 sequenceIndex(new long[] { 1,2,3 }, new long[] { 1,2,3 }),
                 sequenceIndex(new long[] { 4,5,6 }, new long[] { 4,5,6 }),
                 sequenceIndex(new long[] { 7,8,9 }, new long[] { 7,8,9 })
-            }, null, null, LABRawhide.SINGLETON));
+            }, null, null, LABRawhide.SINGLETON, null));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(1, 1));
@@ -204,7 +205,7 @@ public class InterleaveStreamNGTest {
                 sequenceIndex(new long[] { 1 }, new long[] { 1 }),
                 sequenceIndex(new long[] { 4 }, new long[] { 4 }),
                 sequenceIndex(new long[] { 7 }, new long[] { 7 })
-            }, null, null, LABRawhide.SINGLETON));
+            }, null, null, LABRawhide.SINGLETON, null));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(1, 1));
@@ -224,7 +225,7 @@ public class InterleaveStreamNGTest {
                 sequenceIndex(new long[] { 1 }, new long[] { 3 }),
                 sequenceIndex(new long[] { 1 }, new long[] { 1 }),
                 sequenceIndex(new long[] { 1 }, new long[] { 2 })
-            }, null, null, LABRawhide.SINGLETON));
+            }, null, null, LABRawhide.SINGLETON, null));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(1, 3));
@@ -308,19 +309,32 @@ public class InterleaveStreamNGTest {
                 reorderIndexReaders[i] = readerIndexs[wi];
             }
 
-            InterleaveStream ips = new InterleaveStream(rawhide,
-                ActiveScan.indexToFeeds(reorderIndexReaders, null, null, rawhide));
+
 
             List<Expected> expected = new ArrayList<>();
+            Random r = new Random();
+            List<Expected> skipScanExpected = Lists.newArrayList();
             //System.out.println("Expected:");
             for (Map.Entry<byte[], byte[]> entry : desired.entrySet()) {
                 long key = UIO.bytesLong(entry.getKey());
                 long value = TestUtils.value(entry.getValue());
                 expected.add(new Expected(key, value));
-                System.out.println(key + " timestamp:" + value);
+
+                if (r.nextBoolean()) {
+                    skipScanExpected.add(new Expected(key, value));
+                }
+
+                //System.out.println(key + " timestamp:" + value);
             }
             //System.out.println("\n");
 
+            InterleaveStream ips = new InterleaveStream(rawhide,
+                ActiveScan.indexToFeeds(reorderIndexReaders, null, null, rawhide,
+                    new BolBuffer(UIO.longBytes(skipScanExpected.get(0).key))));
+            assertExpectedSkipScan(ips, skipScanExpected);
+
+            ips = new InterleaveStream(rawhide,
+                ActiveScan.indexToFeeds(reorderIndexReaders, null, null, rawhide, null));
             assertExpected(ips, expected);
         } finally {
             for (ReadIndex readerIndex : readerIndexs) {
@@ -330,6 +344,8 @@ public class InterleaveStreamNGTest {
             }
         }
     }
+
+
 
     private void assertExpected(InterleaveStream ips, List<Expected> expected) throws Exception {
         boolean[] passed = { true };
@@ -341,7 +357,7 @@ public class InterleaveStreamNGTest {
             long key = TestUtils.key(rawEntry);
             long value = TestUtils.value(rawEntry);
 
-            System.out.println("key:" + key + " vs " + expect.key + " value:" + value + " vs " + expect.value);
+            //System.out.println("key:" + key + " vs " + expect.key + " value:" + value + " vs " + expect.value);
             if (key != expect.key) {
                 passed[0] = false;
             }
@@ -351,6 +367,36 @@ public class InterleaveStreamNGTest {
         }
         Assert.assertTrue(passed[0], "key or value miss match");
         Assert.assertTrue(expected.isEmpty(), "failed to remove all");
+    }
+
+    private void assertExpectedSkipScan(InterleaveStream ips, List<Expected> expected) throws Exception {
+        boolean[] passed = { true };
+
+        for (Expected e : expected) {
+            BolBuffer rawEntry = ips.next(new BolBuffer(), new BolBuffer(UIO.longBytes(e.key)));
+            long key = TestUtils.key(rawEntry);
+            long value = TestUtils.value(rawEntry);
+
+            System.out.println( key + " vs " + e.key);
+        }
+
+
+//        while ((rawEntry = ips.next(rawEntry,null)) != null) {
+//
+//            Expected expect = expected.remove(0);
+//            long key = TestUtils.key(rawEntry);
+//            long value = TestUtils.value(rawEntry);
+//
+//            //System.out.println("key:" + key + " vs " + expect.key + " value:" + value + " vs " + expect.value);
+//            if (key != expect.key) {
+//                passed[0] = false;
+//            }
+//            if (value != expect.value) {
+//                passed[0] = false;
+//            }
+//        }
+//        Assert.assertTrue(passed[0], "key or value miss match");
+//        Assert.assertTrue(expected.isEmpty(), "failed to remove all");
     }
 
 
