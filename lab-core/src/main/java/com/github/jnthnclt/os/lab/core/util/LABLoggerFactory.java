@@ -24,8 +24,7 @@ public class LABLoggerFactory {
     }
 
     public enum SysoutLABLoggerLevel {
-        INFO, WARN, DEBUG, ERROR
-
+        ERROR, WARN, INFO, DEBUG
     }
 
     public static class SysoutLABLogger implements LABLogger {
