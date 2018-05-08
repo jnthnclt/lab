@@ -3,6 +3,7 @@ package com.github.jnthnclt.os.lab.core;
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.api.Keys.KeyStream;
 import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
+import com.github.jnthnclt.os.lab.core.api.ScanKeys;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABKeyValueRawhide;
@@ -156,7 +157,7 @@ public class LABNGTest {
                             return "" + UIO.bytesLong(key);
                         }
                     });
-                   //System.out.print("RANGE FAILED: from:" + f + " to:" + t + " result:" + rangeScan);
+                    //System.out.print("RANGE FAILED: from:" + f + " to:" + t + " result:" + rangeScan);
                     //System.out.println();
                 }
             }
@@ -233,10 +234,131 @@ public class LABNGTest {
         commitAndWait(index, fsync);
 
         Assert.assertFalse(index.isEmpty());
-        long[] expected = new long[] { 1, 2, 3};
+        long[] expected = new long[] { 1, 2, 3 };
         testScanExpected(index, expected);
         env.shutdown();
 
+    }
+
+    @Test
+    public void testSkipRowScan() throws Exception {
+
+        boolean fsync = true;
+        File root = Files.createTempDir();
+        LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
+        LABHeapPressure labHeapPressure = new LABHeapPressure(new LABStats(),
+            LABEnvironment.buildLABHeapSchedulerThreadPool(1),
+            "default",
+            1024 * 1024 * 10,
+            1024 * 1024 * 10,
+            new AtomicLong(),
+            LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
+        LABEnvironment env = new LABEnvironment(
+            new LABStats(),
+            LABEnvironment.buildLABSchedulerThreadPool(1),
+            LABEnvironment.buildLABCompactorThreadPool(4),
+            LABEnvironment.buildLABDestroyThreadPool(1),
+            null,
+            root,
+            labHeapPressure, 1, 2, leapsCache,
+            new StripingBolBufferLocks(1024),
+            true,
+            false);
+
+        ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo",
+            4096,
+            1024 * 1024 * 10,
+            16,
+            -1,
+            -1,
+            "deprecated",
+            LABRawhide.NAME,
+            MemoryRawEntryFormat.NAME,
+            2,
+            TestUtils.indexType,
+            0.1d,
+            false,
+            Long.MAX_VALUE);
+
+        ValueIndex index = env.open(valueIndexConfig);
+        BolBuffer rawEntryBuffer = new BolBuffer();
+        BolBuffer keyBuffer = new BolBuffer();
+        index.append((stream) -> {
+            stream.stream(-1, UIO.longBytes(10, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(10, new byte[8], 0));
+            stream.stream(-1, UIO.longBytes(30, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(30, new byte[8], 0));
+            stream.stream(-1, UIO.longBytes(50, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(50, new byte[8], 0));
+            stream.stream(-1, UIO.longBytes(70, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(70, new byte[8], 0));
+            stream.stream(-1, UIO.longBytes(90, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(90, new byte[8], 0));
+            return true;
+        }, fsync, rawEntryBuffer, keyBuffer);
+        commitAndWait(index, fsync);
+
+        Assert.assertFalse(index.isEmpty());
+        testScanExpected(index, new long[] { 10, 30, 50, 70, 90 });
+
+        testSkipScanExpected(index, new long[] { 0, 1, 2 },
+            new long[] { -1, -1, -1 });
+
+        testSkipScanExpected(index, new long[] { 31, 32, 33, 71, 73, 75 },
+            new long[] { -1, -1, -1, -1, -1, -1 });
+
+        testSkipScanExpected(index, new long[] { 10, 30, 50, 70, 90 },
+            new long[] { 10, 30, 50, 70, 90 });
+
+        testSkipScanExpected(index, new long[] { 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100 },
+            new long[] { -1, 10, -1, 30, -1, 50, -1, 70, -1, 90, -1 });
+
+        testSkipScanExpected(index, new long[] { 90, 92, 93 },
+            new long[] { 90, -1, -1 });
+
+        testSkipScanExpected(index, new long[] { 91, 92, 93 },
+            new long[] { -1, -1, -1 });
+
+
+        env.shutdown();
+
+    }
+
+    private void testSkipScanExpected(ValueIndex index, long[] desired, long[] expected) throws Exception {
+
+        System.out.println("Checking skip scan");
+        List<Long> scanned = new ArrayList<>();
+
+        ScanKeys scanKeys = new ScanKeys() {
+            int i = 0;
+
+            @Override
+            public BolBuffer nextKey() throws Exception {
+                if (i < desired.length) {
+                    try {
+                        return new BolBuffer(UIO.longBytes(desired[i]));
+                    } finally {
+                        i += 1;
+                    }
+                }
+                return null;
+            }
+        };
+
+
+        index.rowScan(scanKeys,
+            (index1, key, timestamp, tombstoned, version, payload) -> {
+                if (payload != null && !tombstoned) {
+                    System.out.println(
+                        "scan:" + IndexUtil.toString(key) + " " + timestamp + " " + tombstoned + " " + version + " " + IndexUtil.toString(payload));
+                    scanned.add(payload.getLong(0));
+                } else {
+                    scanned.add(-1L);
+                }
+                return true;
+            }, true);
+
+        assertEquals(scanned.size(), expected.length);
+
+        for (int i = 0; i < expected.length; i++) {
+            System.out.println(scanned.get(i) + " vs " + expected[i]);
+            assertEquals((long) scanned.get(i), expected[i]);
+        }
     }
 
 
@@ -367,7 +489,7 @@ public class LABNGTest {
             16,
             -1,
             -1,
-           "deprecated",
+            "deprecated",
             LABRawhide.NAME,
             MemoryRawEntryFormat.NAME,
             2,

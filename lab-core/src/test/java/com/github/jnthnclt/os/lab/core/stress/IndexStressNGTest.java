@@ -136,15 +136,14 @@ public class IndexStressNGTest {
                     continue;
                 }
                 while (indexs.tx(-1, null, null, (index, fromKey, toKey, acquired, hydrateValues) -> {
-                    PointInterleave pointInterleave = new PointInterleave(acquired, key, rawhide, true);
 
                     try {
 
                         int longKey = rand.nextInt(maxKey.intValue());
                         UIO.longBytes(longKey, key, 0);
 
-                        BolBuffer rawEntry = new BolBuffer();
-                        while ((rawEntry =pointInterleave.next(rawEntry,null)) != null) {
+                        BolBuffer rawEntry = PointInterleave.get(acquired,  key, rawhide, true);
+                        if (rawEntry != null) {
                             if (rawEntry != null) {
                                 hits[0]++;
                             } else {

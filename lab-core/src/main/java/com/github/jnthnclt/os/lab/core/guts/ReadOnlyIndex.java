@@ -245,6 +245,7 @@ public class ReadOnlyIndex implements ReadIndex {
 
     private ActiveScanRow setup(ActiveScanRow activeScan) throws IOException {
         activeScan.rawhide = rawhide;
+        activeScan.leaps[0] = leaps;
         activeScan.cacheKey = cacheKey;
         activeScan.leapsCache = leapsCache;
         activeScan.cacheKeyBuffer = new byte[16];

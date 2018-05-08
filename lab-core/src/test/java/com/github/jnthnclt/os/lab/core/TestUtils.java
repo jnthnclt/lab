@@ -137,11 +137,10 @@ public class TestUtils {
         indexes.tx(-1, null, null, (index1, fromKey, toKey, acquired, hydrateValues) -> {
             for (int i = 0; i < count * step; i++) {
                 long k = i;
-                PointInterleave pointInterleave = new PointInterleave(acquired, UIO.longBytes(k, new byte[8], 0), LABRawhide.SINGLETON, true);
 
 
-                BolBuffer rawEntry = new BolBuffer();
-                while ((rawEntry =pointInterleave.next(rawEntry,null)) != null) {
+                BolBuffer rawEntry = PointInterleave.get(acquired,  UIO.longBytes(k, new byte[8], 0), LABRawhide.SINGLETON, true);
+                if (rawEntry != null) {
                     byte[] expectedFP = desired.get(UIO.longBytes(key(rawEntry), new byte[8], 0));
                     if (expectedFP == null) {
                         Assert.assertTrue(expectedFP == null && value(rawEntry) == -1);

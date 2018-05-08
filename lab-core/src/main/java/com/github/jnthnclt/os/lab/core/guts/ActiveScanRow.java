@@ -17,6 +17,8 @@ public class ActiveScanRow implements Scanner {
     LRUConcurrentBAHLinkedHash<Leaps> leapsCache;
     byte[] cacheKeyBuffer;
     long activeOffset = 0;
+    Leaps[] leaps = new Leaps[1];
+    BolBuffer entryKeyBuffer = new BolBuffer();
 
     public ActiveScanRow() {
     }
@@ -26,7 +28,35 @@ public class ActiveScanRow implements Scanner {
 
         if (nextKeyHint != null) {
 
-            BolBuffer entryKeyBuffer = new BolBuffer();
+//            if (leaps[0] == null || rawhide.compare(leaps[0].lastKey, nextKeyHint) < 0) {
+//                return null;
+//            }
+//
+//            long fp = ActiveScan.findInclusiveStartOfRow(readable,
+//                leaps[0],
+//                cacheKey,
+//                leapsCache,
+//                cacheKeyBuffer,
+//                rawhide,
+//                nextKeyHint,
+//                rawEntry,
+//                entryKeyBuffer,
+//                false,
+//                leaps);
+//            if (fp == -1) {
+//                leaps[0] = null;
+//                activeOffset = -1;
+//                return null;
+//            }
+//
+//            int type = readable.read(fp);
+//            if (type == LABAppendableIndex.ENTRY) {
+//                rawhide.rawEntryToBuffer(readable, fp + 1, rawEntry);
+//                return rawEntry;
+//            }
+//            return null;
+
+
 
             int type;
             while ((type = readable.read(activeOffset)) >= 0) {
@@ -41,20 +71,30 @@ public class ActiveScanRow implements Scanner {
                     return rawEntry;
                 } else if (type == LABAppendableIndex.LEAP) {
                     Leaps leaps = Leaps.read(readable, activeOffset);
-                    long fp = ActiveScan.findInclusiveStartOfRow(readable,
-                        leaps,
-                        cacheKey,
-                        leapsCache,
-                        cacheKeyBuffer,
-                        rawhide,
-                        nextKeyHint,
-                        rawEntry,
-                        entryKeyBuffer,
-                        false);
-                    if (fp == -1) {
-                        return null;
+
+                    if (rawhide.compare(leaps.lastKey, nextKeyHint) >= 0) {
+
+                        long fp = ActiveScan.findInclusiveStartOfRow(readable,
+                            leaps,
+                            cacheKey,
+                            leapsCache,
+                            cacheKeyBuffer,
+                            rawhide,
+                            nextKeyHint,
+                            rawEntry,
+                            entryKeyBuffer,
+                            false,
+                            null);
+                        if (fp == -1) {
+                            activeOffset = -1;
+                            return null;
+                        }
+                        activeOffset = fp;
+                    } else {
+                        int length = readable.readInt(activeOffset); // entryLength
+                        activeOffset += (length);
                     }
-                    activeOffset = fp;
+
                 } else if (type == LABAppendableIndex.FOOTER) {
                     return null;
                 } else {

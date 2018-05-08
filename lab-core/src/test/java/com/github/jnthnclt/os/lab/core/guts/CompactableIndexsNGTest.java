@@ -82,11 +82,10 @@ public class CompactableIndexsNGTest {
             //System.out.println("Get:" + i);
             indexs.tx(-1, null, null, (index, fromKey, toKey, readIndexs, hydrateValues) -> {
 
-                PointInterleave pointInterleave = new PointInterleave(readIndexs, k, rawhide, true);
 
-                BolBuffer rawEntry = new BolBuffer();
-                while ((rawEntry = pointInterleave.next(rawEntry,null)) != null) {
-                    if (UIO.bytesLong(rawEntry.copy(), 4) == g) {
+                BolBuffer got = PointInterleave.get(readIndexs, k, rawhide, true);
+                if (got != null) {
+                    if (UIO.bytesLong(got.copy(), 4) == g) {
                         passed[0] = true;
                     }
                 }
@@ -325,11 +324,10 @@ public class CompactableIndexsNGTest {
             for (int i = 0; i < count * step; i++) {
                 long k = i;
                 byte[] key = UIO.longBytes(k, new byte[8], 0);
-                PointInterleave pointInterleave = new PointInterleave(acquired, key, rawhide, true);
+               
+                BolBuffer rawEntry = PointInterleave.get(acquired, key, rawhide, true);
+                if (rawEntry != null) {
 
-
-                BolBuffer rawEntry = new BolBuffer();
-                while ((rawEntry =pointInterleave.next(rawEntry,null)) != null) {
                     if (rawEntry != null) {
                         //System.out.println("Got: " + TestUtils.toString(rawEntry));
                         byte[] rawKey = UIO.longBytes(TestUtils.key(rawEntry), new byte[8], 0);

@@ -4,6 +4,7 @@ import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.api.AppendValues;
 import com.github.jnthnclt.os.lab.core.api.Keys;
 import com.github.jnthnclt.os.lab.core.api.Ranges;
+import com.github.jnthnclt.os.lab.core.api.ScanKeys;
 import com.github.jnthnclt.os.lab.core.api.Snapshot;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueStream;
@@ -162,20 +163,12 @@ public class LAB implements ValueIndex<byte[]> {
             -1,
             -1,
             (index, fromKey, toKey, readIndexes, hydrateValues1) -> {
-                PointInterleave pointInterleave = new PointInterleave(readIndexes, fromKey, rawhide, hashIndexEnabled);
-                try {
-                    BolBuffer next = pointInterleave.next(new BolBuffer(), null);
-                    if (!rawhide.streamRawEntry(index,
-                        next,
-                        streamKeyBuffer,
-                        streamValueBuffer,
-                        stream)) {
-                        return false;
-                    }
-                    return true;
-                } finally {
-                    pointInterleave.close();
-                }
+                BolBuffer next = PointInterleave.get(readIndexes, fromKey, rawhide, hashIndexEnabled);
+                return rawhide.streamRawEntry(index,
+                    next,
+                    streamKeyBuffer,
+                    streamValueBuffer,
+                    stream);
             },
             hydrateValues
         );
@@ -257,9 +250,18 @@ public class LAB implements ValueIndex<byte[]> {
     }
 
     @Override
-    public boolean rowScan(Keys keys, ValueStream stream, boolean hydrateValues) throws Exception {
+    public boolean rowScan(ScanKeys keys, ValueStream stream, boolean hydrateValues) throws Exception {
         BolBuffer streamKeyBuffer = new BolBuffer();
         BolBuffer streamValueBuffer = hydrateValues ? new BolBuffer() : null;
+
+
+        BolBuffer[] keyHint = new BolBuffer[1];
+        keyHint[0] = keys.nextKey();
+
+        BolBuffer[] lastNext = new BolBuffer[1];
+        BolBuffer keyBuffer = new BolBuffer();
+
+
         boolean r = rangeTx(true,
             -1,
             SMALLEST_POSSIBLE_KEY,
@@ -267,23 +269,22 @@ public class LAB implements ValueIndex<byte[]> {
             -1,
             -1,
             (index, fromKey, toKey, readIndexes, hydrateValues1) -> {
-                InterleaveStream[] interleaveStream = new InterleaveStream[1];
+
+                AtomicBoolean eos = new AtomicBoolean();
+
+                PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds = ActiveScan.indexToFeeds(readIndexes,
+                    fromKey, toKey, rawhide, keyHint[0]);
+                InterleaveStream interleaveStream = new InterleaveStream(rawhide, interleavingStreamFeeds);
+
                 try {
-                    BolBuffer[] lastNext = new BolBuffer[1];
-                    BolBuffer keyBuffer = new BolBuffer();
 
-                   return keys.keys((index1, key, offset, length) -> {
-
-                        BolBuffer keyHint = new BolBuffer(key, offset, length);
-
-                        if (interleaveStream[0] == null) {
-                            PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds = ActiveScan.indexToFeeds(readIndexes,
-                                fromKey, toKey, rawhide, keyHint);
-                            interleaveStream[0] = new InterleaveStream(rawhide, interleavingStreamFeeds);
+                    while (true) {
+                        if (keyHint[0] == null) {
+                            return true;
                         }
 
                         if (lastNext[0] != null) {
-                            int c = rawhide.compareKey(lastNext[0], keyBuffer, keyHint);
+                            int c = rawhide.compareKey(lastNext[0], keyBuffer, keyHint[0]);
                             if (c == 0) {
                                 BolBuffer next = lastNext[0];
                                 lastNext[0] = null;
@@ -294,7 +295,8 @@ public class LAB implements ValueIndex<byte[]> {
                                     stream)) {
                                     return false;
                                 }
-                                return true;
+                                keyHint[0] = keys.nextKey();
+                                continue;
                             } else if (c > 0) {
                                 if (!rawhide.streamRawEntry(index,
                                     null,
@@ -303,14 +305,17 @@ public class LAB implements ValueIndex<byte[]> {
                                     stream)) {
                                     return false;
                                 }
-                                return true;
+                                keyHint[0] = keys.nextKey();
+                                continue;
                             }
                         }
 
                         BolBuffer rawEntry = new BolBuffer();
-                        lastNext[0] = interleaveStream[0].next(rawEntry, keyHint);
-                        if (lastNext[0] == null || rawhide.compareKey(lastNext[0], keyBuffer, keyHint) == 0) {
-                            BolBuffer next = lastNext[0];
+                        BolBuffer next = interleaveStream.next(rawEntry, keyHint[0]);
+                        if (next == null) {
+                            return true;
+                        }
+                        if (rawhide.compareKey(next, keyBuffer, keyHint[0]) == 0) {
                             lastNext[0] = null;
                             if (!rawhide.streamRawEntry(index,
                                 next,
@@ -320,6 +325,7 @@ public class LAB implements ValueIndex<byte[]> {
                                 return false;
                             }
                         } else {
+                            lastNext[0] = next;
                             if (!rawhide.streamRawEntry(index,
                                 null,
                                 streamKeyBuffer,
@@ -328,16 +334,30 @@ public class LAB implements ValueIndex<byte[]> {
                                 return false;
                             }
                         }
-                        return true;
-                    });
-
+                        keyHint[0] = keys.nextKey();
+                        continue;
+                    }
 
                 } finally {
-                    interleaveStream[0].close();
+                    if (interleaveStream != null) {
+                        interleaveStream.close();
+                    }
                 }
             },
             hydrateValues
         );
+
+        while (keyHint[0] != null) {
+            if (!rawhide.streamRawEntry(-1,
+                null,
+                streamKeyBuffer,
+                streamValueBuffer,
+                stream)) {
+                return false;
+            }
+            keyHint[0] = keys.nextKey();
+        }
+
         stats.rowScan.increment();
         return r;
     }

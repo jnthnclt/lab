@@ -113,7 +113,8 @@ public class ActiveScan {
             bbKey,
             entryBuffer,
             entryKeyBuffer,
-            exact);
+            exact,
+            null);
     }
 
     public static long findInclusiveStartOfRow(PointerReadableByteBufferFile readable,
@@ -125,7 +126,8 @@ public class ActiveScan {
         BolBuffer bbKey,
         BolBuffer entryBuffer,
         BolBuffer entryKeyBuffer,
-        boolean exact) throws Exception {
+        boolean exact,
+        Leaps[] lastLeap) throws Exception {
 
         long rowIndex = -1;
         Comparator<BolBuffer> byteBufferKeyComparator = rawhide.getBolBufferKeyComparator();
@@ -169,6 +171,9 @@ public class ActiveScan {
         }
         if (cacheMisses > 0) {
             LOG.inc("LAB>leapCache>misses", cacheMisses);
+        }
+        if (lastLeap != null) {
+            lastLeap[0] = l;
         }
         return rowIndex;
     }
