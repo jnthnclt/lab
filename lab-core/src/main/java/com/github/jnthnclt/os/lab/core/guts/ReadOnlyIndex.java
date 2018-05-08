@@ -63,19 +63,7 @@ public class ReadOnlyIndex implements ReadIndex {
         seekToBoundsCheck(seekTo, indexLength);
         int footerLength = readable.readInt(seekTo);
         long hashIndexSizeInBytes;
-        if (footerLength == -1) { // linearProbe has hash index tacked onto the end.
-            seekTo = indexLength - (1 + 8 + 4);
-            seekToBoundsCheck(seekTo, indexLength);
-            hashIndexLongPrecision = (byte) readable.read(seekTo);
-            hashIndexMaxCapacity = readable.readLong(seekTo + 1);
-            hashIndexSizeInBytes = (hashIndexMaxCapacity * hashIndexLongPrecision) + 1 + 8 + 4;
-            hashIndexHeadOffset = indexLength - hashIndexSizeInBytes;
-            seekTo = indexLength - (hashIndexSizeInBytes + 4);
-            seekToBoundsCheck(seekTo, indexLength);
-            footerLength = readable.readInt(seekTo);
-            seekTo = indexLength - (hashIndexSizeInBytes + 1 + footerLength);
-            hashIndexType = LABHashIndexType.linearProbe;
-        } else if (footerLength == -2) { // cuckoo hash index tacked onto the end.
+        if (footerLength == -2) { // cuckoo hash index tacked onto the end.
             seekTo = indexLength - (1 + 1 + 8 + 4);
             seekToBoundsCheck(seekTo, indexLength);
             hashIndexHashFunctionCount = (byte) readable.read(seekTo);
@@ -99,7 +87,7 @@ public class ReadOnlyIndex implements ReadIndex {
             throw new LABCorruptedException(
                 "Footer Corruption! Found " + type + " expected " + LABAppendableIndex.FOOTER + " within file:" + readOnlyFile.getFileName() + " length:" +
                     readOnlyFile
-                    .length());
+                        .length());
         }
         return Footer.read(readable, seekTo);
     }
@@ -137,17 +125,7 @@ public class ReadOnlyIndex implements ReadIndex {
                 seekToBoundsCheck(seekTo, indexLength);
                 int footerLength = readableIndex.readInt(seekTo);
                 long hashIndexSizeInBytes = 0;
-                if (footerLength == -1) { // linearProbe hash index tacked onto the end.
-                    seekTo = indexLength - (1 + 8 + 4);
-                    seekToBoundsCheck(seekTo, indexLength);
-                    byte hashIndexLongPrecision = (byte) readableIndex.read(seekTo);
-                    long hashIndexMaxCapacity = readableIndex.readLong(seekTo + 1);
-                    hashIndexSizeInBytes = (hashIndexMaxCapacity * hashIndexLongPrecision) + 1 + 8 + 4;
-                    seekTo = indexLength - (hashIndexSizeInBytes + 4);
-                    seekToBoundsCheck(seekTo, indexLength);
-                    footerLength = readableIndex.readInt(seekTo);
-                    seekTo = indexLength - (hashIndexSizeInBytes + footerLength + 1 + 4);
-                } else if (footerLength == -2) { // cuckoo hash index tacked onto the end.
+                if (footerLength == -2) { // cuckoo hash index tacked onto the end.
                     seekTo = indexLength - (1 + 1 + 8 + 4);
                     seekToBoundsCheck(seekTo, indexLength);
                     //byte hashIndexHashFunctionCount = (byte) readableIndex.read(seekTo);
@@ -324,32 +302,22 @@ public class ReadOnlyIndex implements ReadIndex {
         if (fp < 0) {
             return null;
         }
-            int type;
-            while ((type = readable.read(fp)) >= 0) {
-                fp++;
-                if (type == LABAppendableIndex.ENTRY) {
-                    fp += rawhide.rawEntryToBuffer(readable, fp, entryBuffer);
-                    return entryBuffer;
-                } else if (type == LABAppendableIndex.LEAP) {
-                    int length = readable.readInt(fp); // entryLength
-                    fp += (length);
-                } else if (type == LABAppendableIndex.FOOTER) {
-                    return null;
-                } else {
-                    throw new IllegalStateException("Bad row type:" + type + " at fp:" + (fp - 1));
-                }
+        int type;
+        while ((type = readable.read(fp)) >= 0) {
+            fp++;
+            if (type == LABAppendableIndex.ENTRY) {
+                fp += rawhide.rawEntryToBuffer(readable, fp, entryBuffer);
+                return entryBuffer;
+            } else if (type == LABAppendableIndex.LEAP) {
+                int length = readable.readInt(fp); // entryLength
+                fp += (length);
+            } else if (type == LABAppendableIndex.FOOTER) {
+                return null;
+            } else {
+                throw new IllegalStateException("Bad row type:" + type + " at fp:" + (fp - 1));
             }
-            throw new IllegalStateException("Missing footer");
-
-
-//
-//        ActiveScanPoint pointScan = setup(new ActiveScanPoint(hashIndexEnabled));
-//        long fp = pointScan.getInclusiveStartOfRow(new BolBuffer(key), new BolBuffer(), new BolBuffer(), true);
-//        if (fp < 0) {
-//            return null;
-//        }
-//        pointScan.setupPointScan(fp);
-//        return pointScan;
+        }
+        throw new IllegalStateException("Missing footer");
     }
 
     @Override

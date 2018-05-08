@@ -1,13 +1,13 @@
 package com.github.jnthnclt.os.lab.core;
 
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
+import com.github.jnthnclt.os.lab.core.guts.LABCSLMIndex;
 import com.github.jnthnclt.os.lab.core.guts.LABIndex;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABAppendOnlyAllocator;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABConcurrentSkipListMap;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABConcurrentSkipListMemory;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABIndexableMemory;
-import com.github.jnthnclt.os.lab.core.guts.LABCSLMIndex;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import org.testng.Assert;

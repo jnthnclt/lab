@@ -12,7 +12,6 @@ import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABFixedWidthKeyFixedWidthValueRawhide;
 import com.github.jnthnclt.os.lab.core.guts.LABHashIndexType;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
-import com.github.jnthnclt.os.lab.core.guts.RangeStripedCompactableIndexes;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.api.UIO;
@@ -37,7 +36,7 @@ public class LABStress {
 
     private static final LABLogger LOG = LABLoggerFactory.getLogger();;
 
-    @Test(enabled = false)
+    @Test(enabled = true)
     public void stressWritesTest() throws Exception {
 
         LABHashIndexType indexType = LABHashIndexType.cuckoo;
@@ -111,7 +110,7 @@ public class LABStress {
                         (totalCardinality1 / threadCount) * efi,
                         totalCardinality1 / threadCount,
                         1_000_000, // writesPerSecond
-                        (10_000_000 / threadCount), //writeCount
+                        (1_000_000 / threadCount), //writeCount
                         1, //readForNSeconds
                     1, // readCount
                         false,
@@ -159,7 +158,7 @@ public class LABStress {
             0, // writesPerSecond
             0, //writeCount
             1, //readForNSeconds
-            10_000_000, // readCount
+            1_000_000, // readCount
             false,
             globalHeapCostInBytes); // removes
 
@@ -302,8 +301,6 @@ public class LABStress {
             AtomicLong misses = new AtomicLong();
             AtomicLong hits = new AtomicLong();
             if (readCount > 0 && totalReads < readCount) {
-                LAB.pointTxCalled.set(0);
-                LAB.pointTxIndexCount.set(0);
                 long s = start;
 
                 while (System.currentTimeMillis() - s < (1000 * readForNSeconds)) {
@@ -343,10 +340,6 @@ public class LABStress {
             LOG.set("hits", hits.get());
             LOG.set("misses", misses.get());
             LOG.set("misses", misses.get());
-            LOG.set("mergeCount", RangeStripedCompactableIndexes.mergeCount.get());
-            LOG.set("splitCount", RangeStripedCompactableIndexes.splitCount.get());
-            LOG.set("pointTxIndexCount", LAB.pointTxIndexCount.get());
-            LOG.set("pointTxCalled", LAB.pointTxCalled.get());
 
             if (report) {
 
@@ -360,9 +353,6 @@ public class LABStress {
                         + " " + readElapse
                         + " " + hits.getAndSet(0)
                         + " " + misses.getAndSet(0)
-                        + " " + RangeStripedCompactableIndexes.mergeCount.getAndSet(0)
-                        + " " + RangeStripedCompactableIndexes.splitCount.getAndSet(0)
-                        + " " + (LAB.pointTxIndexCount.get() / (double) LAB.pointTxCalled.get())
                         + " " + index.count()
                         + " " + stats.debt.sumThenReset()
                         + " " + stats.open.sumThenReset()
@@ -411,10 +401,7 @@ public class LABStress {
             + " read:" + totalReads
             + " rps:" + totalReadRate
             + " hits:" + totalHits
-            + " miss:" + totalMiss
-            + " merged:" + RangeStripedCompactableIndexes.mergeCount.get()
-            + " split:" + RangeStripedCompactableIndexes.splitCount
-            + " readAmplification:" + (LAB.pointTxIndexCount.get() / (double) LAB.pointTxCalled.get());
+            + " miss:" + totalMiss;
 
         return punchLine;
     }

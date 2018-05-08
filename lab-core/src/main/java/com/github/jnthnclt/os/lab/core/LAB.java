@@ -478,7 +478,7 @@ public class LAB implements ValueIndex<byte[]> {
             }
 
             if (closeRequested.get()) {
-                throw new LABClosedException();
+                throw new LABClosedException("");
             }
 
             return rangeStripedCompactableIndexes.pointTx(keys,
@@ -500,9 +500,6 @@ public class LAB implements ValueIndex<byte[]> {
             }
         }
     }
-
-    public static final AtomicLong pointTxCalled = new AtomicLong();
-    public static final AtomicLong pointTxIndexCount = new AtomicLong();
 
     private boolean rangeTx(boolean acquireCommitSemaphore,
         int index,
@@ -584,8 +581,6 @@ public class LAB implements ValueIndex<byte[]> {
                         i++;
                     }
                     System.arraycopy(acquired, 0, indexes, active + flushing, acquired.length);
-                    pointTxCalled.incrementAndGet();
-                    pointTxIndexCount.addAndGet(indexes.length);
                     return tx.tx(index1, fromKey, toKey, indexes, hydrateValues1);
                 },
                 hydrateValues
@@ -628,7 +623,7 @@ public class LAB implements ValueIndex<byte[]> {
         commitSemaphore.acquire();
         try {
             if (closeRequested.get()) {
-                throw new LABClosedException();
+                throw new LABClosedException("");
             }
 
             long appendVersion;
@@ -692,7 +687,7 @@ public class LAB implements ValueIndex<byte[]> {
             throw new LABCorruptedException();
         }
         if (closeRequested.get()) {
-            throw new LABClosedException();
+            throw new LABClosedException("");
         }
 
         if (!internalCommit(fsync, new BolBuffer(), new BolBuffer(), new BolBuffer())) { // grr
@@ -825,7 +820,7 @@ public class LAB implements ValueIndex<byte[]> {
         LABHeapPressure.close(this);
 
         if (!closeRequested.compareAndSet(false, true)) {
-            throw new LABClosedException();
+            throw new LABClosedException("");
         }
 
         if (flushUncommited) {

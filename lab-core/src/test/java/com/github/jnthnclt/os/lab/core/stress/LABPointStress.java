@@ -45,8 +45,8 @@ public class LABPointStress {
         LABStats stats = new LABStats();
         ValueIndex index = createIndex(root, indexType, hashIndexLoadFactor, stats, globalHeapCostInBytes);
 
-        long totalCardinality = 2_000_000;
-        int writeCount = 2_000_000;
+        long totalCardinality = 1_000_000;
+        int writeCount = 1_000_000;
 
         write(index, 0, totalCardinality, writeCount); // removes
 

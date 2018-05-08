@@ -1,7 +1,6 @@
 package com.github.jnthnclt.os.lab.core.stress;
 
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
-import com.github.jnthnclt.os.lab.core.LAB;
 import com.github.jnthnclt.os.lab.core.LABEnvironment;
 import com.github.jnthnclt.os.lab.core.LABHeapPressure;
 import com.github.jnthnclt.os.lab.core.LABStats;
@@ -12,7 +11,6 @@ import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
 import com.github.jnthnclt.os.lab.core.guts.LABHashIndexType;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
-import com.github.jnthnclt.os.lab.core.guts.RangeStripedCompactableIndexes;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.api.UIO;
@@ -145,8 +143,6 @@ public class GlobalHeapStressNGTest {
             AtomicLong misses = new AtomicLong();
             AtomicLong hits = new AtomicLong();
             if (readCount > 0 && totalReads < readCount) {
-                LAB.pointTxCalled.set(0);
-                LAB.pointTxIndexCount.set(0);
                 long s = start;
 
                 while (System.currentTimeMillis() - s < (1000 * readForNSeconds)) {
@@ -195,10 +191,7 @@ public class GlobalHeapStressNGTest {
             + " read:" + totalReads
             + " rps:" + totalReadRate
             + " hits:" + totalHits
-            + " miss:" + totalMiss
-            + " merged:" + RangeStripedCompactableIndexes.mergeCount.get()
-            + " split:" + RangeStripedCompactableIndexes.splitCount
-            + " readAmplification:" + (LAB.pointTxIndexCount.get() / (double) LAB.pointTxCalled.get());
+            + " miss:" + totalMiss;
 
         return punchLine;
     }

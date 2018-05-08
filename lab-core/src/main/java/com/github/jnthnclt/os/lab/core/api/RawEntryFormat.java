@@ -14,17 +14,4 @@ public class RawEntryFormat {
         this.valueFormat = valueFormat;
     }
 
-    public long getKeyFormat() {
-        return keyFormat;
-    }
-
-    public long getValueFormat() {
-        return valueFormat;
-    }
-
-    @Override
-    public String toString() {
-        return "RawEntryFormat{" + "keyFormat=" + keyFormat + ", valueFormat=" + valueFormat + '}';
-    }
-
 }

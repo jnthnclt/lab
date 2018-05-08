@@ -76,19 +76,7 @@ public class ActiveScan {
         }
 
         if (exact && hashIndexEnabled && hashIndexMaxCapacity > 0) {
-            if (hashIndexType == LABHashIndexType.linearProbe) {
-                long exactRowIndex = getLinearProbe(readable,
-                    hashIndexHeadOffset,
-                    hashIndexMaxCapacity,
-                    hashIndexLongPrecision,
-                    bbKey,
-                    entryBuffer,
-                    entryKeyBuffer,
-                    rawhide);
-                if (exactRowIndex >= -1) {
-                    return exactRowIndex > -1 ? exactRowIndex - 1 : -1;
-                }
-            } else if (hashIndexType == LABHashIndexType.cuckoo) {
+            if (hashIndexType == LABHashIndexType.cuckoo) {
                 long exactRowIndex = getCuckoo(readable,
                     hashIndexHashFunctionCount,
                     hashIndexHeadOffset,

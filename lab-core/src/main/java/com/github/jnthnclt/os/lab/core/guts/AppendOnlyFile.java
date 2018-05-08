@@ -121,7 +121,7 @@ public class AppendOnlyFile {
 
     @Override
     public String toString() {
-        return "IndexFile{"
+        return "AppendOnlyFile{"
             + "fileName=" + file
             + ", size=" + size
             + '}';

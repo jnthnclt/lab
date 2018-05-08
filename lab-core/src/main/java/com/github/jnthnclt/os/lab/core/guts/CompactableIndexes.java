@@ -736,7 +736,7 @@ public class CompactableIndexes {
                     throw new LABConcurrentSplitException();
                 }
                 if (closed) {
-                    throw new LABClosedException();
+                    throw new LABClosedException("");
                 }
                 stackIndexes = indexes;
             }

@@ -39,10 +39,7 @@ import org.apache.commons.io.FileUtils;
 
 public class RangeStripedCompactableIndexes {
 
-    private static final LABLogger LOG = LABLoggerFactory.getLogger();;
-
-    public static final AtomicLong splitCount = new AtomicLong();
-    public static final AtomicLong mergeCount = new AtomicLong();
+    private static final LABLogger LOG = LABLoggerFactory.getLogger();
 
     private final AtomicLong largestStripeId = new AtomicLong();
     private final AtomicLong largestIndexId = new AtomicLong();
@@ -368,7 +365,7 @@ public class RangeStripedCompactableIndexes {
                         if (scanner != null) {
                             try {
                                 BolBuffer rawEntry = new BolBuffer();
-                                while((rawEntry = scanner.next(rawEntry, null)) != null) {
+                                while ((rawEntry = scanner.next(rawEntry, null)) != null) {
                                     stream.stream(rawEntry);
                                 }
                             } finally {
@@ -462,7 +459,6 @@ public class RangeStripedCompactableIndexes {
             long nextStripeIdLeft = largestStripeId.incrementAndGet();
             long nextStripeIdRight = largestStripeId.incrementAndGet();
             FileBackMergableIndexs self = this;
-            splitCount.incrementAndGet();
             LOG.inc("split");
             return () -> {
                 appendSemaphore.acquire(Short.MAX_VALUE);
@@ -578,7 +574,6 @@ public class RangeStripedCompactableIndexes {
             FileUtils.forceMkdir(mergingRoot);
 
 
-            mergeCount.incrementAndGet();
             LOG.inc("merge");
             return callback.call(minimumRun, fsync, (id, count) -> {
                 int maxLeaps = calculateIdealMaxLeaps(count, entriesBetweenLeaps);
@@ -743,15 +738,10 @@ public class RangeStripedCompactableIndexes {
             //pointTxIndexCount.addAndGet(indexes.length);
 
             BolBuffer next = PointInterleave.get(indexes, fromKey, rawhide, hashIndexEnabled);
-            return rawhide.streamRawEntry(index,
-                next,
-                streamKeyBuffer,
-                streamValueBuffer,
-                valueStream);
-
+            return rawhide.streamRawEntry(index, next, streamKeyBuffer, streamValueBuffer, valueStream);
         };
 
-        return keys.keys((int index, byte[] key, int offset, int length) -> {
+        return keys.keys((index, key, offset, length) -> {
             rangeTx(index, key, key, newerThanTimestamp, newerThanTimestampVersion, tx, hydrateValues);
             return true;
         });
