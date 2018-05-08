@@ -33,7 +33,7 @@ public class IndexNGTest {
 
     private final Rawhide rawhide = LABRawhide.SINGLETON;
 
-    @Test(enabled = true)
+    @Test(enabled = false)
     public void testLeapDisk() throws Exception {
 
         ExecutorService destroy = Executors.newSingleThreadExecutor();
