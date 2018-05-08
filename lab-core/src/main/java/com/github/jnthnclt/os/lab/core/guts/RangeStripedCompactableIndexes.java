@@ -4,6 +4,7 @@ import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.LABStats;
 import com.github.jnthnclt.os.lab.core.api.Keys;
 import com.github.jnthnclt.os.lab.core.api.Snapshot;
+import com.github.jnthnclt.os.lab.core.api.ValueStream;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABConcurrentSplitException;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.api.KeyToString;
@@ -716,8 +717,39 @@ public class RangeStripedCompactableIndexes {
     public boolean pointTx(Keys keys,
         long newerThanTimestamp,
         long newerThanTimestampVersion,
-        ReaderTx tx,
-        boolean hydrateValues) throws Exception {
+        ReadIndex reader,
+        ReadIndex flushingReader,
+        boolean hashIndexEnabled,
+        boolean hydrateValues,
+        BolBuffer streamKeyBuffer,
+        BolBuffer streamValueBuffer,
+        ValueStream valueStream) throws Exception {
+
+        ReaderTx tx = (index, fromKey, toKey, acquired, hydrateValues1) -> {
+            int active = (reader == null) ? 0 : 1;
+            int flushing = (flushingReader == null) ? 0 : 1;
+            ReadIndex[] indexes = new ReadIndex[acquired.length + active + flushing];
+            int i = 0;
+            if (reader != null) {
+                indexes[i] = reader;
+                i++;
+            }
+            if (flushingReader != null) {
+                indexes[i] = flushingReader;
+                i++;
+            }
+            System.arraycopy(acquired, 0, indexes, active + flushing, acquired.length);
+            //pointTxCalled.incrementAndGet();
+            //pointTxIndexCount.addAndGet(indexes.length);
+
+            BolBuffer next = PointInterleave.get(indexes, fromKey, rawhide, hashIndexEnabled);
+            return rawhide.streamRawEntry(index,
+                next,
+                streamKeyBuffer,
+                streamValueBuffer,
+                valueStream);
+
+        };
 
         return keys.keys((int index, byte[] key, int offset, int length) -> {
             rangeTx(index, key, key, newerThanTimestamp, newerThanTimestampVersion, tx, hydrateValues);

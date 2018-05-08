@@ -195,26 +195,21 @@ public class IndexNGTest {
             try {
                 byte[] key = UIO.longBytes(k, new byte[8], 0);
 
-                Scanner scanner = reader.pointScan(true, key);
-                if (scanner != null) {
-                    BolBuffer rawEntry = new BolBuffer();
-                    while ((rawEntry = scanner.next(rawEntry, null)) != null) {
-                        if (rawEntry != null) {
-                            byte[] rawKey = UIO.longBytes(TestUtils.key(rawEntry), new byte[8], 0);
-                            Assert.assertEquals(rawKey, key);
-                            byte[] d = desired.get(key);
-                            if (d == null) {
-                                Assert.fail();
-                            } else {
-                                Assert.assertEquals(TestUtils.value(rawEntry), TestUtils.value(d));
-                            }
-                        } else {
-                            Assert.assertFalse(desired.containsKey(key));
-                        }
+                BolBuffer rawEntry = reader.pointScan(true, key);
+                if (rawEntry != null) {
+                    byte[] rawKey = UIO.longBytes(TestUtils.key(rawEntry), new byte[8], 0);
+                    Assert.assertEquals(rawKey, key);
+                    byte[] d = desired.get(key);
+                    if (d == null) {
+                        Assert.fail();
+                    } else {
+                        Assert.assertEquals(TestUtils.value(rawEntry), TestUtils.value(d));
                     }
+                } else {
+                    Assert.assertFalse(desired.containsKey(key));
                 }
 
-                Assert.assertEquals(scanner == null ? false : true, desired.containsKey(key));
+                Assert.assertEquals(rawEntry == null ? false : true, desired.containsKey(key));
             } finally {
                 reader.release();
             }
@@ -294,22 +289,18 @@ public class IndexNGTest {
             reader = walIndex.acquireReader();
             try {
                 byte[] key = UIO.longBytes(k, new byte[8], 0);
-                Scanner scanner = reader.pointScan(true, key);
-                if (scanner != null) {
-                    BolBuffer rawEntry = new BolBuffer();
-                    while ((rawEntry = scanner.next(rawEntry, null)) != null) {
-                        byte[] rawKey = UIO.longBytes(TestUtils.key(rawEntry), new byte[8], 0);
-                        Assert.assertEquals(rawKey, key);
-                        byte[] d = desired.get(key);
-                        if (d == null) {
-                            Assert.fail();
-                        } else {
-                            Assert.assertEquals(TestUtils.value(rawEntry), TestUtils.value(d));
-                        }
+                BolBuffer rawEntry = reader.pointScan(true, key);
+                if (rawEntry != null) {
+                    byte[] rawKey = UIO.longBytes(TestUtils.key(rawEntry), new byte[8], 0);
+                    Assert.assertEquals(rawKey, key);
+                    byte[] d = desired.get(key);
+                    if (d == null) {
+                        Assert.fail();
+                    } else {
+                        Assert.assertEquals(TestUtils.value(rawEntry), TestUtils.value(d));
                     }
                 }
-
-                Assert.assertEquals(scanner == null ? false : true, desired.containsKey(key));
+                Assert.assertEquals(rawEntry == null ? false : true, desired.containsKey(key));
             } finally {
                 reader.release();
             }

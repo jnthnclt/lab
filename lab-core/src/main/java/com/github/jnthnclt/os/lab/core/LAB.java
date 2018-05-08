@@ -19,7 +19,6 @@ import com.github.jnthnclt.os.lab.core.guts.LABIndex;
 import com.github.jnthnclt.os.lab.core.guts.LABIndexProvider;
 import com.github.jnthnclt.os.lab.core.guts.LABMemoryIndex;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
-import com.github.jnthnclt.os.lab.core.guts.PointInterleave;
 import com.github.jnthnclt.os.lab.core.guts.RangeStripedCompactableIndexes;
 import com.github.jnthnclt.os.lab.core.guts.ReaderTx;
 import com.github.jnthnclt.os.lab.core.guts.api.KeyToString;
@@ -162,14 +161,9 @@ public class LAB implements ValueIndex<byte[]> {
         boolean b = pointTx(keys,
             -1,
             -1,
-            (index, fromKey, toKey, readIndexes, hydrateValues1) -> {
-                BolBuffer next = PointInterleave.get(readIndexes, fromKey, rawhide, hashIndexEnabled);
-                return rawhide.streamRawEntry(index,
-                    next,
-                    streamKeyBuffer,
-                    streamValueBuffer,
-                    stream);
-            },
+            streamKeyBuffer,
+            streamValueBuffer,
+            stream,
             hydrateValues
         );
         stats.gets.increment();
@@ -433,7 +427,9 @@ public class LAB implements ValueIndex<byte[]> {
     private boolean pointTx(Keys keys,
         long newerThanTimestamp,
         long newerThanTimestampVersion,
-        ReaderTx tx,
+        BolBuffer streamKeyBuffer,
+        BolBuffer streamValueBuffer,
+        ValueStream valueStream,
         boolean hydrateValues) throws Exception {
 
         ReadIndex memoryIndexReader = null;
@@ -484,29 +480,17 @@ public class LAB implements ValueIndex<byte[]> {
             if (closeRequested.get()) {
                 throw new LABClosedException();
             }
-            ReadIndex reader = memoryIndexReader;
-            ReadIndex flushingReader = flushingMemoryIndexReader;
+
             return rangeStripedCompactableIndexes.pointTx(keys,
                 newerThanTimestamp,
                 newerThanTimestampVersion,
-                (index, fromKey, toKey, acquired, hydrateValues1) -> {
-                    int active = (reader == null) ? 0 : 1;
-                    int flushing = (flushingReader == null) ? 0 : 1;
-                    ReadIndex[] indexes = new ReadIndex[acquired.length + active + flushing];
-                    int i = 0;
-                    if (reader != null) {
-                        indexes[i] = reader;
-                        i++;
-                    }
-                    if (flushingReader != null) {
-                        indexes[i] = flushingReader;
-                        i++;
-                    }
-                    System.arraycopy(acquired, 0, indexes, active + flushing, acquired.length);
-                    pointTxCalled.incrementAndGet();
-                    pointTxIndexCount.addAndGet(indexes.length);
-                    return tx.tx(index, fromKey, toKey, indexes, hydrateValues1);
-                }, hydrateValues);
+                memoryIndexReader,
+                flushingMemoryIndexReader,
+                hashIndexEnabled,
+                hydrateValues,
+                streamKeyBuffer,
+                streamValueBuffer,
+                valueStream);
         } finally {
             if (memoryIndexReader != null) {
                 memoryIndexReader.release();
@@ -515,7 +499,6 @@ public class LAB implements ValueIndex<byte[]> {
                 flushingMemoryIndexReader.release();
             }
         }
-
     }
 
     public static final AtomicLong pointTxCalled = new AtomicLong();

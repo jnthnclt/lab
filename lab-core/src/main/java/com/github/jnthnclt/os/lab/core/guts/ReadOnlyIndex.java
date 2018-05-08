@@ -271,24 +271,6 @@ public class ReadOnlyIndex implements ReadIndex {
         return activeScan;
     }
 
-    private ActiveScanPoint setup(ActiveScanPoint activeScan) throws IOException {
-        activeScan.rawhide = rawhide;
-        activeScan.leaps = leaps;
-        activeScan.cacheKey = cacheKey;
-        activeScan.leapsCache = leapsCache;
-        activeScan.readable = readOnlyFile.pointerReadable(-1);
-        activeScan.cacheKeyBuffer = new byte[16];
-
-        activeScan.hashIndexType = hashIndexType;
-        activeScan.hashIndexHashFunctionCount = hashIndexHashFunctionCount;
-        activeScan.hashIndexHeadOffset = hashIndexHeadOffset;
-        activeScan.hashIndexMaxCapacity = hashIndexMaxCapacity;
-        activeScan.hashIndexLongPrecision = hashIndexLongPrecision;
-
-        activeScan.activeOffset = -1;
-        return activeScan;
-    }
-
 
     @Override
     public void release() {
@@ -316,14 +298,58 @@ public class ReadOnlyIndex implements ReadIndex {
     }
 
     @Override
-    public Scanner pointScan(boolean hashIndexEnabled, byte[] key) throws Exception {
-        ActiveScanPoint pointScan = setup(new ActiveScanPoint(hashIndexEnabled));
-        long fp = pointScan.getInclusiveStartOfRow(new BolBuffer(key), new BolBuffer(), new BolBuffer(), true);
+    public BolBuffer pointScan(boolean hashIndexEnabled, byte[] key) throws Exception {
+
+        BolBuffer entryBuffer = new BolBuffer();
+
+        byte[] cacheKeyBuffer = new byte[16];
+        PointerReadableByteBufferFile readable = readOnlyFile.pointerReadable(-1);
+        long fp = ActiveScan.getInclusiveStartOfRow(readable,
+            leaps,
+            cacheKey,
+            leapsCache,
+            cacheKeyBuffer,
+            rawhide,
+            hashIndexEnabled,
+            hashIndexType,
+            hashIndexHashFunctionCount,
+            hashIndexHeadOffset,
+            hashIndexMaxCapacity,
+            hashIndexLongPrecision,
+            new BolBuffer(key),
+            new BolBuffer(),
+            new BolBuffer(),
+            true);
+
         if (fp < 0) {
             return null;
         }
-        pointScan.setupPointScan(fp);
-        return pointScan;
+            int type;
+            while ((type = readable.read(fp)) >= 0) {
+                fp++;
+                if (type == LABAppendableIndex.ENTRY) {
+                    fp += rawhide.rawEntryToBuffer(readable, fp, entryBuffer);
+                    return entryBuffer;
+                } else if (type == LABAppendableIndex.LEAP) {
+                    int length = readable.readInt(fp); // entryLength
+                    fp += (length);
+                } else if (type == LABAppendableIndex.FOOTER) {
+                    return null;
+                } else {
+                    throw new IllegalStateException("Bad row type:" + type + " at fp:" + (fp - 1));
+                }
+            }
+            throw new IllegalStateException("Missing footer");
+
+
+//
+//        ActiveScanPoint pointScan = setup(new ActiveScanPoint(hashIndexEnabled));
+//        long fp = pointScan.getInclusiveStartOfRow(new BolBuffer(key), new BolBuffer(), new BolBuffer(), true);
+//        if (fp < 0) {
+//            return null;
+//        }
+//        pointScan.setupPointScan(fp);
+//        return pointScan;
     }
 
     @Override

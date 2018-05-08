@@ -254,7 +254,7 @@ public class InterleaveStreamNGTest {
             }
 
             @Override
-            public Scanner pointScan(boolean hashIndexEnabled, byte[] key) throws Exception {
+            public BolBuffer pointScan(boolean hashIndexEnabled, byte[] key) throws Exception {
                 throw new UnsupportedOperationException("Not supported.");
             }
 
