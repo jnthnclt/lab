@@ -48,7 +48,6 @@ public class LAB implements ValueIndex<byte[]> {
     }
 
     private static final LABLogger LOG = LABLoggerFactory.getLogger();
-    ;
 
     private final static byte[] SMALLEST_POSSIBLE_KEY = new byte[0];
 

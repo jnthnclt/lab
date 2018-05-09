@@ -1,5 +1,6 @@
 package com.github.jnthnclt.os.lab.core.io;
 
+import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
@@ -7,8 +8,6 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
-import java.util.Arrays;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 
 /**
  *
@@ -372,50 +371,50 @@ public class PointerReadableByteBufferFile {
     }
 
 
-    public static void main(String[] args) {
-
-        long[] values = { -Long.MAX_VALUE, -Long.MAX_VALUE / 2, -65_536, -65_535, -65_534, -128, -127, -1, 0, 1, 127, 128, 65_534, 65_535, 65_536,
-            Long.MAX_VALUE / 2, Long.MAX_VALUE };
-
-        for (long value : values) {
-            int chunkPower = UIO.chunkPower(value + 1, 1);
-            int precision = Math.min(chunkPower / 8 + 1, 8);
-
-            boolean needsNegation = false;
-            long flipped = value;
-            if (flipped < 0) {
-                needsNegation = true;
-                flipped = -flipped;
-            }
-
-            byte[] bytes = new byte[precision];
-            for (int i = 0, j = 0; i < precision; i++, j += 8) {
-                bytes[precision - i - 1] = (byte) (flipped >>> j);
-            }
-            if (needsNegation) {
-                bytes[0] |= (0x80);
-            }
-
-            System.out.println(Arrays.toString(bytes));
-
-            boolean wasNegated = (bytes[0] & 0x80) != 0;
-            bytes[0] &= ~0x80;
-
-            long output = 0;
-            for (int i = 0; i < precision; i++) {
-                output <<= 8;
-                output |= (bytes[i] & 0xFF);
-            }
-
-            if (wasNegated) {
-                output = -output;
-            }
-
-            System.out.println(value + " (" + precision + ") -> " + output + " = " + (value == output));
-        }
-
-
-    }
+//    public static void main(String[] args) {
+//
+//        long[] values = { -Long.MAX_VALUE, -Long.MAX_VALUE / 2, -65_536, -65_535, -65_534, -128, -127, -1, 0, 1, 127, 128, 65_534, 65_535, 65_536,
+//            Long.MAX_VALUE / 2, Long.MAX_VALUE };
+//
+//        for (long value : values) {
+//            int chunkPower = UIO.chunkPower(value + 1, 1);
+//            int precision = Math.min(chunkPower / 8 + 1, 8);
+//
+//            boolean needsNegation = false;
+//            long flipped = value;
+//            if (flipped < 0) {
+//                needsNegation = true;
+//                flipped = -flipped;
+//            }
+//
+//            byte[] bytes = new byte[precision];
+//            for (int i = 0, j = 0; i < precision; i++, j += 8) {
+//                bytes[precision - i - 1] = (byte) (flipped >>> j);
+//            }
+//            if (needsNegation) {
+//                bytes[0] |= (0x80);
+//            }
+//
+//            System.out.println(Arrays.toString(bytes));
+//
+//            boolean wasNegated = (bytes[0] & 0x80) != 0;
+//            bytes[0] &= ~0x80;
+//
+//            long output = 0;
+//            for (int i = 0; i < precision; i++) {
+//                output <<= 8;
+//                output |= (bytes[i] & 0xFF);
+//            }
+//
+//            if (wasNegated) {
+//                output = -output;
+//            }
+//
+//            System.out.println(value + " (" + precision + ") -> " + output + " = " + (value == output));
+//        }
+//
+//
+//    }
 
 
 }
