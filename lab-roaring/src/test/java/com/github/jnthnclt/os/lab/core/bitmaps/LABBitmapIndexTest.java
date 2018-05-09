@@ -433,7 +433,7 @@ public class LABBitmapIndexTest {
             -1,
             -1,
             10 * 1024 * 1024,
-            NoOpFormatTransformerProvider.NAME,
+            "deprecated",
             LABRawhide.NAME,
             MemoryRawEntryFormat.NAME,
             20,
