@@ -1,15 +1,27 @@
 package com.github.jnthnclt.os.lab.core;
 
+import com.github.jnthnclt.os.lab.core.guts.LABSparseCircularMetricBuffer;
+import com.github.jnthnclt.os.lab.core.util.LABLogger;
+import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
 import com.google.common.collect.Maps;
+import java.lang.management.ManagementFactory;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.LongAdder;
-import com.github.jnthnclt.os.lab.core.guts.LABSparseCircularMetricBuffer;
+import javax.management.InstanceAlreadyExistsException;
+import javax.management.InstanceNotFoundException;
+import javax.management.MBeanRegistrationException;
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.NotCompliantMBeanException;
+import javax.management.ObjectName;
 
 /**
  *
  * @author jonathan.colt
  */
 public class LABStats {
+
+    private static final LABLogger LOG = LABLoggerFactory.getLogger();;
 
     public final LongAdder debt = new LongAdder();
     public final LongAdder open = new LongAdder();
@@ -125,6 +137,42 @@ public class LABStats {
         this.mBytesWrittenAsIndex = new LABSparseCircularMetricBuffer(numberOfBuckets, utcOffset, bucketWidthMillis);
         this.mBytesWrittenAsSplit = new LABSparseCircularMetricBuffer(numberOfBuckets, utcOffset, bucketWidthMillis);
         this.mBytesWrittenAsMerge = new LABSparseCircularMetricBuffer(numberOfBuckets, utcOffset, bucketWidthMillis);
+
+
+        register("files>debt", new LongAdderCounter(debt));
+        register("files>open", new LongAdderCounter(open));
+        register("files>closed", new LongAdderCounter(closed));
+
+        register("append>append", new LongAdderCounter(append));
+        register("append>journaledAppend", new LongAdderCounter(journaledAppend));
+
+        register("read>gets", new LongAdderCounter(gets));
+        register("read>rangeScan", new LongAdderCounter(rangeScan));
+        register("read>multiRangeScan", new LongAdderCounter(multiRangeScan));
+        register("read>rowScan", new LongAdderCounter(rowScan));
+
+        register("lsm>merging", new LongAdderCounter(merging));
+        register("lsm>merged", new LongAdderCounter(merged));
+        register("lsm>spliting", new LongAdderCounter(spliting));
+        register("lsm>splits", new LongAdderCounter(splits));
+
+        register("memory.slabbed", new LongAdderCounter(slabbed));
+        register("memory.allocationed", new LongAdderCounter(allocationed));
+        register("memory.released", new LongAdderCounter(released));
+        register("memory.freed", new LongAdderCounter(freed));
+
+
+        register("commits>gc", new LongAdderCounter(freed));
+        register("commits>gcCommit", new LongAdderCounter(freed));
+        register("commits>pressureCommit", new LongAdderCounter(freed));
+        register("commits>commit", new LongAdderCounter(freed));
+        register("commits>fsyncedCommit", new LongAdderCounter(freed));
+
+        register("bytes>writtenToWAL", new LongAdderCounter(freed));
+        register("bytes>writtenAsIndex", new LongAdderCounter(freed));
+        register("bytes>writtenAsSplit", new LongAdderCounter(freed));
+        register("bytes>writtenAsMerge", new LongAdderCounter(freed));
+
     }
 
     public void refresh() {
@@ -195,6 +243,73 @@ public class LABStats {
             }
         }
 
+    }
+
+    public class LongAdderCounter implements LABCounterMXBean {
+        private final LongAdder longAdder;
+
+        public LongAdderCounter(LongAdder longAdder) {
+            this.longAdder = longAdder;
+        }
+
+        @Override
+        public long getValue() {
+            return longAdder.longValue();
+        }
+
+        @Override
+        public String getType() {
+            return "count";
+        }
+    }
+
+    public interface LABCounterMXBean {
+
+        long getValue();
+
+        String getType();
+
+    }
+
+
+    private static void register(String name, Object mbean) {
+        name = name.replace(':', '_');
+
+        String[] parts = name.split(">");
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < parts.length; i++) {
+            if (i != 0) {
+                sb.append(",");
+            }
+            sb.append("leaf");
+            sb.append(i);
+            sb.append("=");
+            sb.append(parts[i]);
+        }
+
+        Class clazz = mbean.getClass();
+        String objectName = "lab.metrics:type=" + clazz.getSimpleName() + "," + sb.toString();
+
+        LOG.debug("registering bean: " + objectName);
+
+        MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+
+        try {
+            ObjectName mbeanName = new ObjectName(objectName);
+
+            // note: unregister any previous, as this may be a replacement
+            if (mbs.isRegistered(mbeanName)) {
+                mbs.unregisterMBean(mbeanName);
+            }
+
+            mbs.registerMBean(mbean, mbeanName);
+
+            LOG.debug("registered bean: " + objectName);
+        } catch (MalformedObjectNameException | NotCompliantMBeanException |
+            InstanceAlreadyExistsException | InstanceNotFoundException | MBeanRegistrationException e) {
+            LOG.warn("unable to register bean: " + objectName + "cause: " + e.getMessage(), e);
+        }
     }
 
 }

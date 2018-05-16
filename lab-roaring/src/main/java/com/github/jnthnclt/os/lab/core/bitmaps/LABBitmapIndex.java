@@ -22,7 +22,7 @@ import org.roaringbitmap.LABBitmapAndLastId;
  */
 public class LABBitmapIndex<BM extends IBM, IBM> {
 
-    private static final LABLogger LOG = LABLoggerFactory.getLogger();;
+    private static final LABLogger LOG = LABLoggerFactory.getLogger();
 
     public static final int LAST_ID_LENGTH = 4;
 

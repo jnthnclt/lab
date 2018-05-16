@@ -300,7 +300,7 @@ public class LABAppendableIndex implements RawAppendableIndex {
                             displaceable--;
                             if (displaceable < 0 || reinsertion > maxReinsertionsBeforeExtinction) {
                                 extinctions++;
-                                LOG.warn("Cuckoo: {} with entries:{} capacity:{} numHashFunctions:{} extinctions:{}",
+                                LOG.debug("Cuckoo: {} with entries:{} capacity:{} numHashFunctions:{} extinctions:{}",
                                     appendOnlyFile.getFile(), count, hashIndexMaxCapacity, numHashFunctions, extinctions);
                                 continue CUCKOO_EXTINCTION_LEVEL_EVENT;
                             }

@@ -18,15 +18,26 @@ public class LABIndexProvider<T> {
 
     private final int cores = Runtime.getRuntime().availableProcessors();
     private final LABStats stats;
-    private final AtomicLong globalHeapCostInBytes = new AtomicLong();
+    private final AtomicLong globalHeapCostInBytes;
+    private final LABHeapPressure labHeapPressure;
     private final ExecutorService scheduler = LABEnvironment.buildLABSchedulerThreadPool(cores);
     private final ExecutorService compact = LABEnvironment.buildLABCompactorThreadPool(cores);
     private final ExecutorService destroy = LABEnvironment.buildLABDestroyThreadPool(cores);
     private final ExecutorService heapScheduler = LABEnvironment.buildLABHeapSchedulerThreadPool(cores);
     private final LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100_000, 4);
 
-    public LABIndexProvider(LABStats stats) throws Exception {
+    public LABIndexProvider(AtomicLong globalHeapCostInBytes, LABStats stats) throws Exception {
+        this.globalHeapCostInBytes = globalHeapCostInBytes;
         this.stats = stats;
+
+        labHeapPressure = new LABHeapPressure(stats,
+            heapScheduler,
+            "default",
+            1024 * 1024 * 512,
+            1024 * 1024 * 512,
+            globalHeapCostInBytes,
+            FreeHeapStrategy.mostBytesFirst
+        );
     }
 
     public void destroyIndex(File root, String name) throws Exception {
@@ -35,21 +46,13 @@ public class LABIndexProvider<T> {
 
     public ValueIndex<byte[]> buildIndex(File root, String name) throws Exception {
 
-        LABHeapPressure labHeapPressure = new LABHeapPressure(stats,
-            heapScheduler,
-            name,
-            1024 * 1024 * 512,
-            1024 * 1024 * 512,
-            globalHeapCostInBytes,
-            FreeHeapStrategy.mostBytesFirst
-        );
 
         LABEnvironment environment = new LABEnvironment(stats,
             scheduler,
             compact,
             destroy,
             null,
-            new File(root, name),
+            root,
             labHeapPressure,
             4,
             16,
@@ -63,7 +66,7 @@ public class LABIndexProvider<T> {
             1024 * 1024 * 512,
             -1,
             -1,
-            64 * 1024 * 1024,
+            128 * 1024 * 1024,
             "deprecated",
             LABRawhide.NAME,
             MemoryRawEntryFormat.NAME,

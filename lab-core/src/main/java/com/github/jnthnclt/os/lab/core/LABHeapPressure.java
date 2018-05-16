@@ -21,7 +21,7 @@ public class LABHeapPressure {
         mostBytesFirst, oldestAppendFirst, longestElapseSinceCommit
     }
 
-    private static final LABLogger LOG = LABLoggerFactory.getLogger();;
+    private static final LABLogger LOG = LABLoggerFactory.getLogger();
 
     private final LABStats stats;
     private final ExecutorService schedule;
