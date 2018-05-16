@@ -102,20 +102,20 @@ public class LABBitmapIndexes<BM extends IBM, IBM> {
         return cardinalities[fieldId % cardinalities.length];
     }
 
-    public void set(int fieldId, boolean cardinality, byte[] key, int[] ids, long[] counts) throws Exception {
+    public void set(int fieldId, boolean cardinality, byte[] key, int[] ids, long[] counts, long timestamp) throws Exception {
         getIndex(fieldId, key).set(ids);
-        mergeCardinalities(fieldId, cardinality, key, ids, counts);
+        mergeCardinalities(fieldId, cardinality, key, ids, counts, timestamp);
     }
 
-    public void setIfEmpty(int fieldId, boolean cardinality, byte[] key, int id, long count) throws Exception {
+    public void setIfEmpty(int fieldId, boolean cardinality, byte[] key, int id, long count, long timestamp) throws Exception {
         if (getIndex(fieldId, key).setIfEmpty(id)) {
-            mergeCardinalities(fieldId, cardinality, key, new int[] { id }, new long[] { count });
+            mergeCardinalities(fieldId, cardinality, key, new int[] { id }, new long[] { count }, timestamp);
         }
     }
 
-    public void remove(int fieldId, boolean cardinality, byte[] key, int[] ids) throws Exception {
+    public void remove(int fieldId, boolean cardinality, byte[] key, int[] ids, long timestamp) throws Exception {
         getIndex(fieldId, key).remove(ids);
-        mergeCardinalities(fieldId, cardinality, key, ids, cardinality ? new long[ids.length] : null);
+        mergeCardinalities(fieldId, cardinality, key, ids, cardinality ? new long[ids.length] : null, timestamp);
     }
 
     public long getApproximateCount(int fieldId) throws Exception {
@@ -370,7 +370,7 @@ public class LABBitmapIndexes<BM extends IBM, IBM> {
         return getCardinality(fieldId, cardinality, indexKey, -1);
     }
 
-    private void mergeCardinalities(int fieldId, boolean cardinality, byte[] indexKey, int[] ids, long[] counts) throws Exception {
+    private void mergeCardinalities(int fieldId, boolean cardinality, byte[] indexKey, int[] ids, long[] counts, long timestamp) throws Exception {
         if (cardinality && counts != null) {
             byte[] fieldBytes = intBytes(fieldId);
             ValueIndex<byte[]> cardinalityIndex = getCardinalityIndex(fieldId);
@@ -389,7 +389,7 @@ public class LABBitmapIndexes<BM extends IBM, IBM> {
                     }
                     return true;
                 },
-                (index, key, timestamp, tombstoned, version, payload) -> {
+                (index, key, timestamp1, tombstoned, version, payload) -> {
                     if (payload != null && !tombstoned) {
                         merge[index] = payload.getLong(0);
                     }
@@ -405,7 +405,7 @@ public class LABBitmapIndexes<BM extends IBM, IBM> {
             byte[] cardinalityIndexKey = cardinalityIndexKey(fieldBytes, -1, indexKey);
             cardinalityIndex.get(
                 (keyStream) -> keyStream.key(0, cardinalityIndexKey, 0, cardinalityIndexKey.length),
-                (index, key, timestamp, tombstoned, version, payload) -> {
+                (index, key, timestamp1, tombstoned, version, payload) -> {
                     if (payload != null && !tombstoned) {
                         globalCount[0] = payload.getLong(0);
                     }
@@ -414,7 +414,6 @@ public class LABBitmapIndexes<BM extends IBM, IBM> {
                 true);
             globalCount[0] += delta;
 
-            long timestamp = System.currentTimeMillis();
             long version = versionProvider.nextId();
             cardinalityIndex.append(
                 valueStream -> {

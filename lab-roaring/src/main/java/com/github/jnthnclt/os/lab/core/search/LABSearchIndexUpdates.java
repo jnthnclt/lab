@@ -16,10 +16,26 @@ public class LABSearchIndexUpdates {
 
 
     public final Set<Long> guids = Sets.newHashSet();
+    public final Map<Long,Long> updateTimestampMillis = Maps.newHashMap();
     public final Map<Integer, Map<Long, byte[]>> fieldNameGuidStoredFieldValue = Maps.newHashMap();
     public final Map<Integer, Map<String, List<Long>>> fieldNameFieldValueGuids = Maps.newHashMap();
 
-    public void update(long guid,
+    public void updateInts(long guid,
+        int fieldNameOrdinal,
+        int[] fieldValues,
+        byte[] storedFieldValue
+    ) {
+        String[] strings = null;
+        if (fieldValues != null) {
+            strings = new String[fieldValues.length];
+            for (int i = 0; i < fieldValues.length; i++) {
+                strings[i] = String.valueOf(fieldValues[i]);
+            }
+        }
+        updateStrings(guid, fieldNameOrdinal, strings, storedFieldValue);
+    }
+
+    public void updateStrings(long guid,
         int fieldNameOrdinal,
         String[] fieldValues,
         byte[] storedFieldValue

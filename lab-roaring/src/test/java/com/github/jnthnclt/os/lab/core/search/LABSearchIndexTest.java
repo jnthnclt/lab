@@ -2,7 +2,6 @@ package com.github.jnthnclt.os.lab.core.search;
 
 import com.github.jnthnclt.os.lab.core.LABIndexProvider;
 import com.github.jnthnclt.os.lab.core.LABStats;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import com.github.jnthnclt.os.lab.core.search.LABSearchIndex.CachedFieldValue;
 import com.google.common.io.Files;
 import java.io.File;
@@ -26,21 +25,31 @@ public class LABSearchIndexTest {
 
         LABSearchIndexUpdates updates = new LABSearchIndexUpdates();
 
-        int idOrdinal = index.fieldOrdinal("id");
+        int storedOrdinal = index.fieldOrdinal("stored");
         int titleOrdinal = index.fieldOrdinal("title");
         int bodyOrdinal = index.fieldOrdinal("body");
+        int priceOrdinal = index.fieldOrdinal("price");
 
-        updates.update(0, idOrdinal, null, UIO.longBytes(0));
-        updates.update(0, titleOrdinal, new String[] { "a", "wrinkle", "in", "time" }, null);
-        updates.update(0, bodyOrdinal, new String[] { "quick", "brown", "fox" }, null);
 
-        updates.update(1, idOrdinal, null, UIO.longBytes(1));
-        updates.update(1, titleOrdinal, new String[] { "a", "crease", "in", "time" }, null);
-        updates.update(1, bodyOrdinal, new String[] { "slow", "brown", "fox" }, null);
+        updates.updateStrings(0, storedOrdinal, null, "{userid=1,searchId=5}".getBytes());
+        updates.updateStrings(0, titleOrdinal, new String[] { "a", "wrinkle", "in", "time" }, null);
+        updates.updateStrings(0, bodyOrdinal, new String[] { "quick", "brown", "fox" }, null);
+        updates.updateStrings(0, priceOrdinal, new String[] { "000799" }, null);
 
-        updates.update(2, idOrdinal, null, UIO.longBytes(2));
-        updates.update(2, titleOrdinal, new String[] { "a", "wrinkle", "in", "cloth" }, null);
-        updates.update(2, bodyOrdinal, new String[] { "quick", "red", "fox" }, null);
+        updates.updateStrings(1, storedOrdinal, null, "{userid=1,searchId=7}".getBytes());
+        updates.updateStrings(1, titleOrdinal, new String[] { "a", "crease", "in", "time" }, null);
+        updates.updateStrings(1, bodyOrdinal, new String[] { "slow", "red", "fox" }, null);
+        updates.updateStrings(1, priceOrdinal, new String[] { "000699" }, null);
+
+        updates.updateStrings(2, storedOrdinal, null, "{userid=1,searchId=9}".getBytes());
+        updates.updateStrings(2, titleOrdinal, new String[] { "a", "wrinkle", "in", "cloth" }, null);
+        updates.updateStrings(2, bodyOrdinal, new String[] { "quick", "red", "fox" }, null);
+        updates.updateStrings(2, priceOrdinal, new String[] { "000599" }, null);
+
+        updates.updateStrings(3, storedOrdinal, null, "{userid=2,searchId=15}".getBytes());
+        updates.updateStrings(3, titleOrdinal, new String[] { "a", "wrinkle", "in", "cloth" }, null);
+        updates.updateStrings(3, bodyOrdinal, new String[] { "quick", "red", "fox" }, null);
+        updates.updateStrings(3, priceOrdinal, new String[] { "001599" }, null);
 
         index.update(updates);
         index.flush();
@@ -58,7 +67,7 @@ public class LABSearchIndexTest {
             List<CachedFieldValue> next = combinator.next();
             RoaringBitmap answer = index.andFieldValues(next, null, null);
             System.out.println(answer.getCardinality() + " had " + next);
-            index.storedValues(answer, idOrdinal, (index1, value) -> {
+            index.storedValues(answer, storedOrdinal, (index1, value) -> {
                 System.out.println(index1 + "->" + value.getLong(0));
                 return true;
             });

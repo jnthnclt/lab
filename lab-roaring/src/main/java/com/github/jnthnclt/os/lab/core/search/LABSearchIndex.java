@@ -263,11 +263,16 @@ public class LABSearchIndex {
             guidToInternalId.put(externalIds.get(i), (int) internalId[i]);
         }
 
-        long timestamp = System.currentTimeMillis(); // FIX_ME
 
         List<Future> futures = Lists.newArrayList();
-        futures.add(indexerThreads.submit(() -> indexStoredFieldValues(updates, guidToInternalId, timestamp)));
+        futures.add(indexerThreads.submit(() -> indexStoredFieldValues(updates, guidToInternalId)));
 
+        long maxTimestamp = 0;
+        for (Long timestamp : updates.updateTimestampMillis.values()) {
+            maxTimestamp = Math.max(timestamp, maxTimestamp);
+        }
+
+        long ef_maxTimestamp = maxTimestamp;
         for (Entry<Integer, Map<String, List<Long>>> entry : updates.fieldNameFieldValueGuids.entrySet()) {
             int fieldOrdinal = entry.getKey();
 
@@ -275,7 +280,7 @@ public class LABSearchIndex {
                 String value = fieldValue_guids.getKey();
                 if (value != null) {
                     List<Long> guids = fieldValue_guids.getValue();
-                    futures.add(indexerThreads.submit(() -> indexBits(guidToInternalId, fieldOrdinal, value, guids)));
+                    futures.add(indexerThreads.submit(() -> indexBits(guidToInternalId, fieldOrdinal, value, guids, ef_maxTimestamp)));
                 }
             }
         }
@@ -285,22 +290,24 @@ public class LABSearchIndex {
         }
     }
 
-    private Boolean indexBits(Map<Long, Integer> guidToInternalId, int fieldOrdinal, String value, List<Long> guids) throws Exception {
+    private Boolean indexBits(Map<Long, Integer> guidToInternalId, int fieldOrdinal, String value, List<Long> guids, long timestamp) throws Exception {
         int size = guids.size();
         int[] internalIds = new int[size];
         for (int i = 0; i < size; i++) {
             internalIds[i] = guidToInternalId.get(guids.get(i));
         }
-        fieldIndex.set(fieldOrdinal, false, value.getBytes(StandardCharsets.UTF_8), internalIds, null);
+        fieldIndex.set(fieldOrdinal, false, value.getBytes(StandardCharsets.UTF_8), internalIds, null, timestamp);
         return true;
     }
 
-    private Boolean indexStoredFieldValues(LABSearchIndexUpdates update, Map<Long, Integer> guidToInternalId, long timestamp) throws Exception {
+    private Boolean indexStoredFieldValues(LABSearchIndexUpdates update, Map<Long, Integer> guidToInternalId) throws Exception {
         for (Entry<Integer, Map<Long, byte[]>> entry : update.fieldNameGuidStoredFieldValue.entrySet()) {
             int fieldNameOrdinal = entry.getKey();
             ValueIndex<byte[]> stored = getOrCreateFieldNameBlob("fieldName_" + fieldNameOrdinal);
             stored.append(appendValueStream -> {
                 for (Entry<Long, byte[]> guidFieldData : entry.getValue().entrySet()) {
+
+                    long timestamp = update.updateTimestampMillis.getOrDefault(guidFieldData.getKey(), System.currentTimeMillis());
                     Integer id = guidToInternalId.get(guidFieldData.getKey());
                     appendValueStream.stream(0, UIO.longBytes(id),
                         timestamp,
