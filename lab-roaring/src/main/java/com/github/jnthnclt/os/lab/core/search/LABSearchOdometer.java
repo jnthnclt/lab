@@ -1,6 +1,6 @@
 package com.github.jnthnclt.os.lab.core.search;
 
-import com.github.jnthnclt.os.lab.core.search.LABSearchIndex.CachedFieldValue;
+import com.github.jnthnclt.os.lab.core.search.LABSearch.CachedFieldValue;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,7 +50,7 @@ public class LABSearchOdometer {
             if (expansionValue.size() == 1 && "*".equals(expansionValue.get(0))) {
                 aFieldValues = Sets.newHashSet();
                 if (allowWildcards) {
-                    index.fieldValues(index.fieldOrdinal(expansion), s -> {
+                    index.fieldStringValues(index.fieldOrdinal(expansion), null, s -> {
                         aFieldValues.add(s);
                         return true;
                     });
@@ -62,7 +62,7 @@ public class LABSearchOdometer {
             }
         } else {
             aFieldValues = Sets.newHashSet();
-            index.fieldValues(index.fieldOrdinal(expansion), s -> {
+            index.fieldStringValues(index.fieldOrdinal(expansion), null, s -> {
                 aFieldValues.add(s);
                 return true;
             });

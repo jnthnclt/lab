@@ -1,11 +1,13 @@
 package com.github.jnthnclt.os.lab.core.search;
 
+import com.github.jnthnclt.os.lab.collections.bah.BAHash;
 import com.github.jnthnclt.os.lab.core.LABIndexProvider;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.bitmaps.LABBitmapIndex;
 import com.github.jnthnclt.os.lab.core.bitmaps.LABBitmapIndexes;
 import com.github.jnthnclt.os.lab.core.bitmaps.LABBitmaps;
 import com.github.jnthnclt.os.lab.core.bitmaps.LABIndexKeyInterner;
+import com.github.jnthnclt.os.lab.core.bitmaps.LABIndexKeyRange;
 import com.github.jnthnclt.os.lab.core.bitmaps.LABStripingLocksProvider;
 import com.github.jnthnclt.os.lab.core.bitmaps.RoaringLABBitmaps;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
@@ -29,17 +31,17 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import org.apache.commons.io.FileUtils;
-import org.roaringbitmap.FastAggregation;
 import org.roaringbitmap.RoaringBitmap;
-import org.roaringbitmap.RoaringUtils;
 
 public class LABSearchIndex {
 
-    private static final LABLogger LOG = LABLoggerFactory.getLogger();;
+    private static final LABLogger LOG = LABLoggerFactory.getLogger();
+
 
     private final int cores = Runtime.getRuntime().availableProcessors();
     private final ExecutorService indexerThreads = Executors.newFixedThreadPool(cores);
@@ -53,7 +55,6 @@ public class LABSearchIndex {
     public final LABBitmapIndexes<RoaringBitmap, RoaringBitmap> fieldIndex;
 
     public LABSearchIndex(LABIndexProvider valueIndexProvider, File root) throws Exception {
-
 
         this.valueIndexProvider = valueIndexProvider;
         this.root = root;
@@ -123,10 +124,30 @@ public class LABSearchIndex {
         }
         return got;
     }
+    public void fieldIntegerValues(int fieldOrdinal, List<LABIndexKeyRange> ranges,Function<Integer, Boolean> fieldValues) throws Exception {
+        fieldIndex.streamTermIdsForField(fieldOrdinal, ranges, labIndexKey -> {
+            if (labIndexKey != null && labIndexKey.length() == 4) {
+                if (!fieldValues.apply(UIO.bytesInt(labIndexKey.getBytes()))) {
+                    return false;
+                }
+            }
+            return true;
+        });
+    }
 
+    public void fieldLongValues(int fieldOrdinal, List<LABIndexKeyRange> ranges, Function<Long, Boolean> fieldValues) throws Exception {
+        fieldIndex.streamTermIdsForField(fieldOrdinal, ranges, labIndexKey -> {
+            if (labIndexKey != null && labIndexKey.length() == 8) {
+                if (!fieldValues.apply(UIO.bytesLong(labIndexKey.getBytes()))) {
+                    return false;
+                }
+            }
+            return true;
+        });
+    }
 
-    public void fieldValues(int fieldOrdinal, Function<String, Boolean> fieldValues) throws Exception {
-        fieldIndex.streamTermIdsForField(fieldOrdinal, null, labIndexKey -> {
+    public void fieldStringValues(int fieldOrdinal, List<LABIndexKeyRange> ranges,Function<String, Boolean> fieldValues) throws Exception {
+        fieldIndex.streamTermIdsForField(fieldOrdinal, ranges, labIndexKey -> {
             if (labIndexKey != null && labIndexKey.length() > 0) {
                 String s = new String(labIndexKey.getBytes(), StandardCharsets.UTF_8);
                 if (s.length() > 0) {
@@ -139,74 +160,61 @@ public class LABSearchIndex {
         });
     }
 
+
     public RoaringBitmap bitmap(int fieldOrdinal, String key) throws Exception {
-        LABBitmapIndex<RoaringBitmap, RoaringBitmap> got = fieldIndex.get(fieldOrdinal, key.getBytes(StandardCharsets.UTF_8));
+        return bitmap(fieldOrdinal, key);
+    }
+
+    public RoaringBitmap bitmap(int fieldOrdinal, int key) throws Exception {
+        return bitmap(fieldOrdinal, UIO.intBytes(key, new byte[4], 0));
+    }
+
+    public RoaringBitmap bitmap(int fieldOrdinal, long key) throws Exception {
+        return bitmap(fieldOrdinal, UIO.longBytes(key, new byte[8], 0));
+    }
+
+    public RoaringBitmap bitmap(int fieldOrdinal, byte[] key) throws Exception {
+        LABBitmapIndex<RoaringBitmap, RoaringBitmap> got = fieldIndex.get(fieldOrdinal, key);
         return got == null ? null : got.txIndex(bitmap -> bitmap);
-    }
-
-    public RoaringBitmap andFieldValues(List<CachedFieldValue> andFieldValue, RoaringBitmap resultOfAnds, RoaringBitmap mask) throws Exception {
-        int maxSize = andFieldValue.size();
-        RoaringBitmap[] bitmaps = new RoaringBitmap[maxSize];
-        int actualSize = 0;
-        for (int i = 0; i < maxSize; i++) {
-            CachedFieldValue fieldValue = andFieldValue.get(i);
-            if (fieldValue.value != null) {
-                if (fieldValue.cache == null) {
-                    int fo = fieldOrdinal(fieldValue.fieldName);
-                    fieldValue.cache = bitmap(fo, fieldValue.value);
-                    if (mask != null) {
-                        fieldValue.cache.and(mask);
-                    }
-                }
-                bitmaps[actualSize] = fieldValue.cache;
-                actualSize++;
-            }
-        }
-
-        if (actualSize < maxSize) {
-            RoaringBitmap[] actualBitmaps = new RoaringBitmap[actualSize];
-            System.arraycopy(bitmaps,0, actualBitmaps, 0, actualSize);
-            bitmaps = actualBitmaps;
-        }
-
-        if (RoaringUtils.mightAnd(bitmaps, mask)) {
-            RoaringBitmap and = FastAggregation.and(bitmaps);
-            if (resultOfAnds != null) {
-                resultOfAnds.and(and);
-                return resultOfAnds;
-            } else {
-                return and;
-            }
-        } else {
-            return new RoaringBitmap();
-        }
-    }
-
-    public static class CachedFieldValue {
-        public final String fieldName;
-        public final String value;
-        public RoaringBitmap cache;
-
-        public CachedFieldValue(CachedFieldValue cachedFieldValue) {
-            this.fieldName = cachedFieldValue.fieldName;
-            this.value = cachedFieldValue.value;
-        }
-
-        public CachedFieldValue(String fieldName, String value) {
-            this.fieldName = fieldName;
-            this.value = value;
-        }
-
-        @Override
-        public String toString() {
-            return fieldName +":"+ value;
-        }
     }
 
 
     public interface StreamValues {
         boolean value(int index, BolBuffer value) throws Exception;
     }
+
+    public void storedValues(Collection<Long> externalIds, int fieldNameOrdinal, StreamValues values) throws Exception {
+        ValueIndex<byte[]> stored = getOrCreateFieldNameBlob("fieldName_" + fieldNameOrdinal);
+        AtomicBoolean canceled = new AtomicBoolean(false);
+        stored.get(keyStream -> {
+            int i = 0;
+            for (Long idx : allocateIdxs(externalIds, guidToIdx)) {
+                keyStream.key(i, UIO.longBytes(idx), 0, 8);
+                i++;
+                if (canceled.get()) {
+                    return false;
+                }
+            }
+            return true;
+        }, (index, key, timestamp, tombstoned, version, payload) -> {
+            if (!tombstoned && payload != null) {
+                try {
+                    if (!values.value(index, payload)) {
+                        canceled.set(true);
+                        return false;
+                    }
+                } catch (CancellationException ce) {
+                    canceled.set(true);
+                    return false;
+                } catch (Exception x) {
+                    LOG.error("values callback failed.", x);
+                    return false;
+                }
+            }
+            return true;
+        }, true);
+    }
+
 
     public void storedValues(RoaringBitmap all, int fieldNameOrdinal, StreamValues values) throws Exception {
         ValueIndex<byte[]> stored = getOrCreateFieldNameBlob("fieldName_" + fieldNameOrdinal);
@@ -229,14 +237,14 @@ public class LABSearchIndex {
                 } catch (CancellationException ce) {
                     canceled.set(true);
                     return false;
-                } catch(Exception x) {
+                } catch (Exception x) {
                     LOG.error("values callback failed.", x);
                     return false;
                 }
             }
             return true;
         }, true);
-}
+    }
 
 
     private ValueIndex<byte[]> getOrCreateFieldNameBlob(String name) throws Exception {
@@ -254,7 +262,7 @@ public class LABSearchIndex {
     }
 
 
-    public void update(LABSearchIndexUpdates updates) throws Exception {
+    public void update(LABSearchIndexUpdates updates, boolean delete) throws Exception {
 
         List<Long> externalIds = Lists.newArrayList(updates.guids);
         long[] internalId = allocateIdxs(externalIds, guidToIdx);
@@ -273,16 +281,14 @@ public class LABSearchIndex {
         }
 
         long ef_maxTimestamp = maxTimestamp;
-        for (Entry<Integer, Map<String, List<Long>>> entry : updates.fieldNameFieldValueGuids.entrySet()) {
+        for (Entry<Integer, BAHash<List<Long>>> entry : updates.fieldNameFieldValueGuids.entrySet()) {
             int fieldOrdinal = entry.getKey();
-
-            for (Entry<String, List<Long>> fieldValue_guids : entry.getValue().entrySet()) {
-                String value = fieldValue_guids.getKey();
+            entry.getValue().stream(new Semaphore(1),(key, value) -> {
                 if (value != null) {
-                    List<Long> guids = fieldValue_guids.getValue();
-                    futures.add(indexerThreads.submit(() -> indexBits(guidToInternalId, fieldOrdinal, value, guids, ef_maxTimestamp)));
+                    futures.add(indexerThreads.submit(() -> indexBits(guidToInternalId, fieldOrdinal, key, value, ef_maxTimestamp, delete)));
                 }
-            }
+                return true;
+            });
         }
 
         for (Future future : futures) {
@@ -290,31 +296,43 @@ public class LABSearchIndex {
         }
     }
 
-    private Boolean indexBits(Map<Long, Integer> guidToInternalId, int fieldOrdinal, String value, List<Long> guids, long timestamp) throws Exception {
+    private Boolean indexBits(Map<Long, Integer> guidToInternalId,
+        int fieldOrdinal,
+        byte[] value,
+        List<Long> guids,
+        long timestamp,
+        boolean remove) throws Exception {
+
         int size = guids.size();
         int[] internalIds = new int[size];
         for (int i = 0; i < size; i++) {
             internalIds[i] = guidToInternalId.get(guids.get(i));
         }
-        fieldIndex.set(fieldOrdinal, false, value.getBytes(StandardCharsets.UTF_8), internalIds, null, timestamp);
+        if (remove) {
+            fieldIndex.remove(fieldOrdinal, false, value, internalIds, timestamp);
+        } else {
+            fieldIndex.set(fieldOrdinal, false, value, internalIds, null, timestamp);
+        }
         return true;
     }
 
     private Boolean indexStoredFieldValues(LABSearchIndexUpdates update, Map<Long, Integer> guidToInternalId) throws Exception {
-        for (Entry<Integer, Map<Long, byte[]>> entry : update.fieldNameGuidStoredFieldValue.entrySet()) {
+        for (Entry<Integer, BAHash<byte[]>> entry : update.fieldNameGuidStoredFieldValue.entrySet()) {
             int fieldNameOrdinal = entry.getKey();
             ValueIndex<byte[]> stored = getOrCreateFieldNameBlob("fieldName_" + fieldNameOrdinal);
             stored.append(appendValueStream -> {
-                for (Entry<Long, byte[]> guidFieldData : entry.getValue().entrySet()) {
+                entry.getValue().stream(new Semaphore(1), (key, value) -> {
 
-                    long timestamp = update.updateTimestampMillis.getOrDefault(guidFieldData.getKey(), System.currentTimeMillis());
-                    Integer id = guidToInternalId.get(guidFieldData.getKey());
+                    long timestamp = update.updateTimestampMillis.getOrDefault(UIO.bytesLong(key), System.currentTimeMillis());
+                    Integer id = guidToInternalId.get(UIO.bytesLong(key));
                     appendValueStream.stream(0, UIO.longBytes(id),
                         timestamp,
-                        false,
+                        value == null,
                         timestamp,
-                        guidFieldData.getValue());
-                }
+                        value);
+
+                    return true;
+                });
                 return true;
             }, false, new BolBuffer(), new BolBuffer());
         }
@@ -384,7 +402,6 @@ public class LABSearchIndex {
     }
 
 
-
     public void compact() throws Exception {
         for (Entry<String, ValueIndex<byte[]>> entry : fieldNameBlob.entrySet()) {
             compact(entry.getValue());
@@ -408,8 +425,6 @@ public class LABSearchIndex {
         return FileUtils.sizeOfDirectory(root);
     }
 
-
-
     public List<String> summary() throws Exception {
         List<String> s = Lists.newArrayList();
         s.add("guid-to-idx: count=" + guidToIdx.count() + " debt=" + guidToIdx.debt());
@@ -420,8 +435,6 @@ public class LABSearchIndex {
         }
         return s;
     }
-
-
 
     private int lut(ValueIndex<byte[]> lut, byte[] key) throws Exception {
         long[] idx = { -1L };
