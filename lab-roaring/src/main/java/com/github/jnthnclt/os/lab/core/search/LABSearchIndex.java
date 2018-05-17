@@ -162,7 +162,7 @@ public class LABSearchIndex {
 
 
     public RoaringBitmap bitmap(int fieldOrdinal, String key) throws Exception {
-        return bitmap(fieldOrdinal, key);
+        return bitmap(fieldOrdinal, key.getBytes(StandardCharsets.UTF_8));
     }
 
     public RoaringBitmap bitmap(int fieldOrdinal, int key) throws Exception {
