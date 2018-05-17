@@ -23,6 +23,9 @@ public class LABSearch {
                 if (fieldValue.cache == null) {
                     int fo = index.fieldOrdinal(fieldValue.fieldName);
                     fieldValue.cache = index.bitmap(fo, fieldValue.value);
+                    if (fieldValue.cache == null) {
+                        fieldValue.cache = new RoaringBitmap();
+                    }
                     if (mask != null) {
                         fieldValue.cache.and(mask);
                     }
