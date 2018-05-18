@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.github.jnthnclt</groupId>
         <artifactId>os.lab</artifactId>
-        <version>0.3-SNAPSHOT</version>
+        <version>0.3</version>
     </parent>
     <groupId>com.github.jnthnclt</groupId>
     <artifactId>os.lab.roaring</artifactId>
@@ -13,7 +13,7 @@
         <dependency>
             <groupId>com.github.jnthnclt</groupId>
             <artifactId>os.lab.core</artifactId>
-            <version>0.3-SNAPSHOT</version>
+            <version>0.3</version>
         </dependency>
     </dependencies>
 </project>
