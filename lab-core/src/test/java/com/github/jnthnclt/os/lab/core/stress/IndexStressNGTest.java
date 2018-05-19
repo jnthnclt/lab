@@ -46,7 +46,7 @@ public class IndexStressNGTest {
         Random rand = new Random(12345);
 
         long start = System.currentTimeMillis();
-        CompactableIndexes indexs = new CompactableIndexes(new LABStats(), rawhide);
+        CompactableIndexes indexs = new CompactableIndexes(new LABStats(new AtomicLong()), rawhide);
         int count = 0;
 
         boolean fsync = true;
@@ -70,7 +70,7 @@ public class IndexStressNGTest {
 
                 try {
 
-                    Callable<Void> compactor = indexs.compactor(new LABStats(), "test", -1, -1, -1, null, minMergeDebt, fsync,
+                    Callable<Void> compactor = indexs.compactor(new LABStats(new AtomicLong()), "test", -1, -1, -1, null, minMergeDebt, fsync,
                         (rawhideName, minimumRun1, fsync1, callback) -> callback.call(minimumRun1, fsync1,
                             (id, worstCaseCount) -> {
 

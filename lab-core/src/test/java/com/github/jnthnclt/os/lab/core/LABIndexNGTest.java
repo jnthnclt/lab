@@ -10,6 +10,7 @@ import com.github.jnthnclt.os.lab.core.guts.allocators.LABConcurrentSkipListMemo
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABIndexableMemory;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.api.UIO;
+import java.util.concurrent.atomic.AtomicLong;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -28,7 +29,7 @@ public class LABIndexNGTest {
 
     @Test
     public void testGet() throws Exception {
-        LABIndex<BolBuffer, BolBuffer> map = new LABConcurrentSkipListMap(new LABStats(),
+        LABIndex<BolBuffer, BolBuffer> map = new LABConcurrentSkipListMap(new LABStats(new AtomicLong()),
             new LABConcurrentSkipListMemory(
                 LABRawhide.SINGLETON, new LABIndexableMemory( new LABAppendOnlyAllocator("test", 2))
             ),

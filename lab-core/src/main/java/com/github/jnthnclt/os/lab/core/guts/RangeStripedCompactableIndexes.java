@@ -3,7 +3,6 @@ package com.github.jnthnclt.os.lab.core.guts;
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.LABStats;
 import com.github.jnthnclt.os.lab.core.api.Keys;
-import com.github.jnthnclt.os.lab.core.api.Snapshot;
 import com.github.jnthnclt.os.lab.core.api.ValueStream;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABConcurrentSplitException;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
@@ -17,7 +16,6 @@ import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import com.github.jnthnclt.os.lab.core.util.LABLogger;
 import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
@@ -49,8 +47,8 @@ public class RangeStripedCompactableIndexes {
     private final String primaryName;
     private final int entriesBetweenLeaps;
     private final Object copyIndexOnWrite = new Object();
-    private volatile ConcurrentSkipListMap<byte[], FileBackMergableIndexs> indexes;
-    private volatile Entry<byte[], FileBackMergableIndexs>[] indexesArray;
+    private volatile ConcurrentSkipListMap<byte[], FileBackMergableIndexes> indexes;
+    private volatile Entry<byte[], FileBackMergableIndexes>[] indexesArray;
     private final long splitWhenKeysTotalExceedsNBytes;
     private final long splitWhenValuesTotalExceedsNBytes;
     private final long splitWhenValuesAndKeysTotalExceedsNBytes;
@@ -128,7 +126,7 @@ public class RangeStripedCompactableIndexes {
                         largestStripeId.set(stripeId);
                     }
 
-                    indexes.put(entry.getValue().keyRange.start, new FileBackMergableIndexs(destroy,
+                    indexes.put(entry.getValue().keyRange.start, new FileBackMergableIndexes(destroy,
                         largestStripeId,
                         largestIndexId,
                         root,
@@ -139,16 +137,6 @@ public class RangeStripedCompactableIndexes {
             }
 
             indexesArray = indexes.entrySet().toArray(new Entry[0]);
-        }
-    }
-
-    public void snapshot(Snapshot snapshot) throws Exception {
-        Entry<byte[], FileBackMergableIndexs>[] entries = indexesArray;
-        if (entries != null && entries.length == 0) {
-            for (Entry<byte[], FileBackMergableIndexs> fileBackMergableIndexsEntry : entries) {
-                FileBackMergableIndexs value = fileBackMergableIndexsEntry.getValue();
-                value.snapshot(snapshot);
-            }
         }
     }
 
@@ -247,7 +235,7 @@ public class RangeStripedCompactableIndexes {
         return null;
     }
 
-    private class FileBackMergableIndexs implements SplitterBuilder, MergerBuilder {
+    private class FileBackMergableIndexes implements SplitterBuilder, MergerBuilder {
 
         final ExecutorService destroy;
         final AtomicLong largestStripeId;
@@ -258,13 +246,13 @@ public class RangeStripedCompactableIndexes {
         final long stripeId;
         final CompactableIndexes compactableIndexes;
 
-        public FileBackMergableIndexs(ExecutorService destroy,
+        public FileBackMergableIndexes(ExecutorService destroy,
             AtomicLong largestStripeId,
             AtomicLong largestIndexId,
             File root,
             String indexName,
             long stripeId,
-            CompactableIndexes mergeableIndexes) throws IOException {
+            CompactableIndexes mergeableIndexes) {
 
             this.destroy = destroy;
             this.largestStripeId = largestStripeId;
@@ -285,10 +273,6 @@ public class RangeStripedCompactableIndexes {
             FileUtils.deleteQuietly(mergingRoot);
             FileUtils.deleteQuietly(commitingRoot);
             FileUtils.deleteQuietly(splittingRoot);
-        }
-
-        void snapshot(Snapshot snapshot) throws Exception {
-            compactableIndexes.snapshot(snapshot);
         }
 
         void append(String rawhideName,
@@ -335,12 +319,6 @@ public class RangeStripedCompactableIndexes {
 
             long count = memoryIndex.count();
             LOG.debug("Commiting memory index to on disk index: {}", count, activeRoot);
-
-            int p = Math.min(31, UIO.chunkPower(count, 0));
-            stats.written("all", p);
-            stats.written("rawhide-" + rawhideName, p);
-            //TODO fix, this leaks like crazy
-            //stats.written("family-" + primaryName, p);
 
             int maxLeaps = calculateIdealMaxLeaps(count, entriesBetweenLeaps);
             IndexRangeId indexRangeId = new IndexRangeId(nextIndexId, nextIndexId, generation);
@@ -458,7 +436,7 @@ public class RangeStripedCompactableIndexes {
 
             long nextStripeIdLeft = largestStripeId.incrementAndGet();
             long nextStripeIdRight = largestStripeId.incrementAndGet();
-            FileBackMergableIndexs self = this;
+            FileBackMergableIndexes self = this;
             LOG.inc("split");
             return () -> {
                 appendSemaphore.acquire(Short.MAX_VALUE);
@@ -518,12 +496,12 @@ public class RangeStripedCompactableIndexes {
                             Stripe leftStripe = loadStripe(left);
                             Stripe rightStripe = loadStripe(right);
                             synchronized (copyIndexOnWrite) {
-                                ConcurrentSkipListMap<byte[], FileBackMergableIndexs> copyOfIndexes = new ConcurrentSkipListMap<>(
+                                ConcurrentSkipListMap<byte[], FileBackMergableIndexes> copyOfIndexes = new ConcurrentSkipListMap<>(
                                     rawhide.getKeyComparator());
                                 copyOfIndexes.putAll(indexes);
 
-                                for (Iterator<Map.Entry<byte[], FileBackMergableIndexs>> iterator = copyOfIndexes.entrySet().iterator(); iterator.hasNext(); ) {
-                                    Map.Entry<byte[], FileBackMergableIndexs> next = iterator.next();
+                                for (Iterator<Map.Entry<byte[], FileBackMergableIndexes>> iterator = copyOfIndexes.entrySet().iterator(); iterator.hasNext(); ) {
+                                    Map.Entry<byte[], FileBackMergableIndexes> next = iterator.next();
                                     if (next.getValue() == self) {
                                         iterator.remove();
                                         break;
@@ -531,13 +509,13 @@ public class RangeStripedCompactableIndexes {
                                 }
                                 if (leftStripe != null && leftStripe.keyRange != null && leftStripe.keyRange.start != null) {
                                     copyOfIndexes.put(leftStripe.keyRange.start,
-                                        new FileBackMergableIndexs(destroy, largestStripeId, largestIndexId, root, indexName, nextStripeIdLeft,
+                                        new FileBackMergableIndexes(destroy, largestStripeId, largestIndexId, root, indexName, nextStripeIdLeft,
                                             leftStripe.mergeableIndexes));
                                 }
 
                                 if (rightStripe != null && rightStripe.keyRange != null && rightStripe.keyRange.start != null) {
                                     copyOfIndexes.put(rightStripe.keyRange.start,
-                                        new FileBackMergableIndexs(destroy, largestStripeId, largestIndexId, root, indexName, nextStripeIdRight,
+                                        new FileBackMergableIndexes(destroy, largestStripeId, largestIndexId, root, indexName, nextStripeIdRight,
                                             rightStripe.mergeableIndexes));
                                 }
                                 indexes = copyOfIndexes;
@@ -597,7 +575,7 @@ public class RangeStripedCompactableIndexes {
             });
         }
 
-        private void auditRanges(String prefix, KeyToString keyToString) throws Exception {
+        private void auditRanges(String prefix, KeyToString keyToString) {
             compactableIndexes.auditRanges(prefix, keyToString);
         }
 
@@ -629,7 +607,7 @@ public class RangeStripedCompactableIndexes {
 
             if (indexes.isEmpty()) {
                 long stripeId = largestStripeId.incrementAndGet();
-                FileBackMergableIndexs index = new FileBackMergableIndexs(destroy,
+                FileBackMergableIndexes index = new FileBackMergableIndexes(destroy,
                     largestStripeId,
                     largestIndexId,
                     root,
@@ -639,7 +617,7 @@ public class RangeStripedCompactableIndexes {
                 index.append(rawhideName, memoryIndex, null, null, fsync, keyBuffer, entryBuffer, entryKeyBuffer);
 
                 synchronized (copyIndexOnWrite) {
-                    ConcurrentSkipListMap<byte[], FileBackMergableIndexs> copyOfIndexes = new ConcurrentSkipListMap<>(rawhide.getKeyComparator());
+                    ConcurrentSkipListMap<byte[], FileBackMergableIndexes> copyOfIndexes = new ConcurrentSkipListMap<>(rawhide.getKeyComparator());
                     copyOfIndexes.putAll(indexes);
                     copyOfIndexes.put(minKey.bytes, index);
                     indexes = copyOfIndexes;
@@ -648,15 +626,15 @@ public class RangeStripedCompactableIndexes {
                 return;
             }
 
-            SortedMap<byte[], FileBackMergableIndexs> tailMap = indexes.tailMap(minKey.bytes);
+            SortedMap<byte[], FileBackMergableIndexes> tailMap = indexes.tailMap(minKey.bytes);
             if (tailMap.isEmpty()) {
                 tailMap = indexes.tailMap(indexes.lastKey());
             } else {
                 byte[] priorKey = indexes.lowerKey(tailMap.firstKey());
                 if (priorKey == null) {
-                    FileBackMergableIndexs moved;
+                    FileBackMergableIndexes moved;
                     synchronized (copyIndexOnWrite) {
-                        ConcurrentSkipListMap<byte[], FileBackMergableIndexs> copyOfIndexes = new ConcurrentSkipListMap<>(rawhide.getKeyComparator());
+                        ConcurrentSkipListMap<byte[], FileBackMergableIndexes> copyOfIndexes = new ConcurrentSkipListMap<>(rawhide.getKeyComparator());
                         copyOfIndexes.putAll(indexes);
                         moved = copyOfIndexes.remove(tailMap.firstKey());
                         copyOfIndexes.put(minKey.bytes, moved);
@@ -670,8 +648,8 @@ public class RangeStripedCompactableIndexes {
             }
 
             Comparator<byte[]> keyComparator = rawhide.getKeyComparator();
-            Map.Entry<byte[], FileBackMergableIndexs> priorEntry = null;
-            for (Map.Entry<byte[], FileBackMergableIndexs> currentEntry : tailMap.entrySet()) {
+            Map.Entry<byte[], FileBackMergableIndexes> priorEntry = null;
+            for (Map.Entry<byte[], FileBackMergableIndexes> currentEntry : tailMap.entrySet()) {
                 if (priorEntry == null) {
                     priorEntry = currentEntry;
                 } else {
@@ -731,12 +709,8 @@ public class RangeStripedCompactableIndexes {
             }
             if (flushingReader != null) {
                 indexes[i] = flushingReader;
-                i++;
             }
             System.arraycopy(acquired, 0, indexes, active + flushing, acquired.length);
-            //pointTxCalled.incrementAndGet();
-            //pointTxIndexCount.addAndGet(indexes.length);
-
             BolBuffer next = PointInterleave.get(indexes, fromKey, rawhide, hashIndexEnabled);
             return rawhide.streamRawEntry(index, next, streamKeyBuffer, streamValueBuffer, valueStream);
         };
@@ -762,7 +736,7 @@ public class RangeStripedCompactableIndexes {
         THE_INSANITY:
         while (true) {
 
-            Entry<byte[], FileBackMergableIndexs>[] entries = indexesArray;
+            Entry<byte[], FileBackMergableIndexes>[] entries = indexesArray;
             if (entries == null || entries.length == 0) {
                 return tx.tx(index, from, to, EMPTY, hydrateValues);
             }
@@ -795,10 +769,10 @@ public class RangeStripedCompactableIndexes {
 
             boolean streamed = false;
             for (int i = fi; i <= ti; i++) {
-                Entry<byte[], FileBackMergableIndexs> entry = entries[i];
+                Entry<byte[], FileBackMergableIndexes> entry = entries[i];
                 byte[] start = i == fi ? from : entries[i].getKey();
                 byte[] end = i < ti ? entries[i + 1].getKey() : to;
-                FileBackMergableIndexs mergableIndex = entry.getValue();
+                FileBackMergableIndexes mergableIndex = entry.getValue();
                 try {
                     TimestampAndVersion timestampAndVersion = mergableIndex.compactableIndexes.maxTimeStampAndVersion();
                     if (rawhide.mightContain(timestampAndVersion.maxTimestamp,
@@ -848,9 +822,9 @@ public class RangeStripedCompactableIndexes {
         return -(low + 1);  // key not found.
     }
 
-    public int debt() throws Exception {
+    public int debt() {
         int maxDebt = 0;
-        for (FileBackMergableIndexs index : indexes.values()) {
+        for (FileBackMergableIndexes index : indexes.values()) {
             maxDebt = Math.max(index.debt(), maxDebt);
         }
         return maxDebt;
@@ -858,7 +832,7 @@ public class RangeStripedCompactableIndexes {
 
     public List<Callable<Void>> buildCompactors(String rawhideName, boolean fsync, int minDebt) throws Exception {
         List<Callable<Void>> compactors = null;
-        for (FileBackMergableIndexs index : indexes.values()) {
+        for (FileBackMergableIndexes index : indexes.values()) {
             if (index.debt() >= minDebt) {
                 Callable<Void> compactor = index.compactor(rawhideName, minDebt, fsync);
                 if (compactor != null) {
@@ -872,20 +846,20 @@ public class RangeStripedCompactableIndexes {
         return compactors;
     }
 
-    public boolean isEmpty() throws Exception {
+    public boolean isEmpty() {
         return indexes.isEmpty();
     }
 
     public long count() throws Exception {
         long count = 0;
-        for (FileBackMergableIndexs index : indexes.values()) {
+        for (FileBackMergableIndexes index : indexes.values()) {
             count += index.count();
         }
         return count;
     }
 
     public void close() throws Exception {
-        for (FileBackMergableIndexs index : indexes.values()) {
+        for (FileBackMergableIndexes index : indexes.values()) {
             index.close();
         }
     }
@@ -896,12 +870,12 @@ public class RangeStripedCompactableIndexes {
         return 1 + maxLeaps;
     }
 
-    public void auditRanges(KeyToString keyToString) throws Exception {
-        for (Entry<byte[], FileBackMergableIndexs> entry : indexes.entrySet()) {
+    public void auditRanges(KeyToString keyToString) {
+        for (Entry<byte[], FileBackMergableIndexes> entry : indexes.entrySet()) {
 
             System.out.println("key:" + keyToString.keyToString(entry.getKey()));
-            FileBackMergableIndexs indexs = entry.getValue();
-            indexs.auditRanges("\t\t", keyToString);
+            FileBackMergableIndexes indexes = entry.getValue();
+            indexes.auditRanges("\t\t", keyToString);
         }
     }
 

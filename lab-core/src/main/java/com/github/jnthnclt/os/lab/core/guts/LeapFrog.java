@@ -64,9 +64,7 @@ class LeapFrog {
                 }
             }
         }
-        return new Leaps(index, new BolBuffer(lastKey.copy()), fpIndex, keys, readable1 -> {
-            return LongBuffer.wrap(startOfEntryIndex);
-        });
+        return new Leaps(index, new BolBuffer(lastKey.copy()), fpIndex, keys, readable1 -> LongBuffer.wrap(startOfEntryIndex));
     }
 
     static private double euclidean(long[] a, long[] b) {

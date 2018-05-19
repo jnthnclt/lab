@@ -52,13 +52,14 @@ public class LABValidationNGTest {
         File finalRoot = com.google.common.io.Files.createTempDir();
         int entriesBetweenLeaps = 2;
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-        LABStats labStats = new LABStats();
+        AtomicLong globalHeapCostInBytes = new AtomicLong();
+        LABStats labStats = new LABStats(globalHeapCostInBytes);
         LABHeapPressure labHeapPressure = new LABHeapPressure(labStats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
             1024 * 1024 * 10,
             1024 * 1024 * 10,
-            new AtomicLong(),
+            globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
 
         StripingBolBufferLocks stripingBolBufferLocks = new StripingBolBufferLocks(1024);
@@ -195,13 +196,14 @@ public class LABValidationNGTest {
         File root = com.google.common.io.Files.createTempDir();
         int entriesBetweenLeaps = 2;
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-        LABStats labStats = new LABStats();
+        AtomicLong globalHeapCostInBytes = new AtomicLong();
+        LABStats labStats = new LABStats(globalHeapCostInBytes);
         LABHeapPressure labHeapPressure = new LABHeapPressure(labStats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
             1024 * 1024 * 10,
             1024 * 1024 * 10,
-            new AtomicLong(),
+            globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
 
         LABWAL wal = new LABWAL(labStats, walRoot, 1024 * 1024 * 10, 1000, 1024 * 1024 * 10, 1024 * 1024 * 10);

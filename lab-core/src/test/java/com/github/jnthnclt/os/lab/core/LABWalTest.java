@@ -38,14 +38,15 @@ public class LABWalTest {
         long maxEntriesPerWAL = 1_000L;
         long maxEntrySizeInBytes = 128L;
 
-        LABStats labStats = new LABStats(1, 0, 1000L);
+        AtomicLong globalHeapCostInBytes = new AtomicLong();
+        LABStats labStats = new LABStats(globalHeapCostInBytes);
         File envRoot = Files.createTempDir();
         LABHeapPressure LABHeapPressure1 = new LABHeapPressure(labStats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
             1024 * 10,
             1024 * 10,
-            new AtomicLong(),
+            globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
         LABEnvironment env = new LABEnvironment(labStats,
@@ -247,15 +248,17 @@ public class LABWalTest {
         File root = testEnvRoot;
         //System.out.println("Created root " + root);
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-        LABHeapPressure LABHeapPressure1 = new LABHeapPressure(new LABStats(),
+        AtomicLong globalHeapCostInBytes = new AtomicLong();
+        LABStats stats = new LABStats(globalHeapCostInBytes);
+        LABHeapPressure LABHeapPressure1 = new LABHeapPressure(stats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
             1024,
             1024 * 1024 * 10,
-            new AtomicLong(),
+            globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
 
-        LABEnvironment env = new LABEnvironment(new LABStats(),
+        LABEnvironment env = new LABEnvironment(stats,
             LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(4),
             LABEnvironment.buildLABDestroyThreadPool(1),

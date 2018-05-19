@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class LABMemoryIndex implements RawAppendableIndex {
 
-    private static final LABLogger LOG = LABLoggerFactory.getLogger();;
+    private static final LABLogger LOG = LABLoggerFactory.getLogger();
 
     private final LABIndex<BolBuffer, BolBuffer> index;
     private final AtomicLong approximateCount = new AtomicLong();
@@ -49,7 +49,7 @@ public class LABMemoryIndex implements RawAppendableIndex {
         LABHeapPressure LABHeapPressure,
         LABStats stats,
         Rawhide rawhide,
-        LABIndex<BolBuffer, BolBuffer> index) throws InterruptedException {
+        LABIndex<BolBuffer, BolBuffer> index) {
 
         this.costChangeInBytes = (allocated, resued) -> {
             costInBytes.addAndGet(allocated);
@@ -149,7 +149,7 @@ public class LABMemoryIndex implements RawAppendableIndex {
         return reader;
     }
 
-    public void destroy() throws Exception {
+    public void destroy() {
         destroy.submit(() -> {
             hideABone.acquire(numBones);
             try {
@@ -168,7 +168,7 @@ public class LABMemoryIndex implements RawAppendableIndex {
         });
     }
 
-    public void closeReadable() throws Exception {
+    public void closeReadable() {
     }
 
     @Override

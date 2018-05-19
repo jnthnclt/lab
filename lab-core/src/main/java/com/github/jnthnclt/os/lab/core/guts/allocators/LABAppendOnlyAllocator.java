@@ -58,7 +58,7 @@ public class LABAppendOnlyAllocator {
 
     }
 
-    public long allocate(byte[] bytes, int offset, int length, LABCostChangeInBytes costInBytes) throws Exception {
+    public long allocate(byte[] bytes, int offset, int length, LABCostChangeInBytes costInBytes) {
         if (bytes == null) {
             return -1;
         }
@@ -73,7 +73,7 @@ public class LABAppendOnlyAllocator {
         }
     }
 
-    private long allocate(int length, LABCostChangeInBytes costInBytes) throws Exception {
+    private long allocate(int length, LABCostChangeInBytes costInBytes) {
 
         LABMemorySlabs m = memory;
         while (length > m.powerLength && m.powerSize < MAX_POWER) {
@@ -161,7 +161,7 @@ public class LABAppendOnlyAllocator {
         return nm;
     }
 
-    public int release(long address) throws InterruptedException {
+    public int release(long address) {
         if (address == -1) {
             return 0;
         }

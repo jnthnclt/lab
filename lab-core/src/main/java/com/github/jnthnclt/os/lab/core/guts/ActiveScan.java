@@ -200,45 +200,6 @@ public class ActiveScan {
         }
     }
 
-    static private long getLinearProbe(PointerReadableByteBufferFile readable,
-        long hashIndexHeadOffset,
-        long hashIndexMaxCapacity,
-        byte hashIndexLongPrecision,
-        BolBuffer compareKey,
-        BolBuffer entryBuffer,
-        BolBuffer keyBuffer,
-        Rawhide rawhide) throws Exception {
-
-
-        long hashIndex = Math.abs(compareKey.longHashCode() % hashIndexMaxCapacity);
-
-        int i = 0;
-        while (i < hashIndexMaxCapacity) {
-            long readPointer = hashIndexHeadOffset + (hashIndex * hashIndexLongPrecision);
-            long offset = readable.readVPLong(readPointer, hashIndexLongPrecision);
-            if (offset == 0L) {
-                return -1L;
-            } else {
-                // since we add one at creation time so zero can be null
-                rawhide.rawEntryToBuffer(readable, Math.abs(offset) - 1, entryBuffer);
-                int c = rawhide.compareKey(entryBuffer, keyBuffer, compareKey);
-                if (c > 0) {
-                    return -1;
-                }
-                if (c == 0) {
-                    return Math.abs(offset) - 1;
-                }
-                if (offset > 0) {
-                    return -1L;
-                }
-            }
-            i++;
-            hashIndex = (++hashIndex) % hashIndexMaxCapacity;
-        }
-        throw new IllegalStateException("ActiveScan failed to get entry because programming is hard.");
-
-    }
-
     static private long getCuckoo(PointerReadableByteBufferFile readable,
         byte hashIndexHashFunctionCount,
         long hashIndexHeadOffset,

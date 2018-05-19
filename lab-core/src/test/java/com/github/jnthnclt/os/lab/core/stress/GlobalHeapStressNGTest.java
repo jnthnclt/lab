@@ -40,7 +40,7 @@ public class GlobalHeapStressNGTest {
         System.out.println(rootA.getAbsolutePath());
         System.out.println(rootB.getAbsolutePath());
         AtomicLong globalHeapCostInBytes = new AtomicLong();
-        LABStats stats = new LABStats();
+        LABStats stats = new LABStats(globalHeapCostInBytes);
         ValueIndex indexA = createIndex(rootA, indexType, hashIndexLoadFactor, stats, globalHeapCostInBytes, 10, 10);
         ValueIndex indexB = createIndex(rootB, indexType, hashIndexLoadFactor, stats, globalHeapCostInBytes, 10, 10);
 

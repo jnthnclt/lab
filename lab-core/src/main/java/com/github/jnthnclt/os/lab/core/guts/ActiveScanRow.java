@@ -17,8 +17,8 @@ public class ActiveScanRow implements Scanner {
     LRUConcurrentBAHLinkedHash<Leaps> leapsCache;
     byte[] cacheKeyBuffer;
     long activeOffset = 0;
-    Leaps[] leaps = new Leaps[1];
-    BolBuffer entryKeyBuffer = new BolBuffer();
+    final Leaps[] leaps = new Leaps[1];
+    final BolBuffer entryKeyBuffer = new BolBuffer();
 
     public ActiveScanRow() {
     }

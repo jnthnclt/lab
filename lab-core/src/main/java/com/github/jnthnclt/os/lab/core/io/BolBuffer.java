@@ -11,7 +11,7 @@ import java.nio.LongBuffer;
  */
 public class BolBuffer {
 
-    private static final LABLogger LOG = LABLoggerFactory.getLogger();;
+    private static final LABLogger LOG = LABLoggerFactory.getLogger();
 
     public volatile ByteBuffer bb;
     public volatile byte[] bytes;
@@ -249,39 +249,39 @@ public class BolBuffer {
         throw new UnsupportedOperationException("NOPE");
     }
 
-    public long longHashCode() {
-        return longHashCode(length);
-    }
-
-    final static long randMult = 0x5DEECE66DL;
-    final static long randAdd = 0xBL;
-    final static long randMask = (1L << 48) - 1;
-
-    public long longHashCode(long seed) {
-
-        if (bb != null) {
-            long hash = 0;
-            for (int i = 0; i < length; i++) {
-                long x = (seed * randMult + randAdd) & randMask;
-                seed = x;
-                hash += (bb.get(offset + i) + 128) * x;
-            }
-
-            return hash;
-        }
-
-        if (bytes != null) {
-            long hash = 0;
-            for (int i = 0; i < length; i++) {
-                long x = (seed * randMult + randAdd) & randMask;
-                seed = x;
-                hash += (bytes[offset + i] + 128) * x;
-            }
-            return hash;
-        }
-        return 0;
-
-    }
+//    public long longHashCode() {
+//        return longHashCode(length);
+//    }
+//
+//    final static long randMult = 0x5DEECE66DL;
+//    final static long randAdd = 0xBL;
+//    final static long randMask = (1L << 48) - 1;
+//
+//    public long longHashCode(long seed) {
+//
+//        if (bb != null) {
+//            long hash = 0;
+//            for (int i = 0; i < length; i++) {
+//                long x = (seed * randMult + randAdd) & randMask;
+//                seed = x;
+//                hash += (bb.get(offset + i) + 128) * x;
+//            }
+//
+//            return hash;
+//        }
+//
+//        if (bytes != null) {
+//            long hash = 0;
+//            for (int i = 0; i < length; i++) {
+//                long x = (seed * randMult + randAdd) & randMask;
+//                seed = x;
+//                hash += (bytes[offset + i] + 128) * x;
+//            }
+//            return hash;
+//        }
+//        return 0;
+//
+//    }
 
     final static long magic = 0xc6a4a7935bd1e995L;
     final static int prime = 47;

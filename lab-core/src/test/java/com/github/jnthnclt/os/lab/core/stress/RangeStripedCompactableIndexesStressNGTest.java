@@ -57,7 +57,7 @@ public class RangeStripedCompactableIndexesStressNGTest {
         long splitWhenValuesAndKeysTotalExceedsNBytes = -1;
 
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-        LABStats labStats = new LABStats();
+        LABStats labStats = new LABStats(new AtomicLong());
         RangeStripedCompactableIndexes indexs = new RangeStripedCompactableIndexes(labStats,
             destroy,
             root,

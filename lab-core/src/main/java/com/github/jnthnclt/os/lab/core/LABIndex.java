@@ -36,7 +36,7 @@ public class LABIndex {
     }
 
     interface LABIndexTx {
-        void tx(ValueIndex[] indexes) throws Exception;
+        void tx(ValueIndex[] indexes);
     }
 
     public Collection<String> getIndexNames() {

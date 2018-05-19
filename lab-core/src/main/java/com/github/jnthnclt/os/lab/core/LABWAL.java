@@ -1,48 +1,48 @@
 package com.github.jnthnclt.os.lab.core;
 
+import com.github.jnthnclt.os.lab.collections.bah.BAHEqualer;
+import com.github.jnthnclt.os.lab.collections.bah.BAHMapState;
+import com.github.jnthnclt.os.lab.collections.bah.BAHash;
+import com.github.jnthnclt.os.lab.collections.bah.BAHasher;
 import com.github.jnthnclt.os.lab.core.api.JournalStream;
+import com.github.jnthnclt.os.lab.core.api.RawEntryFormat;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
+import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.api.ValueStream;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABClosedException;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABCorruptedException;
+import com.github.jnthnclt.os.lab.core.api.exceptions.LABFailedToInitializeWALException;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.AppendOnlyFile;
 import com.github.jnthnclt.os.lab.core.guts.ReadOnlyFile;
 import com.github.jnthnclt.os.lab.core.io.AppendableHeap;
+import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
+import com.github.jnthnclt.os.lab.core.io.api.IAppendOnly;
 import com.github.jnthnclt.os.lab.core.util.LABLogger;
 import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.github.jnthnclt.os.lab.collections.bah.BAHEqualer;
-import com.github.jnthnclt.os.lab.collections.bah.BAHMapState;
-import com.github.jnthnclt.os.lab.collections.bah.BAHash;
-import com.github.jnthnclt.os.lab.collections.bah.BAHasher;
 import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import com.github.jnthnclt.os.lab.core.api.RawEntryFormat;
-import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
-import com.github.jnthnclt.os.lab.core.api.exceptions.LABFailedToInitializeWALException;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.io.api.IAppendOnly;
 
 /**
  * @author jonathan.colt
  */
 public class LABWAL {
 
-    private static final LABLogger LOG = LABLoggerFactory.getLogger();;
+    private static final LABLogger LOG = LABLoggerFactory.getLogger();
 
     private static final byte ENTRY = 0;
     private static final byte BATCH_ISOLATION = 1;
@@ -73,7 +73,7 @@ public class LABWAL {
         long maxWALSizeInBytes,
         long maxEntriesPerWAL,
         long maxEntrySizeInBytes,
-        long maxValueIndexHeapPressureOverride) throws IOException {
+        long maxValueIndexHeapPressureOverride) {
 
         this.stats = stats;
         this.walRoot = walRoot;
@@ -110,7 +110,7 @@ public class LABWAL {
         }
         walIdProvider.set(maxWALId);
 
-        Collections.sort(listWALFiles, (wal1, wal2) -> Long.compare(Long.parseLong(wal1.getName()), Long.parseLong(wal2.getName())));
+        listWALFiles.sort(Comparator.comparingLong(wal -> Long.parseLong(wal.getName())));
 
         List<ReadOnlyFile> deleteableIndexFiles = Lists.newArrayList();
         Map<String, ListMultimap<Long, byte[]>> allEntries = Maps.newHashMap();
@@ -429,7 +429,7 @@ public class LABWAL {
             appendableHeap.appendLong(appendVersion);
         }
 
-        private boolean commit(byte[] valueIndexId, long appendVersion) throws Exception {
+        private boolean commit(byte[] valueIndexId, long appendVersion) {
             synchronized (oneWriteAtTimeLock) {
                 Long lastAppendVersion = appendVersions.get(valueIndexId, 0, valueIndexId.length);
                 if (lastAppendVersion != null && lastAppendVersion < appendVersion) {

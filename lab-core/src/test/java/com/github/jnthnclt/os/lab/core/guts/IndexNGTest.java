@@ -80,13 +80,14 @@ public class IndexNGTest {
         int step = 10;
 
         ExecutorService destroy = Executors.newSingleThreadExecutor();
-        LABStats labStats = new LABStats();
+        AtomicLong globalHeapCostInBytes = new AtomicLong();
+        LABStats labStats = new LABStats(globalHeapCostInBytes);
         LABHeapPressure labHeapPressure = new LABHeapPressure(labStats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
             -1,
             -1,
-            new AtomicLong(),
+            globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
         LABMemoryIndex walIndex = new LABMemoryIndex(destroy,
             labHeapPressure,
@@ -111,13 +112,14 @@ public class IndexNGTest {
 
         int count = 10;
         int step = 10;
-        LABStats labStats = new LABStats();
+        AtomicLong globalHeapCostInBytes = new AtomicLong();
+        LABStats labStats = new LABStats(globalHeapCostInBytes);
         LABHeapPressure labHeapPressure = new LABHeapPressure(labStats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
             -1,
             -1,
-            new AtomicLong(),
+            globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
 
         LABMemoryIndex memoryIndex = new LABMemoryIndex(destroy,

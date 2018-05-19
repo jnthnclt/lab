@@ -16,7 +16,7 @@ public class InterleaveStream implements Scanner {
     private InterleavingStreamFeed until;
 
 
-    public InterleaveStream(Rawhide rawhide, PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds) throws Exception {
+    public InterleaveStream(Rawhide rawhide, PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds) {
         this.rawhide = rawhide;
         this.interleavingStreamFeeds = interleavingStreamFeeds;
     }

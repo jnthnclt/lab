@@ -18,19 +18,19 @@ public class LABConcurrentSkipListMemory {
         this.indexableMemory = indexableMemory;
     }
 
-    public byte[] bytes(long chunkAddress) throws InterruptedException {
+    public byte[] bytes(long chunkAddress) {
         return indexableMemory.bytes(chunkAddress);
     }
 
-    public BolBuffer acquireBytes(long chunkAddress, BolBuffer bolBuffer) throws Exception {
+    public BolBuffer acquireBytes(long chunkAddress, BolBuffer bolBuffer) {
         return indexableMemory.acquireBytes(chunkAddress, bolBuffer);
     }
 
-    public long allocate(BolBuffer bytes, LABCostChangeInBytes costInBytes) throws Exception {
+    public long allocate(BolBuffer bytes, LABCostChangeInBytes costInBytes) {
         return indexableMemory.allocate(bytes, costInBytes);
     }
 
-    public int release(long address) throws Exception {
+    public int release(long address) {
         return indexableMemory.release(address);
     }
 

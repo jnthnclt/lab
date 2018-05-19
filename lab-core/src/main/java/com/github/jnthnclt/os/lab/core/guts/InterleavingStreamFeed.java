@@ -10,7 +10,7 @@ public class InterleavingStreamFeed implements Comparable<InterleavingStreamFeed
     private final Scanner scanner;
     private final Rawhide rawhide;
 
-    BolBuffer entryKeyBuffer = new BolBuffer();
+    final BolBuffer entryKeyBuffer = new BolBuffer();
     BolBuffer nextRawEntry;
 
     public InterleavingStreamFeed(int index, Scanner scanner, Rawhide rawhide) {

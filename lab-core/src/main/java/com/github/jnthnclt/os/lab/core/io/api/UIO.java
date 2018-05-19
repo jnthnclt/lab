@@ -28,7 +28,7 @@ import java.util.Iterator;
 
 public class UIO {
 
-    private static final LABLogger LOG = LABLoggerFactory.getLogger();;
+    private static final LABLogger LOG = LABLoggerFactory.getLogger();
 
     private static void writeLength(IAppendOnly _filer, int l) throws IOException {
         _filer.appendInt(l);

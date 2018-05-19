@@ -44,7 +44,7 @@ public class LABStress {
         File root = Files.createTempDir();
         System.out.println(root.getAbsolutePath());
         AtomicLong globalHeapCostInBytes = new AtomicLong();
-        LABStats stats = new LABStats();
+        LABStats stats = new LABStats(globalHeapCostInBytes);
         ValueIndex index = createIndex(root, indexType, hashIndexLoadFactor, stats, globalHeapCostInBytes);
 
         long totalCardinality = 100_000_000;
@@ -81,17 +81,18 @@ public class LABStress {
 
         System.out.println("-------------------------------");
 
-        stats = new LABStats();
         globalHeapCostInBytes = new AtomicLong();
+        stats = new LABStats(globalHeapCostInBytes);
         root = Files.createTempDir();
         index = createIndex(root, indexType, hashIndexLoadFactor, stats, globalHeapCostInBytes);
 
         // ---
+        System.out.println("Write Stress:");
         printLabels();
 
         totalCardinality = 10_000_000L;
 
-        int threadCount = 1; //Runtime.getRuntime().availableProcessors();
+        int threadCount = 8; //Runtime.getRuntime().availableProcessors();
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
 
         futures = new ArrayList<>();
@@ -109,10 +110,10 @@ public class LABStress {
                         index1,
                         (totalCardinality1 / threadCount) * efi,
                         totalCardinality1 / threadCount,
-                        1_000_000, // writesPerSecond
-                        (1_000_000 / threadCount), //writeCount
+                        100_000, // writesPerSecond
+                        (2_000_000), //writeCount
                         1, //readForNSeconds
-                    1, // readCount
+                        1, // readCount
                         false,
                         globalHeapCostInBytes1); // removes
                 return write1;
@@ -157,8 +158,8 @@ public class LABStress {
             totalCardinality,
             0, // writesPerSecond
             0, //writeCount
-            1, //readForNSeconds
-            1_000_000, // readCount
+            10, //readForNSeconds
+            100_000_000, // readCount
             false,
             globalHeapCostInBytes); // removes
 
@@ -222,7 +223,7 @@ public class LABStress {
             "deprecated",
             "8x8fixedWidthRawhide", //new LABRawhide(),
             MemoryRawEntryFormat.NAME,
-            24,
+            27,
             indexType,
             hashIndexLoadFactor,
             true,
@@ -290,9 +291,7 @@ public class LABStress {
                 writeElapse = (System.currentTimeMillis() - start);
                 totalWriteTime += writeElapse;
                 writeRate = (double) wrote * 1000 / (writeElapse);
-                if (writeElapse < 1000) {
-                    Thread.sleep(1000 - writeElapse);
-                }
+
             }
 
             start = System.currentTimeMillis();

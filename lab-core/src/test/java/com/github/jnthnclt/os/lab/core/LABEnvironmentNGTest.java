@@ -38,13 +38,14 @@ public class LABEnvironmentNGTest {
             root = Files.createTempDir();
             //System.out.println("root" + root.getAbsolutePath());
             LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-            LABStats labStats = new LABStats();
+            AtomicLong globalHeapCostInBytes = new AtomicLong();
+            LABStats labStats = new LABStats(globalHeapCostInBytes);
             LABHeapPressure LABHeapPressure1 = new LABHeapPressure(labStats,
                 LABEnvironment.buildLABHeapSchedulerThreadPool(1),
                 "default",
                 1024 * 1024 * 10,
                 1024 * 1024 * 10,
-                new AtomicLong(),
+                globalHeapCostInBytes,
                 LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
 
             LABEnvironment env = new LABEnvironment(labStats,
@@ -241,20 +242,23 @@ public class LABEnvironmentNGTest {
         File root = Files.createTempDir();
         //System.out.println("Created root");
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-        LABHeapPressure LABHeapPressure1 = new LABHeapPressure(new LABStats(),
+        AtomicLong globalHeapCostInBytes = new AtomicLong();
+        LABStats stats1 = new LABStats(globalHeapCostInBytes);
+        LABHeapPressure labHeapPressure = new LABHeapPressure(stats1,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
             1024 * 1024 * 10,
             1024 * 1024 * 10,
-            new AtomicLong(),
+            globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
-        LABEnvironment env = new LABEnvironment(new LABStats(),
+
+        LABEnvironment env = new LABEnvironment(stats1,
             LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(4),
             LABEnvironment.buildLABDestroyThreadPool(1),
             null,
             root,
-            LABHeapPressure1, 4, 8, leapsCache,
+            labHeapPressure, 4, 8, leapsCache,
             new StripingBolBufferLocks(1024),
             true,
             false);
@@ -285,14 +289,17 @@ public class LABEnvironmentNGTest {
         env.shutdown();
         //System.out.println("Shutdown");
 
-        LABHeapPressure LABHeapPressure2 = new LABHeapPressure(new LABStats(),
+        AtomicLong globalHeapCostInBytes1 = new AtomicLong();
+        LABStats stats = new LABStats(globalHeapCostInBytes1);
+        LABHeapPressure LABHeapPressure2 = new LABHeapPressure(stats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
             1024 * 1024 * 10,
             1024 * 1024 * 10,
-            new AtomicLong(),
+            globalHeapCostInBytes1,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
-        env = new LABEnvironment(new LABStats(),
+
+        env = new LABEnvironment(stats,
             LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(4),
             LABEnvironment.buildLABDestroyThreadPool(1),
@@ -323,14 +330,16 @@ public class LABEnvironmentNGTest {
         File root = Files.createTempDir();
         //System.out.println("Created root");
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-        LABHeapPressure LABHeapPressure1 = new LABHeapPressure(new LABStats(),
+        AtomicLong globalHeapCostInBytes1 = new AtomicLong();
+        LABStats stats = new LABStats(globalHeapCostInBytes1);
+        LABHeapPressure LABHeapPressure1 = new LABHeapPressure(stats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
             1024 * 1024 * 10,
             1024 * 1024 * 10,
-            new AtomicLong(),
+            globalHeapCostInBytes1,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
-        LABEnvironment env = new LABEnvironment(new LABStats(),
+        LABEnvironment env = new LABEnvironment(stats,
             LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(4),
             LABEnvironment.buildLABDestroyThreadPool(1),
@@ -372,14 +381,16 @@ public class LABEnvironmentNGTest {
         env.shutdown();
         //System.out.println("Shutdown");
 
-        LABHeapPressure LABHeapPressure2 = new LABHeapPressure(new LABStats(),
+        AtomicLong globalHeapCostInBytes = new AtomicLong();
+        LABStats stats1 = new LABStats(globalHeapCostInBytes);
+        LABHeapPressure LABHeapPressure2 = new LABHeapPressure(stats1,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
             1024 * 1024 * 10,
             1024 * 1024 * 10,
-            new AtomicLong(),
+            globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
-        env = new LABEnvironment(new LABStats(),
+        env = new LABEnvironment(stats1,
             LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(4),
             LABEnvironment.buildLABDestroyThreadPool(1),
@@ -410,14 +421,16 @@ public class LABEnvironmentNGTest {
         env.shutdown();
         //System.out.println("Re-shutdown");
 
-        LABHeapPressure LABHeapPressure3 = new LABHeapPressure(new LABStats(),
+        AtomicLong globalHeapCostInBytes2 = new AtomicLong();
+        LABStats stats2 = new LABStats(globalHeapCostInBytes2);
+        LABHeapPressure LABHeapPressure3 = new LABHeapPressure(stats2,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
             1024 * 1024 * 10,
             1024 * 1024 * 10,
-            new AtomicLong(),
+            globalHeapCostInBytes2,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
-        env = new LABEnvironment(new LABStats(),
+        env = new LABEnvironment(stats2,
             LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(4),
             LABEnvironment.buildLABDestroyThreadPool(1),

@@ -1,7 +1,6 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
 import com.github.jnthnclt.os.lab.core.LABStats;
-import com.github.jnthnclt.os.lab.core.api.Snapshot;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABClosedException;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.api.CommitIndex;
@@ -34,7 +33,6 @@ public class CompactableIndexes {
     }
 
     private static final LABLogger LOG = LABLoggerFactory.getLogger();
-    ;
 
     // newest to oldest
     private final LABStats stats;
@@ -52,13 +50,6 @@ public class CompactableIndexes {
     public CompactableIndexes(LABStats stats, Rawhide rawhide) {
         this.stats = stats;
         this.rawhide = rawhide;
-    }
-
-    public void snapshot(Snapshot snapshot) throws Exception {
-        ReadOnlyIndex[] stackIndexes = indexes;
-        for (ReadOnlyIndex stackIndex : stackIndexes) {
-            stackIndex.snapshot(snapshot);
-        }
     }
 
     public boolean append(ReadOnlyIndex index) {
@@ -117,6 +108,33 @@ public class CompactableIndexes {
         }
         int debt = (merging.length - 1);
         return debt < 0 ? 0 : debt;
+    }
+
+
+    public long count() throws Exception {
+        long count = 0;
+        for (ReadOnlyIndex g : grab()) {
+            count += g.count();
+        }
+        return count;
+    }
+
+    public void close() throws Exception {
+        synchronized (indexesLock) {
+            for (ReadOnlyIndex index : indexes) {
+                index.closeReadable();
+            }
+            closed = true;
+        }
+    }
+
+    public void destroy() {
+        synchronized (indexesLock) {
+            for (ReadOnlyIndex index : indexes) {
+                index.destroy();
+            }
+            closed = true;
+        }
     }
 
     public Callable<Void> compactor(
@@ -179,7 +197,7 @@ public class CompactableIndexes {
     private boolean splittable(
         long splittableIfKeysLargerThanBytes,
         long splittableIfValuesLargerThanBytes,
-        long splittableIfLargerThanBytes) throws Exception {
+        long splittableIfLargerThanBytes) {
 
         ReadOnlyIndex[] splittable;
         synchronized (indexesLock) {
@@ -771,41 +789,6 @@ public class CompactableIndexes {
             }
         }
     }
-
-    public long count() throws Exception {
-        long count = 0;
-        for (ReadOnlyIndex g : grab()) {
-            count += g.count();
-        }
-        return count;
-    }
-
-    public void close() throws Exception {
-        synchronized (indexesLock) {
-            for (ReadOnlyIndex index : indexes) {
-                index.closeReadable();
-            }
-            closed = true;
-        }
-    }
-
-    public void destroy() throws Exception {
-        synchronized (indexesLock) {
-            for (ReadOnlyIndex index : indexes) {
-                index.destroy();
-            }
-            closed = true;
-        }
-    }
-
-    /*public boolean isEmpty() throws Exception {
-        for (ReadOnlyIndex g : grab()) {
-            if (g.count() > 0) {
-                return false;
-            }
-        }
-        return true;
-    }*/
 
     private ReadOnlyIndex[] grab() {
         ReadOnlyIndex[] copy;

@@ -15,7 +15,7 @@ public class LABIndexableMemory {
         this.memoryAllocator = memoryAllocator;
     }
 
-    BolBuffer acquireBytes(long address, BolBuffer bolBuffer) throws Exception {
+    BolBuffer acquireBytes(long address, BolBuffer bolBuffer) {
         if (address == -1) {
             return null;
         }
@@ -23,21 +23,21 @@ public class LABIndexableMemory {
         return bolBuffer;
     }
 
-    public byte[] bytes(long address) throws InterruptedException {
+    public byte[] bytes(long address) {
         if (address == -1) {
             return null;
         }
         return memoryAllocator.bytes(address);
     }
 
-    public long allocate(BolBuffer bolBuffer, LABCostChangeInBytes costInBytes) throws Exception {
+    public long allocate(BolBuffer bolBuffer, LABCostChangeInBytes costInBytes) {
         if (bolBuffer == null || bolBuffer.length == -1) {
             throw new IllegalStateException();
         }
         return memoryAllocator.allocate(bolBuffer.bytes, bolBuffer.offset, bolBuffer.length, costInBytes);
     }
 
-    public int release(long address) throws Exception {
+    public int release(long address) {
         if (address == -1) {
             return 0;
         }

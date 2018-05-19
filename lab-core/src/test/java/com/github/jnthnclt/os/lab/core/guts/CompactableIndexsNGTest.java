@@ -34,7 +34,7 @@ public class CompactableIndexsNGTest {
     public void testPointGets() throws Exception {
 
         ExecutorService destroy = Executors.newSingleThreadExecutor();
-        CompactableIndexes indexs = new CompactableIndexes(new LABStats(), rawhide);
+        CompactableIndexes indexs = new CompactableIndexes(new LABStats(new AtomicLong()), rawhide);
         AtomicLong id = new AtomicLong();
         AtomicLong timeProvider = new AtomicLong();
         BolBuffer keyBuffer = new BolBuffer();
@@ -111,7 +111,7 @@ public class CompactableIndexsNGTest {
         boolean fsync = true;
         int minimumRun = 4;
 
-        CompactableIndexes indexs = new CompactableIndexes(new LABStats(), rawhide);
+        CompactableIndexes indexs = new CompactableIndexes(new LABStats(new AtomicLong()), rawhide);
         long time = System.currentTimeMillis();
         System.out.println("Seed:" + time);
         Random rand = new Random(1446914103456L);
@@ -147,7 +147,7 @@ public class CompactableIndexsNGTest {
         assertions(indexs, count, step, desired);
 
         File indexFiler = File.createTempFile("a-index-merged", ".tmp");
-        Callable<Void> compactor = indexs.compactor(new LABStats(), "test", -1, -1, -1, null, minimumRun, fsync,
+        Callable<Void> compactor = indexs.compactor(new LABStats(new AtomicLong()), "test", -1, -1, -1, null, minimumRun, fsync,
             (rawhideName, minimumRun1, fsync1, callback) -> callback.call(minimumRun,
                 fsync1,
                 (id, worstCaseCount) -> {
@@ -188,7 +188,7 @@ public class CompactableIndexsNGTest {
         boolean fsync = true;
         int minimumRun = 4;
 
-        CompactableIndexes indexs = new CompactableIndexes(new LABStats(), rawhide);
+        CompactableIndexes indexs = new CompactableIndexes(new LABStats(new AtomicLong()), rawhide);
         long time = System.currentTimeMillis();
         System.out.println("Seed:" + time);
         Random rand = new Random(1446914103456L);
@@ -241,7 +241,7 @@ public class CompactableIndexsNGTest {
 
         File indexFiler = File.createTempFile("a-index-merged", ".tmp");
 
-        Callable<Void> compactor = indexs.compactor(new LABStats(), "test", -1, -1, -1, null, minimumRun, fsync,
+        Callable<Void> compactor = indexs.compactor(new LABStats(new AtomicLong()), "test", -1, -1, -1, null, minimumRun, fsync,
             (rawhideName, minimumRun1, fsync1, callback) -> callback.call(minimumRun1,
                 fsync1, (id, worstCaseCount) -> {
                     int updatesBetweenLeaps = 2;
@@ -281,7 +281,7 @@ public class CompactableIndexsNGTest {
             return true;
         }, true);
 
-        indexs = new CompactableIndexes(new LABStats(), rawhide);
+        indexs = new CompactableIndexes(new LABStats(new AtomicLong()), rawhide);
         IndexRangeId indexRangeId = new IndexRangeId(0, 0, 0);
         ReadOnlyFile indexFile = new ReadOnlyFile(indexFiler);
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);

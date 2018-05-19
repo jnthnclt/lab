@@ -18,7 +18,6 @@ public class LABIndexProvider<T> {
 
     private final int cores = Runtime.getRuntime().availableProcessors();
     private final LABStats stats;
-    private final AtomicLong globalHeapCostInBytes;
     private final LABHeapPressure labHeapPressure;
     private final ExecutorService scheduler = LABEnvironment.buildLABSchedulerThreadPool(cores);
     private final ExecutorService compact = LABEnvironment.buildLABCompactorThreadPool(cores);
@@ -26,8 +25,7 @@ public class LABIndexProvider<T> {
     private final ExecutorService heapScheduler = LABEnvironment.buildLABHeapSchedulerThreadPool(cores);
     private final LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100_000, 4);
 
-    public LABIndexProvider(AtomicLong globalHeapCostInBytes, LABStats stats) throws Exception {
-        this.globalHeapCostInBytes = globalHeapCostInBytes;
+    public LABIndexProvider(AtomicLong globalHeapCostInBytes, LABStats stats) {
         this.stats = stats;
 
         labHeapPressure = new LABHeapPressure(stats,

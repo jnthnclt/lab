@@ -26,13 +26,11 @@ import com.github.jnthnclt.os.lab.core.io.api.IAppendOnly;
  */
 public class AppendableHeap implements IAppendOnly {
 
-    private final int initialSize;
     private byte[] bytes = new byte[0];
     private int fp = 0;
     private int maxLength = 0;
 
     public AppendableHeap(int initialSize) {
-        this.initialSize = initialSize;
         bytes = new byte[initialSize];
         maxLength = 0;
     }

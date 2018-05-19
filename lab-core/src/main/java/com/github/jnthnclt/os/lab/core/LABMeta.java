@@ -21,7 +21,7 @@ import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
  */
 public class LABMeta {
 
-    private static final LABLogger LOG = LABLoggerFactory.getLogger();;
+    private static final LABLogger LOG = LABLoggerFactory.getLogger();
 
     private final File metaRoot;
     private final Semaphore writeSemaphore = new Semaphore(Short.MAX_VALUE);
@@ -137,7 +137,7 @@ public class LABMeta {
 
     static private class Meta {
 
-        private static final LABLogger LOG = LABLoggerFactory.getLogger();;
+        private static final LABLogger LOG = LABLoggerFactory.getLogger();
 
         private final File metaFile;
         private volatile ReadOnlyFile readOnlyFile;
@@ -158,10 +158,7 @@ public class LABMeta {
             offsetKeyOffsetValueCache.stream((key, valueOffset) -> {
                 long offset = UIO.bytesLong(valueOffset);
                 int length = pointerReadable.readInt(offset);
-                if (length > 0) {
-                    return keys.metaKey(key);
-                }
-                return true;
+                return length <= 0 || keys.metaKey(key);
             });
         }
 

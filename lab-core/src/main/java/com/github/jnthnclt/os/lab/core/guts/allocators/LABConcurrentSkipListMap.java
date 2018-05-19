@@ -35,7 +35,7 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
         return headUpdater.compareAndSet(this, cmp, val);
     }
 
-    private final int ALL = 1024; // TODO Expose?
+    private final int ALL = Short.MAX_VALUE;
     private final Semaphore growSemaphore = new Semaphore(ALL);
     private volatile AtomicLongArray nodesArray = new AtomicLongArray(4 * 16);
     private final AtomicInteger freeNode = new AtomicInteger(-1);
@@ -118,15 +118,15 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
 
     }
 
-    long nodeKey(int address) throws InterruptedException {
+    long nodeKey(int address) {
         return nodesArray.get(address + NODE_KEY_OFFSET);
     }
 
-    long nodeValue(int address) throws InterruptedException {
+    long nodeValue(int address) {
         return nodesArray.get(address + NODE_VALUE_OFFSET);
     }
 
-    int nodeNext(int address) throws InterruptedException {
+    int nodeNext(int address) {
         return (int) nodesArray.get(address + NODE_NEXT_OFFSET);
     }
 
@@ -149,7 +149,7 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
         return v;
     }
 
-    void releaseValue(int address) throws InterruptedException {
+    void releaseValue(int address) {
         nodesArray.decrementAndGet(address + NODE_REF_COUNT_OFFSET);
     }
 
@@ -171,15 +171,15 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
         }
     }
 
-    boolean casNext(int address, int cmp, int val) throws InterruptedException {
+    boolean casNext(int address, int cmp, int val) {
         return nodesArray.compareAndSet(address + NODE_NEXT_OFFSET, cmp, val);
     }
 
-    boolean isMarker(int address) throws InterruptedException {
+    boolean isMarker(int address) {
         return nodeValue(address) == SELF;
     }
 
-    boolean isBaseHeader(int address) throws InterruptedException {
+    boolean isBaseHeader(int address) {
         return nodeValue(address) == BASE_HEADER;
     }
 
@@ -294,11 +294,11 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
         return indexsArray.compareAndSet(indexAddress + INDEX_RIGHT, cmp, val);
     }
 
-    final boolean indexesDeletedNode(int indexAddress) throws InterruptedException {
+    final boolean indexesDeletedNode(int indexAddress) {
         return nodeValue(indexsArray.get(indexAddress + INDEX_NODE)) == NIL;
     }
 
-    final boolean link(int indexAddress, int succ, int newSucc) throws InterruptedException {
+    final boolean link(int indexAddress, int succ, int newSucc) {
         int n = indexsArray.get(indexAddress + INDEX_NODE);
         indexsArray.set(newSucc + INDEX_RIGHT, succ);
         return nodeValue(n) != NIL && casRight(indexAddress, succ, newSucc);
@@ -1269,7 +1269,7 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
         /**
          * Returns true if node key is less than upper bound of range.
          */
-        boolean isBeforeEnd(int n) throws InterruptedException {
+        boolean isBeforeEnd(int n) {
             if (n == NIL) {
                 return false;
             }
@@ -1282,10 +1282,7 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
                 return true;
             }
             int c = m.memory.compareLB(k, hi.bytes, hi.offset, hi.length);
-            if (c > 0 || (c == 0 && !hiInclusive)) {
-                return false;
-            }
-            return true;
+            return c <= 0 && (c != 0 || hiInclusive);
 
         }
 
@@ -1383,7 +1380,7 @@ public class LABConcurrentSkipListMap implements LABIndex<BolBuffer, BolBuffer> 
         EntryStream entryStream;
         growSemaphore.acquire();
         try {
-            entryStream = rangeMap(from != null ? from : null, to != null ? to : null);
+            entryStream = rangeMap(from, to);
         } finally {
             growSemaphore.release();
         }

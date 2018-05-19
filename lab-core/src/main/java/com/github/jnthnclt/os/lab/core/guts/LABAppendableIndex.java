@@ -61,7 +61,7 @@ public class LABAppendableIndex implements RawAppendableIndex {
         Rawhide rawhide,
         LABHashIndexType hashIndexType,
         double hashIndexLoadFactor,
-        long deleteTombstonedVersionsAfterMillis) throws Exception {
+        long deleteTombstonedVersionsAfterMillis) {
 
         this.appendedStat = appendedStat;
         this.indexRangeId = indexRangeId;
@@ -225,15 +225,15 @@ public class LABAppendableIndex implements RawAppendableIndex {
         byte hashIndexLongPrecision = (byte) Math.min((chunkPower / 8) + 1, 8);
         long maxReinsertionsBeforeExtinction = (long) (count * 0.01d);
 
-        byte numHashFunctions = 2;
+        byte numHashFunctions;
         PointerReadableByteBufferFile c = null;
-        long hashIndexSizeInBytes = 0;
+        long hashIndexSizeInBytes;
 
 
         int extinctions = 0;
-        long reinsertion = 0;
+        long reinsertion;
         long start = System.currentTimeMillis();
-        long clear = 0;
+        long clear;
         long[] histo;
         try {
             CUCKOO_EXTINCTION_LEVEL_EVENT:
@@ -319,11 +319,13 @@ public class LABAppendableIndex implements RawAppendableIndex {
             }
 
         } finally {
-            c.close();
+            if (c != null) {
+                c.close();
+            }
             f.close();
         }
 
-        LOG.info(
+        LOG.debug(
             "Built hash index for {} with {} entries in {} + {} millis numHashFunctions:{} precision:{} cost:{} bytes reinsertion:{} extinctions:{} histo:{}",
             appendOnlyFile.getFile(),
             count,

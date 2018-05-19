@@ -6,6 +6,7 @@ import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.api.UIO;
+import java.util.concurrent.atomic.AtomicLong;
 import org.testng.annotations.Test;
 
 /**
@@ -20,7 +21,7 @@ public class LABConcurrentSkipListMapNGTest {
         LABIndexableMemory labIndexableMemory = new LABIndexableMemory(allocator);
         LABFixedWidthKeyFixedWidthValueRawhide rawhide = new LABFixedWidthKeyFixedWidthValueRawhide(8, 8);
 
-        LABConcurrentSkipListMap map = new LABConcurrentSkipListMap(new LABStats(), new LABConcurrentSkipListMemory(rawhide, labIndexableMemory),
+        LABConcurrentSkipListMap map = new LABConcurrentSkipListMap(new LABStats(new AtomicLong()), new LABConcurrentSkipListMemory(rawhide, labIndexableMemory),
             new StripingBolBufferLocks(1024));
 
         for (int i = 0; i < 100; i++) {

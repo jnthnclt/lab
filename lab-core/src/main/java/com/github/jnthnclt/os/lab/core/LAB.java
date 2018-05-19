@@ -5,7 +5,6 @@ import com.github.jnthnclt.os.lab.core.api.AppendValues;
 import com.github.jnthnclt.os.lab.core.api.Keys;
 import com.github.jnthnclt.os.lab.core.api.Ranges;
 import com.github.jnthnclt.os.lab.core.api.ScanKeys;
-import com.github.jnthnclt.os.lab.core.api.Snapshot;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueStream;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABClosedException;
@@ -328,13 +327,10 @@ public class LAB implements ValueIndex<byte[]> {
                             }
                         }
                         keyHint[0] = keys.nextKey();
-                        continue;
                     }
 
                 } finally {
-                    if (interleaveStream != null) {
-                        interleaveStream.close();
-                    }
+                    interleaveStream.close();
                 }
             },
             hydrateValues
@@ -401,10 +397,7 @@ public class LAB implements ValueIndex<byte[]> {
 
     @Override
     public boolean isEmpty() throws Exception {
-        if (memoryIndex.isEmpty()) {
-            return rangeStripedCompactableIndexes.isEmpty();
-        }
-        return false;
+        return memoryIndex.isEmpty() && rangeStripedCompactableIndexes.isEmpty();
     }
 
     public long approximateHeapPressureInBytes() {
@@ -577,7 +570,6 @@ public class LAB implements ValueIndex<byte[]> {
                     }
                     if (flushingReader != null) {
                         indexes[i] = flushingReader;
-                        i++;
                     }
                     System.arraycopy(acquired, 0, indexes, active + flushing, acquired.length);
                     return tx.tx(index1, fromKey, toKey, indexes, hydrateValues1);
@@ -747,11 +739,6 @@ public class LAB implements ValueIndex<byte[]> {
         }
     }
 
-    public void snapshot(Snapshot snapshot) throws Exception {
-        // TODO differ snapshot if compaction in progress and avoid compacting when snapshot in progress
-        rangeStripedCompactableIndexes.snapshot(snapshot);
-    }
-
     @Override
     public List<Future<Object>> compact(boolean fsync, int minDebt, int maxDebt, boolean waitIfToFarBehind) throws Exception {
 
@@ -857,7 +844,7 @@ public class LAB implements ValueIndex<byte[]> {
     }
 
 
-    public void auditRanges(KeyToString keyToString) throws Exception {
+    public void auditRanges(KeyToString keyToString) {
         rangeStripedCompactableIndexes.auditRanges(keyToString);
     }
 

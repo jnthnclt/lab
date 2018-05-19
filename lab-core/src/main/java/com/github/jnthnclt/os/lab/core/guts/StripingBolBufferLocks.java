@@ -33,7 +33,7 @@ public class StripingBolBufferLocks {
     }
 
     public Object lock(BolBuffer buffer, int seed) {
-        return locks[Math.abs(((int)buffer.longHashCode() ^ seed) % locks.length)];
+        return locks[Math.abs((int)buffer.longMurmurHashCode(seed) % locks.length)];
     }
 
     static private class StripingBolBufferLock {

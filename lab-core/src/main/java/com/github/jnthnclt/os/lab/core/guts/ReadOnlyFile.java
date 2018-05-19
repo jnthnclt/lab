@@ -72,7 +72,7 @@ public class ReadOnlyFile {
         }
     }
 
-    public long length() throws IOException {
+    public long length() {
         return size;
     }
 }

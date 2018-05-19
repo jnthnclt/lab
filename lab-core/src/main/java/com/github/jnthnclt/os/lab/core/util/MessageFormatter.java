@@ -28,6 +28,7 @@ import java.util.Map;
 
 // contributors: lizongbo: proposed special treatment of array parameter values
 // J�rn Huxhorn: pointed out double[] omission, suggested deep array copy
+
 /**
  * @author Ceki G&uuml;lc&uuml;
  */
@@ -42,43 +43,42 @@ final public class MessageFormatter {
      * Performs single argument substitution for the 'messagePattern' passed as parameter.
      * <p>
      * For example,
-     *
+     * <p>
      * <pre>
      * MessageFormatter.format(&quot;Hi {}.&quot;, &quot;there&quot;);
      * </pre>
-     *
+     * <p>
      * will return the string "Hi there.".
      * <p>
      *
      * @param messagePattern The message pattern which will be parsed and formatted
-     * @param argument The argument to be substituted in place of the formatting anchor
+     * @param argument       The argument to be substituted in place of the formatting anchor
      * @return The formatted message
      */
-    final public static String format(String messagePattern, Object argument) {
-        return arrayFormat(messagePattern, new Object[]{argument});
+    public static String format(String messagePattern, Object argument) {
+        return arrayFormat(messagePattern, argument);
     }
 
     /**
-     *
      * Performs a two argument substitution for the 'messagePattern' passed as parameter.
      * <p>
      * For example,
-     *
+     * <p>
      * <pre>
      * MessageFormatter.format(&quot;Hi {}. My name is {}.&quot;, &quot;Alice&quot;, &quot;Bob&quot;);
      * </pre>
-     *
+     * <p>
      * will return the string "Hi Alice. My name is Bob.".
      *
      * @param messagePattern The message pattern which will be parsed and formatted
-     * @param args The argument to be substituted in place of the first formatting anchor
+     * @param args           The argument to be substituted in place of the first formatting anchor
      * @return The formatted message
      */
-    final public static String format(final String messagePattern, Object... args) {
+    public static String format(final String messagePattern, Object... args) {
         return arrayFormat(messagePattern, args);
     }
 
-    final public static String arrayFormat(final String messagePattern,
+    public static String arrayFormat(final String messagePattern,
         final Object... argArray) {
         if (messagePattern == null) {
             return null;
@@ -131,28 +131,18 @@ final public class MessageFormatter {
         return sbuf.toString();
     }
 
-    final static boolean isEscapedDelimeter(String messagePattern,
+    static boolean isEscapedDelimeter(String messagePattern,
         int delimeterStartIndex) {
 
         if (delimeterStartIndex == 0) {
             return false;
         }
         char potentialEscape = messagePattern.charAt(delimeterStartIndex - 1);
-        if (potentialEscape == ESCAPE_CHAR) {
-            return true;
-        } else {
-            return false;
-        }
+        return potentialEscape == ESCAPE_CHAR;
     }
 
-    final static boolean isDoubleEscaped(String messagePattern,
-        int delimeterStartIndex) {
-        if (delimeterStartIndex >= 2
-            && messagePattern.charAt(delimeterStartIndex - 2) == ESCAPE_CHAR) {
-            return true;
-        } else {
-            return false;
-        }
+    static boolean isDoubleEscaped(String messagePattern, int delimeterStartIndex) {
+        return delimeterStartIndex >= 2 && messagePattern.charAt(delimeterStartIndex - 2) == ESCAPE_CHAR;
     }
 
     // special treatment of array values was suggested by 'lizongbo'

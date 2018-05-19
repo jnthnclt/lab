@@ -80,7 +80,7 @@ public class PointerReadableByteBufferFile {
         }
     }
 
-    private int read(int bbIndex, int bbSeek) throws IOException {
+    private int read(int bbIndex, int bbSeek) {
         if (!hasRemaining(bbIndex, bbSeek, 1)) {
             return -1;
         }
@@ -175,7 +175,7 @@ public class PointerReadableByteBufferFile {
         }
     }
 
-    private int read(int bbIndex, int bbSeek, byte[] b, int _offset, int _len) throws IOException {
+    private int read(int bbIndex, int bbSeek, byte[] b, int _offset, int _len) {
         ByteBuffer bb = bbs[bbIndex];
         int remaining = bb.limit() - bbSeek;
         if (remaining <= 0) {
@@ -233,7 +233,7 @@ public class PointerReadableByteBufferFile {
         return entryBuffer;
     }
 
-    public void close() throws IOException {
+    public void close() {
         if (bbs.length > 0) {
             ByteBuffer bb = bbs[0];
             if (bb != null) {
@@ -243,7 +243,7 @@ public class PointerReadableByteBufferFile {
     }
 
 
-    public void write(long position, byte b) throws IOException {
+    public void write(long position, byte b) {
         int bbIndex = (int) (position >> fShift);
         int bbSeek = (int) (position & fseekMask);
         bbs[bbIndex].put(bbSeek, b);

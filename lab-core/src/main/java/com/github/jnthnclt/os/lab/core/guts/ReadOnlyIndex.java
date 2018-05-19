@@ -1,7 +1,6 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
-import com.github.jnthnclt.os.lab.core.api.Snapshot;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABCorruptedException;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
@@ -92,7 +91,7 @@ public class ReadOnlyIndex implements ReadIndex {
         return Footer.read(readable, seekTo);
     }
 
-    private void seekToBoundsCheck(long seekTo, long indexLength) throws IOException, LABCorruptedException {
+    private void seekToBoundsCheck(long seekTo, long indexLength) throws LABCorruptedException {
         if (seekTo < 0 || seekTo > indexLength) {
             throw new LABCorruptedException(
                 "Corruption! trying to seek to: " + seekTo + " within file:" + readOnlyFile.getFileName() + " length:" + readOnlyFile.length());
@@ -165,24 +164,7 @@ public class ReadOnlyIndex implements ReadIndex {
         }
     }
 
-
-    public void snapshot(Snapshot snapshot) throws Exception {
-        hideABone.acquire();
-        if (disposed.get() || readOnlyFile.isClosed()) {
-            hideABone.release();
-            return;
-        }
-
-        try {
-            snapshot.file(readOnlyFile.getFile());
-        } catch (Exception x) {
-            hideABone.release();
-            throw x;
-        }
-    }
-
-
-    public void destroy() throws Exception {
+    public void destroy() {
         if (destroy != null) {
             destroy.submit(() -> {
 
@@ -325,15 +307,15 @@ public class ReadOnlyIndex implements ReadIndex {
         return footer.count;
     }
 
-    public long sizeInBytes() throws IOException {
+    public long sizeInBytes() {
         return readOnlyFile.length();
     }
 
-    public long keysSizeInBytes() throws IOException {
+    public long keysSizeInBytes() {
         return footer.keysSizeInBytes;
     }
 
-    public long valuesSizeInBytes() throws IOException {
+    public long valuesSizeInBytes() {
         return footer.valuesSizeInBytes;
     }
 

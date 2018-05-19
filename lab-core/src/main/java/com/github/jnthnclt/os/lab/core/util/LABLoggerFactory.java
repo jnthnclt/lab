@@ -10,16 +10,13 @@ public class LABLoggerFactory {
     }
 
     public static final ConcurrentHashMap<String, LABLogger> loggers = new ConcurrentHashMap();
-    public static final AtomicReference<LABLoggerProvider> LAB_LOGGER_PROVIDER = new AtomicReference<>(name -> {
-        return new SysoutLABLogger(name, SysoutLABLoggerLevel.INFO);
-    });
+    public static final AtomicReference<LABLoggerProvider> LAB_LOGGER_PROVIDER = new AtomicReference<>(
+        name -> new SysoutLABLogger(name, SysoutLABLoggerLevel.INFO));
 
     public static LABLogger getLogger() {
         StackTraceElement[] elements = Thread.currentThread().getStackTrace();
         String name = elements[2].getClassName();
-        return loggers.computeIfAbsent(name, s -> {
-            return LAB_LOGGER_PROVIDER.get().createLogger(name);
-        });
+        return loggers.computeIfAbsent(name, s -> LAB_LOGGER_PROVIDER.get().createLogger(name));
 
     }
 

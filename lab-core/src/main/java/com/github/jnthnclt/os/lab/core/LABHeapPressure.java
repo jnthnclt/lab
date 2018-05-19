@@ -3,8 +3,11 @@ package com.github.jnthnclt.os.lab.core;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABClosedException;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABCorruptedException;
@@ -12,7 +15,6 @@ import com.github.jnthnclt.os.lab.core.util.LABLogger;
 import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
 
 /**
- *
  * @author jonathan.colt
  */
 public class LABHeapPressure {
@@ -29,7 +31,7 @@ public class LABHeapPressure {
     private final long maxHeapPressureInBytes;
     private final long blockOnHeapPressureInBytes;
     private final AtomicLong globalHeapCostInBytes;
-    private final Map<LAB, Boolean> commitableLabs = Maps.newConcurrentMap();
+    private final Map<LAB, Boolean> committableLabs = Maps.newConcurrentMap();
     private volatile boolean running = false;
     private final AtomicLong changed = new AtomicLong();
     private final AtomicLong waiting = new AtomicLong();
@@ -72,17 +74,15 @@ public class LABHeapPressure {
     void commitIfNecessary(LAB lab, long labMaxHeapPressureInBytes, boolean fsyncOnFlush) throws Exception {
         if (lab.approximateHeapPressureInBytes() > labMaxHeapPressureInBytes) {
             LOG.inc("lab>pressure>commit>" + name);
-            commitableLabs.remove(lab);
+            committableLabs.remove(lab);
             lab.commit(fsyncOnFlush, false); // todo config
             stats.pressureCommit.increment();
         } else {
-            commitableLabs.compute(lab, (LAB t, Boolean u) -> {
-                return u == null ? fsyncOnFlush : u || fsyncOnFlush;
-            });
+            committableLabs.compute(lab, (t, u) -> u == null ? fsyncOnFlush : u || fsyncOnFlush);
         }
         long globalHeap = globalHeapCostInBytes.get();
         LOG.set("lab>heap>pressure>" + name, globalHeap);
-        LOG.set("lab>commitable>" + name, commitableLabs.size());
+        LOG.set("lab>committable>" + name, committableLabs.size());
         if (globalHeap > maxHeapPressureInBytes) {
 
             synchronized (globalHeapCostInBytes) {
@@ -150,27 +150,12 @@ public class LABHeapPressure {
             if (!running) {
                 running = true;
                 schedule.submit(() -> {
-                    while (true) {
-                        stats.gc.increment();
-                        try {
-                            long debtInBytes = globalHeapCostInBytes.get() - maxHeapPressureInBytes;
-                            if (debtInBytes <= 0) {
-                                boolean yieldAndContinue = false;
-                                synchronized (globalHeapCostInBytes) {
-                                    if (waiting.get() == 0) {
-                                        running = false;
-                                        return null;
-                                    } else {
-                                        yieldAndContinue = true;
-                                    }
-                                }
-                                if (yieldAndContinue) {
-                                    LOG.warn("yieldAndContinue debt:{} waiting:{}", new Object[]{debtInBytes, waiting.get()});
-                                    Thread.yield();
-                                    continue;
-                                }
-                            }
-                            LAB[] labs = commitableLabs.keySet().toArray(new LAB[0]);
+                    stats.gc.increment();
+                    try {
+                        long debtInBytes = globalHeapCostInBytes.get() - maxHeapPressureInBytes;
+                        LAB[] labs = committableLabs.keySet().toArray(new LAB[0]);
+                        if (labs.length > 0) {
+
                             Freeable[] freeables = new Freeable[labs.length];
                             for (int i = 0; i < labs.length; i++) {
                                 freeables[i] = new Freeable(labs[i],
@@ -182,49 +167,41 @@ public class LABHeapPressure {
                             if (freeHeapStrategy == FreeHeapStrategy.mostBytesFirst) {
                                 Arrays.sort(freeables, (o1, o2) -> -Long.compare(o1.approximateHeapPressureInBytes, o2.approximateHeapPressureInBytes));
                             } else if (freeHeapStrategy == FreeHeapStrategy.oldestAppendFirst) {
-                                Arrays.sort(freeables, (o1, o2) -> Long.compare(o1.lastAppendTimestamp, o2.lastAppendTimestamp));
+                                Arrays.sort(freeables, Comparator.comparingLong(o -> o.lastAppendTimestamp));
                             } else if (freeHeapStrategy == FreeHeapStrategy.longestElapseSinceCommit) {
-                                Arrays.sort(freeables, (o1, o2) -> Long.compare(o1.lastCommitTimestamp, o2.lastCommitTimestamp));
+                                Arrays.sort(freeables, Comparator.comparingLong(o -> o.lastCommitTimestamp));
                             }
 
-                            if (freeables.length == 0) {
-                                LOG.error("LAB has a memory accounting leak. debt:{} waiting:{}", new Object[]{debtInBytes, waiting.get()});
-                                Thread.sleep(1000);
-                            }
-
-                            int i = 0;
-                            while (i < freeables.length && debtInBytes > 0) {
+                            for (int i = 0; i < freeables.length && debtInBytes > 0; i++) {
                                 debtInBytes -= freeables[i].approximateHeapPressureInBytes;
-                                Boolean efsyncOnFlush = this.commitableLabs.remove(freeables[i].lab);
+                                Boolean efsyncOnFlush = this.committableLabs.remove(freeables[i].lab);
                                 if (efsyncOnFlush != null) {
                                     try {
-                                        freeables[i].lab.commit(efsyncOnFlush, false); // todo config
+                                        List<Future<Object>> commit = freeables[i].lab.commit(efsyncOnFlush, false);
+                                        LOG.info("freeHeap waiting on commit..." + freeables[i].lab.name());
+                                        for (Future<Object> c : commit) {
+                                            c.get();
+                                        }
                                         stats.gcCommit.increment();
                                     } catch (LABCorruptedException | LABClosedException x) {
                                         LOG.error("Failed to commit.", x);
                                     } catch (Exception x) {
-                                        this.commitableLabs.compute(freeables[i].lab, (LAB t, Boolean u) -> {
-                                            return u == null ? efsyncOnFlush : (boolean) u || efsyncOnFlush;
-                                        });
+                                        this.committableLabs.compute(freeables[i].lab,
+                                            (t, u) -> u == null ? efsyncOnFlush : (boolean) u || efsyncOnFlush);
                                         throw x;
                                     }
                                 }
-                                i++;
                             }
-                        } catch (InterruptedException ie) {
-                            synchronized (globalHeapCostInBytes) {
-                                running = false;
-                            }
-                            throw ie;
-                        } catch (Exception x) {
-                            LOG.warn("Free heap encountered an error.", x);
-                            Thread.sleep(1000);
                         }
+                        return true;
+                    } catch (InterruptedException ie) {
+                        throw ie;
+                    } catch (Exception x) {
+                        LOG.warn("Free heap encountered an error.", x);
+                        return false;
+                    } finally {
                         synchronized (globalHeapCostInBytes) {
-                            if (waiting.get() == 0) {
-                                running = false;
-                                return null;
-                            }
+                            running = false;
                         }
                     }
                 });
@@ -233,7 +210,7 @@ public class LABHeapPressure {
     }
 
     void close(LAB lab) {
-        commitableLabs.remove(lab);
+        committableLabs.remove(lab);
     }
 
 }

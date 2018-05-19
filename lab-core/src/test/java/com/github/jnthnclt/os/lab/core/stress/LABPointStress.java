@@ -42,7 +42,7 @@ public class LABPointStress {
         File root = Files.createTempDir();
         System.out.println(root.getAbsolutePath());
         AtomicLong globalHeapCostInBytes = new AtomicLong();
-        LABStats stats = new LABStats();
+        LABStats stats = new LABStats(globalHeapCostInBytes);
         ValueIndex index = createIndex(root, indexType, hashIndexLoadFactor, stats, globalHeapCostInBytes);
 
         long totalCardinality = 1_000_000;
