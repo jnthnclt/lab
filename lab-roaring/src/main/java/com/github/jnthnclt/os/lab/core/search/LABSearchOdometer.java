@@ -3,7 +3,6 @@ package com.github.jnthnclt.os.lab.core.search;
 import com.github.jnthnclt.os.lab.core.search.LABSearch.CachedFieldValue;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -72,15 +71,7 @@ public class LABSearchOdometer {
 
     public static class Odometer<V> implements Iterator<List<V>>, Iterable<List<V>> {
 
-        public static void main(String[] args) {
-            //Odometer odometer3 = new Odometer(false, Arrays.asList("x", "y", "z"), null);
-            Odometer odometer2 = new Odometer(false, Arrays.asList("1", "2", "3"), null);
-            Odometer<String> odometer1 = new Odometer<>(true, Arrays.asList("a", "b", "c"), odometer2);
-            for (List<String> o : odometer1) {
-                System.out.println(o.toString());
-            }
 
-        }
 
         private final boolean first;
         public final List<V> values;

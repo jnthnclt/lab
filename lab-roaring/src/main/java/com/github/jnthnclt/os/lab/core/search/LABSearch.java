@@ -60,30 +60,21 @@ public class LABSearch {
         public RoaringBitmap cache;
 
         public CachedFieldValue(String fieldName, String value) {
-            this.fieldName = fieldName;
-            this.value = value == null ? null : value.getBytes(StandardCharsets.UTF_8);
+            this(fieldName, value == null ? null : value.getBytes(StandardCharsets.UTF_8));
         }
 
         public CachedFieldValue(String fieldName, int value) {
-            this.fieldName = fieldName;
-            this.value = UIO.intBytes(value, new byte[4], 0);
+            this(fieldName, UIO.intBytes(value, new byte[4], 0));
         }
 
         public CachedFieldValue(String fieldName, long value) {
-            this.fieldName = fieldName;
-            this.value = UIO.longBytes(value, new byte[8], 0);
+            this(fieldName, UIO.longBytes(value, new byte[8], 0));
         }
 
         public CachedFieldValue(String fieldName, byte[] value) {
             this.fieldName = fieldName;
             this.value = value;
         }
-
-        public CachedFieldValue(CachedFieldValue cachedFieldValue) {
-            this.fieldName = cachedFieldValue.fieldName;
-            this.value = cachedFieldValue.value;
-        }
-
 
         @Override
         public String toString() {

@@ -29,33 +29,6 @@ public class LABSearchIndexUpdates {
     public final Map<Integer, BAHash<byte[]>> fieldNameGuidStoredFieldValue = Maps.newHashMap();
     public final Map<Integer, BAHash<List<Long>>> fieldNameFieldValueGuids = Maps.newHashMap();
 
-    public boolean updateObject(long guid,
-        int fieldNameOrdinal,
-        long timestampMillis,
-        Object fieldValue) {
-
-        if (fieldValue instanceof Long) {
-            update(guid, fieldNameOrdinal, timestampMillis, UIO.longBytes((Long) fieldValue));
-            return true;
-        } else if (fieldValue instanceof Integer) {
-            update(guid, fieldNameOrdinal, timestampMillis, UIO.longBytes((Integer) fieldValue));
-            return true;
-        } else if (fieldValue instanceof String) {
-            update(guid, fieldNameOrdinal, timestampMillis, ((String)fieldValue).getBytes());
-            return true;
-        } else if (fieldValue instanceof int[]) {
-            updateInts(guid, fieldNameOrdinal, timestampMillis, ((int[])fieldValue));
-            return true;
-        } else if (fieldValue instanceof long[]) {
-            updateLongs(guid, fieldNameOrdinal, timestampMillis, ((long[])fieldValue));
-            return true;
-        } else if (fieldValue instanceof String[]) {
-            updateStrings(guid, fieldNameOrdinal, timestampMillis, ((String[])fieldValue));
-            return true;
-        }
-        return false;
-    }
-
     public void updateStrings(long guid,
         int fieldNameOrdinal,
         long timestampMillis,
@@ -100,8 +73,6 @@ public class LABSearchIndexUpdates {
         }
         update(guid, fieldNameOrdinal, timestampMillis, bytes);
     }
-
-
 
     synchronized public void update(long guid,
         int fieldNameOrdinal,
