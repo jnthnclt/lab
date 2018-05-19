@@ -19,7 +19,7 @@ public class LABSearchIndexTest {
         File root = Files.createTempDir();
         System.out.println(root.getAbsolutePath());
         AtomicLong globalHeapCostInBytes = new AtomicLong();
-        LABStats stats = new LABStats();
+        LABStats stats = new LABStats(globalHeapCostInBytes);
         LABIndexProvider labIndexProvider = new LABIndexProvider(globalHeapCostInBytes, stats);
         LABSearchIndex index = new LABSearchIndex(labIndexProvider, root);
 

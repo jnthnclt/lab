@@ -408,17 +408,19 @@ public class LABBitmapIndexTest {
     public static ValueIndex<byte[]> buildValueIndex(String name) throws Exception {
         File root = Files.createTempDir();
         ListeningExecutorService executorService = MoreExecutors.newDirectExecutorService();
-        LABEnvironment environment = new LABEnvironment(new LABStats(), LABEnvironment.buildLABSchedulerThreadPool(1),
+        AtomicLong globalHeapCostInBytes = new AtomicLong();
+        LABStats stats = new LABStats(globalHeapCostInBytes);
+        LABEnvironment environment = new LABEnvironment(stats, LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(1),
             LABEnvironment.buildLABDestroyThreadPool(1),
             null,
             root,
-            new LABHeapPressure(new LABStats(),
+            new LABHeapPressure(stats,
                 executorService,
                 name,
                 1024 * 1024,
                 2 * 1024 * 1024,
-                new AtomicLong(),
+                globalHeapCostInBytes,
                 LABHeapPressure.FreeHeapStrategy.mostBytesFirst
             ),
             4,
@@ -427,6 +429,7 @@ public class LABBitmapIndexTest {
             new StripingBolBufferLocks(2048),
             false,
             false);
+
         return environment.open(new ValueIndexConfig(name,
             64,
             1024 * 1024,
