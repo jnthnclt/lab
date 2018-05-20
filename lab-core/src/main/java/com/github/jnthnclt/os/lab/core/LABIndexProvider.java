@@ -6,6 +6,7 @@ import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
+import com.github.jnthnclt.os.lab.core.guts.LABFiles;
 import com.github.jnthnclt.os.lab.core.guts.LABHashIndexType;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
@@ -18,6 +19,7 @@ public class LABIndexProvider<T> {
 
     private final int cores = Runtime.getRuntime().availableProcessors();
     private final LABStats stats;
+    private final LABFiles labFiles;
     private final LABHeapPressure labHeapPressure;
     private final ExecutorService scheduler = LABEnvironment.buildLABSchedulerThreadPool(cores);
     private final ExecutorService compact = LABEnvironment.buildLABCompactorThreadPool(cores);
@@ -25,8 +27,9 @@ public class LABIndexProvider<T> {
     private final ExecutorService heapScheduler = LABEnvironment.buildLABHeapSchedulerThreadPool(cores);
     private final LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100_000, 4);
 
-    public LABIndexProvider(AtomicLong globalHeapCostInBytes, LABStats stats) {
+    public LABIndexProvider(AtomicLong globalHeapCostInBytes, LABStats stats, LABFiles labFiles) {
         this.stats = stats;
+        this.labFiles = labFiles;
 
         labHeapPressure = new LABHeapPressure(stats,
             heapScheduler,
@@ -46,6 +49,7 @@ public class LABIndexProvider<T> {
 
 
         LABEnvironment environment = new LABEnvironment(stats,
+            labFiles,
             scheduler,
             compact,
             destroy,

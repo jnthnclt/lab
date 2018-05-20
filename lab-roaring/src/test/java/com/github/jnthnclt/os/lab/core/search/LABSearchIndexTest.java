@@ -2,6 +2,7 @@ package com.github.jnthnclt.os.lab.core.search;
 
 import com.github.jnthnclt.os.lab.core.LABIndexProvider;
 import com.github.jnthnclt.os.lab.core.LABStats;
+import com.github.jnthnclt.os.lab.core.guts.LABFiles;
 import com.github.jnthnclt.os.lab.core.search.LABSearch.CachedFieldValue;
 import com.google.common.io.Files;
 import java.io.File;
@@ -21,7 +22,8 @@ public class LABSearchIndexTest {
         System.out.println(root.getAbsolutePath());
         AtomicLong globalHeapCostInBytes = new AtomicLong();
         LABStats stats = new LABStats(globalHeapCostInBytes);
-        LABIndexProvider labIndexProvider = new LABIndexProvider(globalHeapCostInBytes, stats);
+        LABFiles labFiles = new LABFiles();
+        LABIndexProvider labIndexProvider = new LABIndexProvider(globalHeapCostInBytes, stats, labFiles);
         LABSearchIndex index = new LABSearchIndex(labIndexProvider, root);
 
         LABSearchIndexUpdates updates = new LABSearchIndexUpdates();

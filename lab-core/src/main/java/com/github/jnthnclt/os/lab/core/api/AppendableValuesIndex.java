@@ -1,5 +1,6 @@
 package com.github.jnthnclt.os.lab.core.api;
 
+import com.github.jnthnclt.os.lab.core.AppendedVersion;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import java.util.List;
 import java.util.concurrent.Future;
@@ -10,7 +11,9 @@ import java.util.concurrent.Future;
  */
 public interface AppendableValuesIndex<P> {
 
-    boolean append(AppendValues<P> values, boolean fsyncOnFlush, BolBuffer rawEntryBuffer, BolBuffer keyBuffer) throws Exception;
+    AppendedVersion appendedVersion();
+
+    long append(AppendValues<P> values, boolean fsyncOnFlush, BolBuffer rawEntryBuffer, BolBuffer keyBuffer) throws Exception;
 
     List<Future<Object>> commit(boolean fsync, boolean waitIfToFarBehind) throws Exception;
 

@@ -13,6 +13,7 @@ import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.ActiveScan;
 import com.github.jnthnclt.os.lab.core.guts.InterleaveStream;
 import com.github.jnthnclt.os.lab.core.guts.InterleavingStreamFeed;
+import com.github.jnthnclt.os.lab.core.guts.LABFiles;
 import com.github.jnthnclt.os.lab.core.guts.LABHashIndexType;
 import com.github.jnthnclt.os.lab.core.guts.LABIndex;
 import com.github.jnthnclt.os.lab.core.guts.LABIndexProvider;
@@ -54,10 +55,10 @@ public class LAB implements ValueIndex<byte[]> {
     private final ExecutorService compact;
     private final ExecutorService destroy;
     private final LABWAL wal;
-    private final byte[] walId;
-    private final AtomicLong walAppendVersion = new AtomicLong(0);
+    private final byte[] labId;
+    private final AtomicLong appendVersion = new AtomicLong(0);
 
-    private final LABHeapPressure LABHeapPressure;
+    private final LABHeapPressure heapPressure;
     private final long maxHeapPressureInBytes;
     private final int minDebt;
     private final int maxDebt;
@@ -89,10 +90,10 @@ public class LAB implements ValueIndex<byte[]> {
         ExecutorService destroy,
         File root,
         LABWAL wal,
-        byte[] walId,
+        byte[] labId,
         String primaryName,
         int entriesBetweenLeaps,
-        LABHeapPressure LABHeapPressure,
+        LABHeapPressure heapPressure,
         long maxHeapPressureInBytes,
         int minDebt,
         int maxDebt,
@@ -105,7 +106,8 @@ public class LAB implements ValueIndex<byte[]> {
         LABHashIndexType hashIndexType,
         double hashIndexLoadFactor,
         boolean hashIndexEnabled,
-        long deleteTombstonedVersionsAfterMillis) throws Exception {
+        long deleteTombstonedVersionsAfterMillis,
+        LABFiles labFiles) throws Exception {
 
         stats.open.increment();
 
@@ -116,12 +118,14 @@ public class LAB implements ValueIndex<byte[]> {
         this.compact = compact;
         this.destroy = destroy;
         this.wal = wal;
-        this.walId = walId;
-        this.LABHeapPressure = LABHeapPressure;
+        this.labId = labId;
+        this.heapPressure = heapPressure;
         this.maxHeapPressureInBytes = maxHeapPressureInBytes;
-        this.memoryIndex = new LABMemoryIndex(destroy, LABHeapPressure, stats, rawhide, indexProvider.create(rawhide, -1));
+        this.memoryIndex = new LABMemoryIndex(destroy, heapPressure, stats, rawhide, indexProvider.create(rawhide, -1));
         this.primaryName = primaryName;
-        this.rangeStripedCompactableIndexes = new RangeStripedCompactableIndexes(stats,
+        this.rangeStripedCompactableIndexes = new RangeStripedCompactableIndexes(labId,
+            stats,
+            labFiles,
             destroy,
             root,
             primaryName,
@@ -139,6 +143,11 @@ public class LAB implements ValueIndex<byte[]> {
         this.maxDebt = maxDebt;
         this.indexProvider = indexProvider;
         this.hashIndexEnabled = hashIndexEnabled;
+    }
+
+    @Override
+    public AppendedVersion appendedVersion() {
+        return new AppendedVersion(labId, appendVersion.get());
     }
 
     @Override
@@ -588,17 +597,17 @@ public class LAB implements ValueIndex<byte[]> {
     }
 
     @Override
-    public boolean append(AppendValues<byte[]> values, boolean fsyncOnFlush,
+    public long append(AppendValues<byte[]> values, boolean fsyncOnFlush,
         BolBuffer rawEntryBuffer, BolBuffer keyBuffer) throws Exception {
         return internalAppend(values, fsyncOnFlush, -1, rawEntryBuffer, keyBuffer, true);
     }
 
-    public boolean onOpenAppend(AppendValues<byte[]> values, boolean fsyncOnFlush, long overrideMaxHeapPressureInBytes,
+    public long onOpenAppend(AppendValues<byte[]> values, boolean fsyncOnFlush, long overrideMaxHeapPressureInBytes,
         BolBuffer rawEntryBuffer, BolBuffer keyBuffer) throws Exception {
         return internalAppend(values, fsyncOnFlush, overrideMaxHeapPressureInBytes, rawEntryBuffer, keyBuffer, false);
     }
 
-    private boolean internalAppend(
+    private long internalAppend(
         AppendValues<byte[]> values,
         boolean fsyncOnFlush,
         long overrideMaxHeapPressureInBytes,
@@ -607,34 +616,35 @@ public class LAB implements ValueIndex<byte[]> {
         boolean journal) throws Exception {
 
         if (values == null) {
-            return false;
+            return -1;
         }
 
         boolean[] appended = { false };
         commitSemaphore.acquire();
+        long appendedVersion;
         try {
             if (closeRequested.get()) {
                 throw new LABClosedException("");
             }
 
-            long appendVersion;
-            if (journal && wal != null) {
-                appendVersion = walAppendVersion.incrementAndGet();
+            if (journal) {
+                appendedVersion = appendVersion.incrementAndGet();
             } else {
-                appendVersion = -1;
+                appendedVersion = -1;
             }
+
             lastAppendTimestamp = System.currentTimeMillis();
 
             long[] count = { 0 };
             if (journal && wal != null) {
-                wal.appendTx(walId, appendVersion, fsyncOnFlush, activeWAL -> {
+                wal.appendTx(labId, appendedVersion, fsyncOnFlush, activeWAL -> {
                     appended[0] = memoryIndex.append(
                         (stream) -> {
                             return values.consume(
                                 (index, key, timestamp, tombstoned, version, value) -> {
 
                                     BolBuffer rawEntry = rawhide.toRawEntry(key, timestamp, tombstoned, version, value, rawEntryBuffer);
-                                    activeWAL.append(walId, appendVersion, rawEntry);
+                                    activeWAL.append(labId, appendedVersion, rawEntry);
                                     stats.journaledAppend.increment();
 
                                     count[0]++;
@@ -664,8 +674,8 @@ public class LAB implements ValueIndex<byte[]> {
         } finally {
             commitSemaphore.release();
         }
-        LABHeapPressure.commitIfNecessary(this, overrideMaxHeapPressureInBytes >= 0 ? overrideMaxHeapPressureInBytes : maxHeapPressureInBytes, fsyncOnFlush);
-        return appended[0];
+        heapPressure.commitIfNecessary(this, overrideMaxHeapPressureInBytes >= 0 ? overrideMaxHeapPressureInBytes : maxHeapPressureInBytes, fsyncOnFlush);
+        return appended[0] ? appendedVersion : -1;
     }
 
     @Override
@@ -705,18 +715,16 @@ public class LAB implements ValueIndex<byte[]> {
                 } else {
                     stats.commit.increment();
                 }
-                if (wal != null) {
-                    appendVersion = walAppendVersion.incrementAndGet();
-                }
+                appendVersion = this.appendVersion.incrementAndGet();
                 flushingMemoryIndex = memoryIndex;
                 LABIndex<BolBuffer, BolBuffer> labIndex = indexProvider.create(rawhide, flushingMemoryIndex.poweredUpTo());
-                memoryIndex = new LABMemoryIndex(destroy, LABHeapPressure, stats, rawhide, labIndex);
+                memoryIndex = new LABMemoryIndex(destroy, heapPressure, stats, rawhide, labIndex);
             } finally {
                 commitSemaphore.release(Short.MAX_VALUE);
             }
 
             // flush existing memory index to disk
-            rangeStripedCompactableIndexes.append(rawhideName, flushingMemoryIndex, fsync, keyBuffer, entryBuffer, entryKeyBuffer);
+            rangeStripedCompactableIndexes.append(rawhideName, appendVersion, flushingMemoryIndex, fsync, keyBuffer, entryBuffer, entryKeyBuffer);
 
             // destroy existing memory index
             LABMemoryIndex destroyableMemoryIndex;
@@ -731,7 +739,7 @@ public class LAB implements ValueIndex<byte[]> {
 
             // commit to WAL
             if (wal != null) {
-                wal.commit(walId, appendVersion, fsync);
+                wal.commit(labId, appendVersion, fsync);
             }
             lastCommitTimestamp = System.currentTimeMillis();
 
@@ -803,7 +811,7 @@ public class LAB implements ValueIndex<byte[]> {
 
     @Override
     public void close(boolean flushUncommited, boolean fsync) throws Exception {
-        LABHeapPressure.close(this);
+        heapPressure.close(this);
 
         if (!closeRequested.compareAndSet(false, true)) {
             throw new LABClosedException("");

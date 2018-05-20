@@ -8,6 +8,7 @@ import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABKeyValueRawhide;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
+import com.github.jnthnclt.os.lab.core.guts.LABFiles;
 import com.github.jnthnclt.os.lab.core.guts.LABIndexProvider;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
@@ -46,6 +47,7 @@ public class LABEnvironment {
 
     private final File labRoot;
     private final LABStats stats;
+    private final LABFiles labFiles;
     private final ExecutorService scheduler;
     private final ExecutorService compact;
     private final ExecutorService destroy;
@@ -87,12 +89,13 @@ public class LABEnvironment {
     }
 
     public LABEnvironment(LABStats stats,
+        LABFiles labFiles,
         ExecutorService scheduler,
         ExecutorService compact,
         final ExecutorService destroy,
         LABWALConfig walConfig,
         File labRoot,
-        LABHeapPressure labHeapPressure,
+        LABHeapPressure heapPressure,
         int minMergeDebt,
         int maxMergeDebt,
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache,
@@ -105,11 +108,12 @@ public class LABEnvironment {
         register(MemoryRawEntryFormat.NAME, MemoryRawEntryFormat.SINGLETON);
 
         this.stats = stats;
+        this.labFiles = labFiles;
         this.scheduler = scheduler;
         this.compact = compact;
         this.destroy = destroy;
         this.labRoot = labRoot;
-        this.labHeapPressure = labHeapPressure;
+        this.labHeapPressure = heapPressure;
         this.minMergeDebt = minMergeDebt;
         this.maxMergeDebt = maxMergeDebt;
         this.leapsCache = leapsCache;
@@ -305,7 +309,8 @@ public class LABEnvironment {
             config.hashIndexType,
             config.hashIndexLoadFactor,
             config.hashIndexEnabled,
-            config.deleteTombstonedVersionsAfterMillis);
+            config.deleteTombstonedVersionsAfterMillis,
+            labFiles);
 
     }
 

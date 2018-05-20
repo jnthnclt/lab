@@ -7,6 +7,7 @@ import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
+import com.github.jnthnclt.os.lab.core.guts.LABFiles;
 import com.github.jnthnclt.os.lab.core.guts.LABHashIndexType;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
 import com.google.common.collect.Lists;
@@ -410,7 +411,10 @@ public class LABBitmapIndexTest {
         ListeningExecutorService executorService = MoreExecutors.newDirectExecutorService();
         AtomicLong globalHeapCostInBytes = new AtomicLong();
         LABStats stats = new LABStats(globalHeapCostInBytes);
-        LABEnvironment environment = new LABEnvironment(stats, LABEnvironment.buildLABSchedulerThreadPool(1),
+        LABFiles labFiles = new LABFiles();
+        LABEnvironment environment = new LABEnvironment(stats,
+            labFiles,
+            LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(1),
             LABEnvironment.buildLABDestroyThreadPool(1),
             null,

@@ -101,7 +101,8 @@ public class LABValidationNGTest {
             TestUtils.indexType,
             0.75d,
             true,
-            Long.MAX_VALUE);
+            Long.MAX_VALUE,
+            null);
 
         int writerCount = 12;
         ExecutorService writers = Executors.newFixedThreadPool(writerCount, new ThreadFactoryBuilder().setNameFormat("writers-%d").build());
@@ -243,7 +244,8 @@ public class LABValidationNGTest {
             TestUtils.indexType,
             0.75d,
             true,
-            Long.MAX_VALUE);
+            Long.MAX_VALUE,
+            null);
 
         validationTest(lab);
 

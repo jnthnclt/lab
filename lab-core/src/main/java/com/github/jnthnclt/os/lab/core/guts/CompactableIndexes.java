@@ -184,6 +184,7 @@ public class CompactableIndexes {
                     };
                 }
             }
+
             if (start < compactorCheckVersion.get()) {
                 start = compactorCheckVersion.get();
             } else {
@@ -243,7 +244,7 @@ public class CompactableIndexes {
         return splittableIfValuesLargerThanBytes > 0 && worstCaseValuesSizeInBytes > splittableIfValuesLargerThanBytes;
     }
 
-    private Void buildSplitter(IndexFactory leftHalfIndexFactory,
+    private Splitter buildSplitter(IndexFactory leftHalfIndexFactory,
         IndexFactory rightHalfIndexFactory,
         CommitIndex commitIndex,
         boolean fsync) throws Exception {
@@ -261,7 +262,7 @@ public class CompactableIndexes {
             Arrays.fill(merging, true);
             all = indexes;
         }
-        return new Splitter(all, allVersion, leftHalfIndexFactory, rightHalfIndexFactory, commitIndex, fsync).call();
+        return new Splitter(all, allVersion, leftHalfIndexFactory, rightHalfIndexFactory, commitIndex, fsync);
 
     }
 

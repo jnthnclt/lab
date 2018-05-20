@@ -50,6 +50,7 @@ public class LABWalTest {
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
         LABEnvironment env = new LABEnvironment(labStats,
+            null,
             LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(4),
             LABEnvironment.buildLABDestroyThreadPool(1),
@@ -159,6 +160,7 @@ public class LABWalTest {
 
         //System.out.println("Reopening...");
         env = new LABEnvironment(labStats,
+            null,
             LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(4),
             LABEnvironment.buildLABDestroyThreadPool(1),
@@ -259,6 +261,7 @@ public class LABWalTest {
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
 
         LABEnvironment env = new LABEnvironment(stats,
+            null,
             LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(4),
             LABEnvironment.buildLABDestroyThreadPool(1),

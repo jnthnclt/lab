@@ -90,7 +90,7 @@ public class IndexStressNGTest {
                             (ids) -> {
                                 File mergedFile = ids.get(0).toFile(root);
                                 LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-                                return new ReadOnlyIndex(destroy, ids.get(0), new ReadOnlyFile(mergedFile),
+                                return new ReadOnlyIndex(null, destroy, ids.get(0), new ReadOnlyFile(mergedFile),
                                     rawhide, leapsCache);
                             }));
                     if (compactor != null) {
@@ -207,7 +207,7 @@ public class IndexStressNGTest {
             maxKey.setValue(Math.max(maxKey.longValue(), lastKey));
             LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
             indexs.append(
-                new ReadOnlyIndex(destroy, id, new ReadOnlyFile(indexFiler), rawhide, leapsCache));
+                new ReadOnlyIndex(null, destroy, id, new ReadOnlyFile(indexFiler), rawhide, leapsCache));
 
             count += batchSize;
 

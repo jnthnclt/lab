@@ -216,6 +216,7 @@ public class GlobalHeapStressNGTest {
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
 
         LABEnvironment env = new LABEnvironment(stats,
+            null,
             LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(Math.max(1,Runtime.getRuntime().availableProcessors()-1)), // compact
             LABEnvironment.buildLABDestroyThreadPool(1), // destroy

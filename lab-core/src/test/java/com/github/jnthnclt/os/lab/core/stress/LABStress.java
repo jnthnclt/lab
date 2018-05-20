@@ -10,6 +10,7 @@ import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABFixedWidthKeyFixedWidthValueRawhide;
+import com.github.jnthnclt.os.lab.core.guts.LABFiles;
 import com.github.jnthnclt.os.lab.core.guts.LABHashIndexType;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
@@ -28,13 +29,15 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import org.testng.annotations.Test;
+import org.testng.collections.Lists;
 
 /**
  * @author jonathan.colt
  */
 public class LABStress {
 
-    private static final LABLogger LOG = LABLoggerFactory.getLogger();;
+    private static final LABLogger LOG = LABLoggerFactory.getLogger();
+
 
     @Test(enabled = false)
     public void stressWritesTest() throws Exception {
@@ -45,15 +48,17 @@ public class LABStress {
         System.out.println(root.getAbsolutePath());
         AtomicLong globalHeapCostInBytes = new AtomicLong();
         LABStats stats = new LABStats(globalHeapCostInBytes);
-        ValueIndex index = createIndex(root, indexType, hashIndexLoadFactor, stats, globalHeapCostInBytes);
+        LABFiles labFiles = new LABFiles();
+        ValueIndex index = createIndex(root, indexType, hashIndexLoadFactor, stats, null, globalHeapCostInBytes);
 
         long totalCardinality = 100_000_000;
 
         printLabels();
 
         String write = stress(true,
-                "warm:jit",
+            "warm:jit",
             stats,
+            labFiles,
             index,
             0,
             totalCardinality,
@@ -84,7 +89,7 @@ public class LABStress {
         globalHeapCostInBytes = new AtomicLong();
         stats = new LABStats(globalHeapCostInBytes);
         root = Files.createTempDir();
-        index = createIndex(root, indexType, hashIndexLoadFactor, stats, globalHeapCostInBytes);
+        index = createIndex(root, indexType, hashIndexLoadFactor, stats, labFiles, globalHeapCostInBytes);
 
         // ---
         System.out.println("Write Stress:");
@@ -105,17 +110,18 @@ public class LABStress {
             int efi = i;
             futures.add(executorService.submit(() -> {
                 String write1 = stress(true,
-                        "stress:RW",
-                        stats1,
-                        index1,
-                        (totalCardinality1 / threadCount) * efi,
-                        totalCardinality1 / threadCount,
-                        100_000, // writesPerSecond
-                        (2_000_000), //writeCount
-                        1, //readForNSeconds
-                        1, // readCount
-                        false,
-                        globalHeapCostInBytes1); // removes
+                    "stress:RW",
+                    stats1,
+                    labFiles,
+                    index1,
+                    (totalCardinality1 / threadCount) * efi,
+                    totalCardinality1 / threadCount,
+                    100_000, // writesPerSecond
+                    (2_000_000), //writeCount
+                    1, //readForNSeconds
+                    1, // readCount
+                    false,
+                    globalHeapCostInBytes1); // removes
                 return write1;
             }));
         }
@@ -151,8 +157,9 @@ public class LABStress {
         printLabels();
 
         write = stress(true,
-                "stress:R",
+            "stress:R",
             stats,
+            labFiles,
             index,
             0,
             totalCardinality,
@@ -185,6 +192,7 @@ public class LABStress {
         LABHashIndexType indexType,
         double hashIndexLoadFactor,
         LABStats stats,
+        LABFiles labFiles,
         AtomicLong globalHeapCostInBytes) throws Exception {
 
         System.out.println("Created root " + root);
@@ -198,8 +206,9 @@ public class LABStress {
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
 
         LABEnvironment env = new LABEnvironment(stats,
+            labFiles,
             LABEnvironment.buildLABSchedulerThreadPool(1),
-            LABEnvironment.buildLABCompactorThreadPool(Math.max(1,Runtime.getRuntime().availableProcessors()-1)), // compact
+            LABEnvironment.buildLABCompactorThreadPool(Math.max(1, Runtime.getRuntime().availableProcessors() - 1)), // compact
             LABEnvironment.buildLABDestroyThreadPool(1), // destroy
             null,
             root, // rootFile
@@ -234,6 +243,7 @@ public class LABStress {
     private String stress(boolean report,
         String name,
         LABStats stats,
+        LABFiles files,
         ValueIndex index,
         long offset,
         long totalCardinality,
@@ -265,6 +275,16 @@ public class LABStress {
         BolBuffer rawEntryBuffer = new BolBuffer();
         BolBuffer keyBuffer = new BolBuffer();
         while ((writeCount > 0 && totalWrites < writeCount) || (readCount > 0 && totalReads < readCount)) {
+
+
+            if (!files.isEmpty()) {
+                files.take((addedFiles, removedFiles) -> {
+                    System.out.println("Added:" + Lists.newArrayList(addedFiles));
+                    System.out.println("Removed:" + Lists.newArrayList(removedFiles));
+                    return true;
+                });
+            }
+
             long start = System.currentTimeMillis();
             long writeElapse = 0;
             double writeRate = 0;
@@ -273,7 +293,7 @@ public class LABStress {
                 index.append((stream) -> {
                     for (int i = 0; i < writesPerSecond; i++) {
                         count.incrementAndGet();
-                        long key = offset + (long)(rand.nextDouble() * totalCardinality);
+                        long key = offset + (long) (rand.nextDouble() * totalCardinality);
                         stream.stream(-1,
                             UIO.longBytes(key, keyBytes, 0),
                             System.currentTimeMillis(),
@@ -305,7 +325,7 @@ public class LABStress {
                 while (System.currentTimeMillis() - s < (1000 * readForNSeconds)) {
 
                     index.get((KeyStream keyStream) -> {
-                        long k = (long)(rand.nextDouble() * totalCardinality);
+                        long k = (long) (rand.nextDouble() * totalCardinality);
                         UIO.longBytes(k, keyBytes, 0);
                         keyStream.key(0, keyBytes, 0, keyBytes.length);
                         return true;
@@ -344,37 +364,37 @@ public class LABStress {
 
 
                 System.out.println(name + ":" + c
-                        + " " + writesPerSecond
-                        + " " + writeRate
-                        + " " + writeElapse
-                        + " " + reads
-                        + " " + readRate
-                        + " " + readElapse
-                        + " " + hits.getAndSet(0)
-                        + " " + misses.getAndSet(0)
-                        + " " + index.count()
-                        + " " + stats.debt.sumThenReset()
-                        + " " + stats.open.sumThenReset()
-                        + " " + stats.closed.sumThenReset()
-                        + " " + stats.append.sumThenReset()
-                        + " " + stats.journaledAppend.sumThenReset()
-                        + " " + stats.merging.sumThenReset()
-                        + " " + stats.merged.sumThenReset()
-                        + " " + stats.spliting.sumThenReset()
-                        + " " + stats.splits.sumThenReset()
-                        + " " + stats.slabbed.sumThenReset()
-                        + " " + stats.allocationed.sumThenReset()
-                        + " " + stats.released.sumThenReset()
-                        + " " + stats.freed.sumThenReset()
-                        + " " + stats.gc.sumThenReset()
-                        + " " + stats.gcCommit.sumThenReset()
-                        + " " + stats.pressureCommit.sumThenReset()
-                        + " " + stats.commit.sumThenReset()
-                        + " " + stats.fsyncedCommit.sumThenReset()
-                        + " " + stats.bytesWrittenToWAL.sumThenReset()
-                        + " " + stats.bytesWrittenAsIndex.sumThenReset()
-                        + " " + stats.bytesWrittenAsSplit.sumThenReset()
-                        + " " + stats.bytesWrittenAsMerge.sumThenReset()
+                    + " " + writesPerSecond
+                    + " " + writeRate
+                    + " " + writeElapse
+                    + " " + reads
+                    + " " + readRate
+                    + " " + readElapse
+                    + " " + hits.getAndSet(0)
+                    + " " + misses.getAndSet(0)
+                    + " " + index.count()
+                    + " " + stats.debt.sumThenReset()
+                    + " " + stats.open.sumThenReset()
+                    + " " + stats.closed.sumThenReset()
+                    + " " + stats.append.sumThenReset()
+                    + " " + stats.journaledAppend.sumThenReset()
+                    + " " + stats.merging.sumThenReset()
+                    + " " + stats.merged.sumThenReset()
+                    + " " + stats.spliting.sumThenReset()
+                    + " " + stats.splits.sumThenReset()
+                    + " " + stats.slabbed.sumThenReset()
+                    + " " + stats.allocationed.sumThenReset()
+                    + " " + stats.released.sumThenReset()
+                    + " " + stats.freed.sumThenReset()
+                    + " " + stats.gc.sumThenReset()
+                    + " " + stats.gcCommit.sumThenReset()
+                    + " " + stats.pressureCommit.sumThenReset()
+                    + " " + stats.commit.sumThenReset()
+                    + " " + stats.fsyncedCommit.sumThenReset()
+                    + " " + stats.bytesWrittenToWAL.sumThenReset()
+                    + " " + stats.bytesWrittenAsIndex.sumThenReset()
+                    + " " + stats.bytesWrittenAsSplit.sumThenReset()
+                    + " " + stats.bytesWrittenAsMerge.sumThenReset()
                 );
             }
 

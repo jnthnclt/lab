@@ -62,7 +62,8 @@ public class IndexNGTest {
         write.closeAppendable(false);
 
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-        ReadOnlyIndex leapsAndBoundsIndex = new ReadOnlyIndex(destroy,
+        ReadOnlyIndex leapsAndBoundsIndex = new ReadOnlyIndex(null,
+            destroy,
             indexRangeId,
             new ReadOnlyFile(indexFiler),
             rawhide,
@@ -165,7 +166,7 @@ public class IndexNGTest {
         disIndex.closeAppendable(false);
 
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-        assertions(new ReadOnlyIndex(destroy, indexRangeId, new ReadOnlyFile(indexFiler), rawhide,
+        assertions(new ReadOnlyIndex(null, destroy, indexRangeId, new ReadOnlyFile(indexFiler), rawhide,
             leapsCache), count, step, desired);
 
     }

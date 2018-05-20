@@ -49,6 +49,7 @@ public class LABEnvironmentNGTest {
                 LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
 
             LABEnvironment env = new LABEnvironment(labStats,
+                null,
                 LABEnvironment.buildLABSchedulerThreadPool(1),
                 LABEnvironment.buildLABCompactorThreadPool(4),
                 LABEnvironment.buildLABDestroyThreadPool(1),
@@ -91,6 +92,7 @@ public class LABEnvironmentNGTest {
                 new AtomicLong(),
                 LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
             env = new LABEnvironment(labStats,
+                null,
                 LABEnvironment.buildLABSchedulerThreadPool(1),
                 LABEnvironment.buildLABCompactorThreadPool(4),
                 LABEnvironment.buildLABDestroyThreadPool(1),
@@ -120,6 +122,7 @@ public class LABEnvironmentNGTest {
                 new AtomicLong(),
                 LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
             env = new LABEnvironment(labStats,
+                null,
                 LABEnvironment.buildLABSchedulerThreadPool(1),
                 LABEnvironment.buildLABCompactorThreadPool(4), LABEnvironment.buildLABDestroyThreadPool(1),
                 null,
@@ -169,6 +172,7 @@ public class LABEnvironmentNGTest {
                 new AtomicLong(),
                 LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
             env = new LABEnvironment(labStats,
+                null,
                 LABEnvironment.buildLABSchedulerThreadPool(1),
                 LABEnvironment.buildLABCompactorThreadPool(4), LABEnvironment.buildLABDestroyThreadPool(1),
                 null,
@@ -253,6 +257,7 @@ public class LABEnvironmentNGTest {
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
 
         LABEnvironment env = new LABEnvironment(stats1,
+            null,
             LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(4),
             LABEnvironment.buildLABDestroyThreadPool(1),
@@ -300,6 +305,7 @@ public class LABEnvironmentNGTest {
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
 
         env = new LABEnvironment(stats,
+            null,
             LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(4),
             LABEnvironment.buildLABDestroyThreadPool(1),
@@ -340,6 +346,7 @@ public class LABEnvironmentNGTest {
             globalHeapCostInBytes1,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
         LABEnvironment env = new LABEnvironment(stats,
+            null,
             LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(4),
             LABEnvironment.buildLABDestroyThreadPool(1),
@@ -391,6 +398,7 @@ public class LABEnvironmentNGTest {
             globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
         env = new LABEnvironment(stats1,
+            null,
             LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(4),
             LABEnvironment.buildLABDestroyThreadPool(1),
@@ -431,6 +439,7 @@ public class LABEnvironmentNGTest {
             globalHeapCostInBytes2,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
         env = new LABEnvironment(stats2,
+            null,
             LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(4),
             LABEnvironment.buildLABDestroyThreadPool(1),

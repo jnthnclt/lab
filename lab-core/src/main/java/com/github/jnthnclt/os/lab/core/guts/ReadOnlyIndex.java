@@ -7,6 +7,7 @@ import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
+import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
@@ -21,6 +22,7 @@ public class ReadOnlyIndex implements ReadIndex {
     private static final AtomicLong CACHE_KEYS = new AtomicLong();
     private final IndexRangeId id;
     private final ReadOnlyFile readOnlyFile;
+    private final LABFiles labFiles;
     private final ExecutorService destroy;
     private final AtomicBoolean disposed = new AtomicBoolean(false);
     private final LRUConcurrentBAHLinkedHash<Leaps> leapsCache;
@@ -38,11 +40,14 @@ public class ReadOnlyIndex implements ReadIndex {
 
     private final long cacheKey = CACHE_KEYS.incrementAndGet();
 
-    public ReadOnlyIndex(ExecutorService destroy,
+    public ReadOnlyIndex(LABFiles labFiles,
+        ExecutorService destroy,
         IndexRangeId id,
         ReadOnlyFile readOnlyFile,
         Rawhide rawhide,
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache) throws Exception {
+
+        this.labFiles = labFiles;
         this.destroy = destroy;
         this.id = id;
         this.readOnlyFile = readOnlyFile;
@@ -54,6 +59,10 @@ public class ReadOnlyIndex implements ReadIndex {
         this.footer = readFooter(readOnlyFile.pointerReadable(-1));
         this.rawhide = rawhide;
         this.leapsCache = leapsCache;
+    }
+
+    public File getFile() {
+        return readOnlyFile.getFile();
     }
 
     private Footer readFooter(PointerReadableByteBufferFile readable) throws IOException, LABCorruptedException {
@@ -171,6 +180,9 @@ public class ReadOnlyIndex implements ReadIndex {
                 hideABone.acquire(Short.MAX_VALUE);
                 disposed.set(true);
                 try {
+                    if (labFiles != null) {
+                        labFiles.delete(readOnlyFile.getFile());
+                    }
                     readOnlyFile.close();
                     readOnlyFile.delete();
                 } finally {
