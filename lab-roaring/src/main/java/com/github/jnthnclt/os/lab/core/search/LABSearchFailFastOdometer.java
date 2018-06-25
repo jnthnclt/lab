@@ -33,12 +33,20 @@ public class LABSearchFailFastOdometer {
 
         FailFastdometer<CachedFieldValue,E> failFastdometer = null;
         for (Expansion expansion : expansions) {
-            List<CachedFieldValue> cachedFieldValues = expansion.values.stream().map(s -> new CachedFieldValue(expansion.name, s)).collect(Collectors
- .toList());
-            failFastdometer = new FailFastdometer<>(cachedFieldValues, failFastdometer);
+            List<CachedFieldValue> cachedFieldValues = expansion.values.stream()
+                .map(s -> new CachedFieldValue(expansion.name, s))
+                .collect(Collectors.toList());
+
+            List<CachedFieldValue> values = Lists.newArrayList(cachedFieldValues);
+            for (int i = 0; i < values.size(); i++) {
+                if (values.get(i).value == null) {
+                    values.set(i, null);
+                }
+            }
+            failFastdometer = new FailFastdometer<>(values, failFastdometer);
         }
 
-        return new FailFastdometer<>(failFastdometer.values, failFastdometer.next);
+        return failFastdometer;
     }
 
     private static Set<String> fieldSet(LABSearchIndex index, boolean allowWildcards, String expansion, List<String> expansionValue) throws Exception {
