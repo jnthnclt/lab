@@ -31,7 +31,7 @@ public class LABSearchFailFastOdometer {
         }
         Collections.sort(expansions);
 
-        FailFastdometer<CachedFieldValue,E> failFastdometer = null;
+        FailFastdometer<CachedFieldValue, E> failFastdometer = null;
         for (Expansion expansion : expansions) {
             List<CachedFieldValue> cachedFieldValues = expansion.values.stream()
                 .map(s -> new CachedFieldValue(expansion.name, s))
@@ -86,7 +86,7 @@ public class LABSearchFailFastOdometer {
     }
 
     public interface FailFastOdometerEdge<V, E> {
-        E compute(E prior, V current);
+        E compute(V prior, E priorResult, V current);
     }
 
     public static class FailFastdometer<V, E> {
@@ -95,6 +95,7 @@ public class LABSearchFailFastOdometer {
         public final FailFastdometer<V, E> next;
         private int i = 0;
         private E edge;
+        private V edgeValue;
 
         public FailFastdometer(List<V> values, FailFastdometer<V, E> next) {
             this.values = values;
@@ -113,8 +114,8 @@ public class LABSearchFailFastOdometer {
             return i < values.size() && (next != null ? next.hasNext() : true);
         }
 
-        public FailFastOdometerResult<V, E> next(List<V> parts, E prior, FailFastOdometerEdge<V, E> failFastOdometerEdge) {
-            E e = internalNext(parts, prior, failFastOdometerEdge);
+        public FailFastOdometerResult<V, E> next(List<V> parts, V priorValue, E priorResult, FailFastOdometerEdge<V, E> failFastOdometerEdge) {
+            E e = internalNext(parts, priorValue, priorResult, failFastOdometerEdge);
             advance();
             if (e == null) {
                 return null;
@@ -122,30 +123,32 @@ public class LABSearchFailFastOdometer {
             return new FailFastOdometerResult<>(parts, e);
         }
 
-        private E internalNext(List<V> parts, E prior, FailFastOdometerEdge<V, E> failFastOdometerEdge) {
+        private E internalNext(List<V> parts, V priorValue, E priorResult, FailFastOdometerEdge<V, E> failFastOdometerEdge) {
             V currentV = values.get(i);
             parts.add(currentV);
             if (next == null) {
                 if (currentV == null) {
-                    return prior;
+                    return priorResult;
                 } else {
-                    return failFastOdometerEdge.compute(prior, currentV);
+                    return failFastOdometerEdge.compute(priorValue, priorResult, currentV);
                 }
             } else {
                 if (this.edge == null) {
                     if (currentV == null) {
-                        this.edge = prior;
+                        this.edge = priorResult;
+                        this.edgeValue = priorValue;
                     } else {
-                        E compute = failFastOdometerEdge.compute(prior, currentV);
+                        E compute = failFastOdometerEdge.compute(priorValue, priorResult, currentV);
                         if (compute == null) {
                             next.reset();
                             i++;
                             return null;
                         }
                         this.edge = compute;
+                        this.edgeValue = currentV;
                     }
                 }
-                return next.internalNext(parts, this.edge, failFastOdometerEdge);
+                return next.internalNext(parts, this.edgeValue, this.edge, failFastOdometerEdge);
             }
         }
 
@@ -197,8 +200,6 @@ public class LABSearchFailFastOdometer {
     }
 
 
-
-
     public static void main(String[] args) {
 
         Map<String, RoaringBitmap> index = Maps.newHashMap();
@@ -212,7 +213,7 @@ public class LABSearchFailFastOdometer {
         index.put("c", create(1, 2));
 
         FailFastdometer failFastdometer3 = new FailFastdometer(Arrays.asList("a", "b", "c", null), null);
-        FailFastdometer failFastdometer2 = new FailFastdometer(Arrays.asList("1", null, "3","4"), failFastdometer3);
+        FailFastdometer failFastdometer2 = new FailFastdometer(Arrays.asList("1", null, "3", "4"), failFastdometer3);
         FailFastdometer<String, RoaringBitmap> failFastdometer1 = new FailFastdometer<>(Arrays.asList("x", "y"), failFastdometer2);
 
         List<String> parts = Lists.newArrayList();
@@ -223,15 +224,16 @@ public class LABSearchFailFastOdometer {
 
         while (failFastdometer1.hasNext()) {
             parts.clear();
-            FailFastOdometerResult<String, RoaringBitmap> r = failFastdometer1.next(parts, all, (prior, current) -> {
-                RoaringBitmap got = index.get(current);
-                RoaringBitmap and = RoaringBitmap.and(prior, got);
-                System.out.println(current + " " + and);
-                if (and.getCardinality() == 0) {
-                    return null;
-                }
-                return and;
-            });
+            FailFastOdometerResult<String, RoaringBitmap> r = failFastdometer1.next(parts, "all", all,
+                (priorValue, priorResult, current) -> {
+                    RoaringBitmap got = index.get(current);
+                    RoaringBitmap and = RoaringBitmap.and(priorResult, got);
+                    System.out.println(priorValue+"->"+current + " " + and);
+                    if (and.getCardinality() == 0) {
+                        return null;
+                    }
+                    return and;
+                });
             if (r != null) {
                 System.out.println("Result:" + r.pattern + " " + r.edge);
             }
