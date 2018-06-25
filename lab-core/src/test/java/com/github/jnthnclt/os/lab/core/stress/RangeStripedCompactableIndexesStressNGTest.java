@@ -28,9 +28,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.commons.lang3.mutable.MutableBoolean;
-import org.apache.commons.lang3.mutable.MutableLong;
 import org.testng.annotations.Test;
 
 /**
@@ -85,10 +84,10 @@ public class RangeStripedCompactableIndexesStressNGTest {
         int minMergeDebt = 4;
 
         AtomicLong merge = new AtomicLong();
-        MutableLong maxKey = new MutableLong();
-        MutableBoolean running = new MutableBoolean(true);
-        MutableBoolean merging = new MutableBoolean(true);
-        MutableLong stopGets = new MutableLong(System.currentTimeMillis() + 4_000);
+        AtomicLong maxKey = new AtomicLong();
+        AtomicBoolean running = new AtomicBoolean(true);
+        AtomicBoolean merging = new AtomicBoolean(true);
+        AtomicLong stopGets = new AtomicLong(System.currentTimeMillis() + 4_000);
 
         Future<Object> pointGets = Executors.newSingleThreadExecutor().submit(() -> {
 
@@ -101,7 +100,7 @@ public class RangeStripedCompactableIndexesStressNGTest {
             byte[] key = new byte[8];
 
             if (!concurrentReads) {
-                while (merging.isTrue() || running.isTrue()) {
+                while (merging.get() || running.get()) {
                     Thread.sleep(100);
                 }
             }
@@ -236,7 +235,7 @@ public class RangeStripedCompactableIndexesStressNGTest {
                 }
             }
 
-            maxKey.setValue(Math.max(maxKey.longValue(), lastKey));
+            maxKey.set(Math.max(maxKey.longValue(), lastKey));
 
             count += batchSize;
 
@@ -244,10 +243,10 @@ public class RangeStripedCompactableIndexesStressNGTest {
                 ((count / (double) (System.currentTimeMillis() - start))) * 1000) + " mergeDebut:" + indexs.debt());
         }
 
-        running.setValue(false);
+        running.set(false);
         /*System.out.println("Sleeping 10 sec before gets...");
         Thread.sleep(10_000L);*/
-        merging.setValue(false);
+        merging.set(false);
         System.out.println(
             " **************   Total time to add " + (numBatches * batchSize) + " including all merging: "
                 + (System.currentTimeMillis() - start) + " millis *****************");

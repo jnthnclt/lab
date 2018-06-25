@@ -15,8 +15,6 @@ import com.github.jnthnclt.os.lab.core.guts.Leaps;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.api.UIO;
-import com.github.jnthnclt.os.lab.core.util.LABLogger;
-import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
 import com.google.common.io.Files;
 import java.io.File;
 import java.text.NumberFormat;
@@ -32,12 +30,10 @@ import org.testng.annotations.Test;
  */
 public class LABPointStress {
 
-    private static final LABLogger LOG = LABLoggerFactory.getLogger();
-
-    @Test(enabled = false)
+    @Test(enabled = true)
     public void stressWritesTest() throws Exception {
 
-        LABHashIndexType indexType = LABHashIndexType.cuckoo;
+        LABHashIndexType indexType = LABHashIndexType.fibCuckoo;
         double hashIndexLoadFactor = 2d;
         File root = Files.createTempDir();
         System.out.println(root.getAbsolutePath());
@@ -76,8 +72,6 @@ public class LABPointStress {
             skipread(index, totalCardinality, i);
             bruteread(index, totalCardinality, i);
         }
-
-
     }
 
     private void write(
@@ -98,6 +92,8 @@ public class LABPointStress {
         byte[] valuesBytes = new byte[8];
         BolBuffer rawEntryBuffer = new BolBuffer();
         BolBuffer keyBuffer = new BolBuffer();
+        int accumRate = 0;
+        int loops = 0;
         while (writeCount > 0) {
             long start = System.currentTimeMillis();
             int ef_writeCount = writeCount;
@@ -116,8 +112,13 @@ public class LABPointStress {
             }, true, rawEntryBuffer, keyBuffer);
             writeCount -= 100_000;
             long elapse = System.currentTimeMillis() - start;
-            System.out.println("write:" + numberInstance.format(count.get()) + " in " + elapse + " rate:" + (int) ((100_000 / (double) elapse) * 1000));
+            int rate = (int) ((100_000 / (double) elapse) * 1000);
+            accumRate += rate;
+            System.out.println("write:" + numberInstance.format(count.get()) + " in " + elapse + "millis rate:" + rate);
+            loops++;
         }
+        System.out.println("AvgRate:" + (accumRate/(double)loops));
+
 
     }
 
@@ -158,7 +159,7 @@ public class LABPointStress {
 
         System.out.println(
             " pointRead:" + numberInstance.format(
-                count) + " in " + readElapse + " rate:" + numberInstance.format(
+                count) + " in " + readElapse + "millis rate:" + numberInstance.format(
                 (int) ((count / (double) readElapse) * 1000)) + " miss:" + misses.get()
                 + " hits:" + hits.get());
 
@@ -206,7 +207,7 @@ public class LABPointStress {
 
         System.out.println(
             " skipread:" + numberInstance.format(
-                count) + " in " + readElapse + " rate:" + numberInstance.format(
+                count) + " in " + readElapse + "millis rate:" + numberInstance.format(
                 (int) ((count / (double) readElapse) * 1000)) + " miss:" + misses.get() +
                 " hits:" + hits.get());
 
@@ -225,8 +226,7 @@ public class LABPointStress {
         AtomicLong hits = new AtomicLong();
 
 
-
-        AtomicLong k  = new AtomicLong();
+        AtomicLong k = new AtomicLong();
         index.rowScan((index1, key, timestamp, tombstoned, version, value1) -> {
 
 
@@ -234,14 +234,14 @@ public class LABPointStress {
             if (sk < k.get()) {
                 misses.incrementAndGet();
             } else if (sk > k.get()) {
-                while(sk > k.get()) {
+                while (sk > k.get()) {
                     misses.incrementAndGet();
                     k.addAndGet(1 + rand.nextInt(maxStep));
                 }
 
             }
 
-            if (sk == k.get()){
+            if (sk == k.get()) {
                 hits.incrementAndGet();
                 k.addAndGet(1 + rand.nextInt(maxStep));
             }
@@ -253,7 +253,7 @@ public class LABPointStress {
 
         System.out.println(
             " bruteread:" + numberInstance.format(
-                count) + " in " + readElapse + " rate:" + numberInstance.format(
+                count) + " in " + readElapse + "millis rate:" + numberInstance.format(
                 (int) ((count / (double) readElapse) * 1000)) + " miss:" + misses.get() +
                 " hits:" + hits.get());
 
@@ -304,7 +304,7 @@ public class LABPointStress {
             "deprecated",
             "8x8fixedWidthRawhide", //new LABRawhide(),
             MemoryRawEntryFormat.NAME,
-            24,
+            27,
             indexType,
             hashIndexLoadFactor,
             true,

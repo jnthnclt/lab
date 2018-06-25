@@ -25,10 +25,9 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
-import org.apache.commons.lang3.mutable.MutableBoolean;
-import org.apache.commons.lang3.mutable.MutableLong;
 import org.testng.annotations.Test;
 
 /**
@@ -58,15 +57,15 @@ public class IndexStressNGTest {
         int minMergeDebt = 4;
 
         AtomicLong merge = new AtomicLong();
-        MutableLong maxKey = new MutableLong();
-        MutableBoolean running = new MutableBoolean(true);
-        MutableBoolean merging = new MutableBoolean(true);
-        MutableLong stopGets = new MutableLong(System.currentTimeMillis() + 60_000);
+        AtomicLong maxKey = new AtomicLong();
+        AtomicBoolean running = new AtomicBoolean(true);
+        AtomicBoolean merging = new AtomicBoolean(true);
+        AtomicLong stopGets = new AtomicLong(System.currentTimeMillis() + 60_000);
 
         File root = Files.createTempDir();
         AtomicLong waitForDebtToDrain = new AtomicLong();
         Future<Object> mergering = Executors.newSingleThreadExecutor().submit(() -> {
-            while (running.isTrue()) {
+            while (running.get()) {
 
                 try {
 
@@ -123,14 +122,14 @@ public class IndexStressNGTest {
             byte[] key = new byte[8];
 
             if (!concurrentReads) {
-                while (merging.isTrue() || running.isTrue()) {
+                while (merging.get() || running.get()) {
                     Thread.sleep(100);
                 }
             }
 
             int logInterval = 100_000;
             long getStart = System.currentTimeMillis();
-            while (running.isTrue() || stopGets.longValue() > System.currentTimeMillis()) {
+            while (running.get() || stopGets.longValue() > System.currentTimeMillis()) {
                 if (maxKey.intValue() < batchSize) {
                     Thread.sleep(10);
                     continue;
@@ -204,7 +203,7 @@ public class IndexStressNGTest {
             long lastKey = TestUtils.append(rand, write, 0, maxKeyIncrement, batchSize, null, keyBuffer);
             write.closeAppendable(fsync);
 
-            maxKey.setValue(Math.max(maxKey.longValue(), lastKey));
+            maxKey.set(Math.max(maxKey.longValue(), lastKey));
             LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
             indexs.append(
                 new ReadOnlyIndex(null, destroy, id, new ReadOnlyFile(indexFiler), rawhide, leapsCache));
@@ -225,11 +224,11 @@ public class IndexStressNGTest {
             }
         }
 
-        running.setValue(false);
+        running.set(false);
         mergering.get();
         /*System.out.println("Sleeping 10 sec before gets...");
         Thread.sleep(10_000L);*/
-        merging.setValue(false);
+        merging.set(false);
         System.out.println(
             " **************   Total time to add " + (numBatches * batchSize) + " including all merging: "
             + (System.currentTimeMillis() - start) + " millis *****************");

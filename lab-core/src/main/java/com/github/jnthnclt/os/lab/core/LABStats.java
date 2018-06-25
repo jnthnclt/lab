@@ -33,10 +33,8 @@ public class LABStats {
     public final LongAdder multiRangeScan = new LongAdder();
     public final LongAdder rowScan = new LongAdder();
 
-    public final LongAdder merging = new LongAdder();
-    public final LongAdder merged = new LongAdder();
-    public final LongAdder spliting = new LongAdder();
-    public final LongAdder splits = new LongAdder();
+    public final AtomicLong merging = new AtomicLong();
+    public final AtomicLong spliting = new AtomicLong();
 
     public final LongAdder slabbed = new LongAdder();
     public final LongAdder allocationed = new LongAdder();
@@ -54,10 +52,13 @@ public class LABStats {
     public final LongAdder bytesWrittenAsSplit = new LongAdder();
     public final LongAdder bytesWrittenAsMerge = new LongAdder();
 
+    public final AtomicLong commitable = new AtomicLong();
+
 
     public LABStats(AtomicLong globalHeapCostInBytes) {
 
         register("heap>pressure", new LongCounter(globalHeapCostInBytes));
+        register("lab>commitable", new LongCounter(commitable));
 
         register("files>debt", new LongAdderCounter(debt));
         register("files>open", new LongAdderCounter(open));
@@ -71,10 +72,8 @@ public class LABStats {
         register("read>multiRangeScan", new LongAdderCounter(multiRangeScan));
         register("read>rowScan", new LongAdderCounter(rowScan));
 
-        register("lsm>merging", new LongAdderCounter(merging));
-        register("lsm>merged", new LongAdderCounter(merged));
-        register("lsm>spliting", new LongAdderCounter(spliting));
-        register("lsm>splits", new LongAdderCounter(splits));
+        register("lsm>merging", new LongCounter(merging));
+        register("lsm>spliting", new LongCounter(spliting));
 
         register("memory.slabbed", new LongAdderCounter(slabbed));
         register("memory.allocationed", new LongAdderCounter(allocationed));
@@ -82,16 +81,16 @@ public class LABStats {
         register("memory.freed", new LongAdderCounter(freed));
 
 
-        register("commits>gc", new LongAdderCounter(freed));
-        register("commits>gcCommit", new LongAdderCounter(freed));
-        register("commits>pressureCommit", new LongAdderCounter(freed));
-        register("commits>commit", new LongAdderCounter(freed));
-        register("commits>fsyncedCommit", new LongAdderCounter(freed));
+        register("commits>gc", new LongAdderCounter(gc));
+        register("commits>gcCommit", new LongAdderCounter(gcCommit));
+        register("commits>pressureCommit", new LongAdderCounter(pressureCommit));
+        register("commits>commit", new LongAdderCounter(commit));
+        register("commits>fsyncedCommit", new LongAdderCounter(fsyncedCommit));
 
-        register("bytes>writtenToWAL", new LongAdderCounter(freed));
-        register("bytes>writtenAsIndex", new LongAdderCounter(freed));
-        register("bytes>writtenAsSplit", new LongAdderCounter(freed));
-        register("bytes>writtenAsMerge", new LongAdderCounter(freed));
+        register("bytes>writtenToWAL", new LongAdderCounter(bytesWrittenToWAL));
+        register("bytes>writtenAsIndex", new LongAdderCounter(bytesWrittenAsIndex));
+        register("bytes>writtenAsSplit", new LongAdderCounter(bytesWrittenAsSplit));
+        register("bytes>writtenAsMerge", new LongAdderCounter(bytesWrittenAsMerge));
 
     }
 

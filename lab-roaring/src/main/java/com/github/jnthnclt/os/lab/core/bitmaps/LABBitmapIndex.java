@@ -8,8 +8,7 @@ import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
-import gnu.trove.set.TIntSet;
-import gnu.trove.set.hash.TIntHashSet;
+import com.google.common.primitives.Ints;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -257,7 +256,7 @@ public class LABBitmapIndex<BM extends IBM, IBM> {
         }
     }
 
-    private int[] keysFromIds(int... ids) {
+    /*private int[] keysFromIds(int... ids) {
         TIntSet keySet = new TIntHashSet();
         for (int id : ids) {
             keySet.add(bitmaps.key(id));
@@ -265,7 +264,43 @@ public class LABBitmapIndex<BM extends IBM, IBM> {
         int[] keys = keySet.toArray();
         Arrays.sort(keys);
         return keys;
+    }*/
+
+
+    private int[] keysFromIds(int... ids) {
+        if (ids.length == 0) {
+            return ids;
+        }
+
+        int[] ks = new int[ids.length];
+        for (int i = 0; i < ids.length; i++) {
+            ks[i] = bitmaps.key(ids[i]);
+        }
+
+        return orderedSet(ks);
     }
+
+    private int[] orderedSet(int[] ks) {
+        Arrays.sort(ks);
+        int l = 0;
+        for (int i = 0; i < ks.length; i++) {
+            if (ks[l] == ks[i]) {
+                ks[l] = ks[i];
+            } else {
+                l++;
+                ks[l] = ks[i];
+            }
+        }
+        l++;
+        if (l == ks.length) {
+            return ks;
+        } else {
+            int[] keys = new int[l];
+            System.arraycopy(ks, 0, keys, 0, l);
+            return keys;
+        }
+    }
+
 
     public void remove(int... ids) throws Exception {
         synchronized (mutationLock) {
@@ -350,20 +385,38 @@ public class LABBitmapIndex<BM extends IBM, IBM> {
         }
     }
 
+//    public void andNotToSourceSize(List<IBM> masks) throws Exception {
+//        synchronized (mutationLock) {
+//            TIntSet keySet = new TIntHashSet();
+//            for (IBM mask : masks) {
+//                keySet.addAll(bitmaps.keys(mask));
+//            }
+//            int[] keys = keySet.toArray();
+//            Arrays.sort(keys);
+//            BM index = getOrCreateIndex(keys);
+//            BM andNot = bitmaps.andNotToSourceSize(index, masks);
+//            int[] delta = bitmaps.keysNotEqual(andNot, index);
+//            setIndex(delta, andNot);
+//        }
+//    }
+
+
     public void andNotToSourceSize(List<IBM> masks) throws Exception {
         synchronized (mutationLock) {
-            TIntSet keySet = new TIntHashSet();
+            int[][] ids = new int[masks.size()][];
+            int i = 0;
             for (IBM mask : masks) {
-                keySet.addAll(bitmaps.keys(mask));
+                ids[i] = bitmaps.keys(mask);
+                i++;
             }
-            int[] keys = keySet.toArray();
-            Arrays.sort(keys);
+            int[] keys = orderedSet(Ints.concat(ids));
             BM index = getOrCreateIndex(keys);
             BM andNot = bitmaps.andNotToSourceSize(index, masks);
             int[] delta = bitmaps.keysNotEqual(andNot, index);
             setIndex(delta, andNot);
         }
     }
+
 
     public void orToSourceSize(IBM mask) throws Exception {
         synchronized (mutationLock) {

@@ -159,12 +159,12 @@ public class CompactableIndexes {
                 Callable<Void> splitter = splitterBuilder.buildSplitter(rawhideName, fsync, this::buildSplitter);
                 if (splitter != null) {
                     return () -> {
+                        stats.spliting.incrementAndGet();
                         try {
-                            stats.spliting.increment();
                             Void result = splitter.call();
-                            stats.splits.increment();
                             return result;
                         } finally {
+                            stats.spliting.decrementAndGet();
                             compacting.set(false);
                         }
                     };
@@ -173,12 +173,12 @@ public class CompactableIndexes {
                 Callable<Void> merger = mergerBuilder.build(rawhideName, minimumRun, fsync, this::buildMerger);
                 if (merger != null) {
                     return () -> {
+                        stats.merging.incrementAndGet();
                         try {
-                            stats.merging.increment();
                             Void result = merger.call();
-                            stats.merged.increment();
                             return result;
                         } finally {
+                            stats.merging.decrementAndGet();
                             compacting.set(false);
                         }
                     };

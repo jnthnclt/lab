@@ -1,5 +1,5 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
 public enum LABHashIndexType {
-    linearProbe, cuckoo
+    linearProbe, cuckoo, fibCuckoo
 }

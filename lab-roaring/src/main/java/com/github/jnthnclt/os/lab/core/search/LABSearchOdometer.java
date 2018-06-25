@@ -10,21 +10,24 @@ import java.util.stream.Collectors;
 
 public class LABSearchOdometer {
 
-    public static LABSearchCombinator<CachedFieldValue> buildOdometer(LABSearchIndex index, List<String> expansions, List<List<String>> expansionValues, boolean allowWildcards) throws Exception {
+    public static LABSearchCombinator<CachedFieldValue> buildOdometer(LABSearchIndex index,
+        List<String> expansions,
+        List<List<String>> expansionValues,
+        boolean allowWildcards) throws Exception {
+
         if (expansions.isEmpty() || index == null) {
             return null;
         }
         Odometer<CachedFieldValue> odometer = null;
         for (int i = expansions.size() - 1; i > -1; i--) {
             String expansion = expansions.get(i);
-            Set<String> afieldvalues = fieldSet(index, allowWildcards, expansion, expansionValues.get(i));
+            Set<String> set = fieldSet(index, allowWildcards, expansion, expansionValues.get(i));
 
-            List<CachedFieldValue> fieldValues = afieldvalues.stream().map(s -> new CachedFieldValue(expansion, s)).collect(Collectors.toList());
+            List<CachedFieldValue> fieldValues = set.stream().map(s -> new CachedFieldValue(expansion, s)).collect(Collectors.toList());
             odometer = new Odometer<>(false, fieldValues, odometer);
         }
         // mark last odometer as first
-        odometer = new Odometer<>(true, odometer.values, odometer.next);
-        Odometer<CachedFieldValue> ef_odometer = odometer;
+        Odometer<CachedFieldValue> ef_odometer = new Odometer<>(true, odometer.values, odometer.next);
         return new LABSearchCombinator<CachedFieldValue>() {
             @Override
             public boolean hasNext() {

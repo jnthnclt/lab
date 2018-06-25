@@ -77,10 +77,28 @@ public class ActiveScan {
 
         if (exact && hashIndexEnabled && hashIndexMaxCapacity > 0) {
             if (hashIndexType == LABHashIndexType.cuckoo) {
+
                 long exactRowIndex = getCuckoo(readable,
                     hashIndexHashFunctionCount,
                     hashIndexHeadOffset,
                     hashIndexMaxCapacity,
+                    hashIndexLongPrecision,
+                    bbKey,
+                    entryBuffer,
+                    entryKeyBuffer,
+                    rawhide);
+                if (exactRowIndex >= -1) {
+                    return exactRowIndex > -1 ? exactRowIndex - 1 : -1;
+                }
+            }
+            if (hashIndexType == LABHashIndexType.fibCuckoo) {
+
+                int twoPower = 63-UIO.chunkPower(hashIndexMaxCapacity,1);
+
+                long exactRowIndex = getFibCuckoo(readable,
+                    hashIndexHashFunctionCount,
+                    hashIndexHeadOffset,
+                    twoPower,
                     hashIndexLongPrecision,
                     bbKey,
                     entryBuffer,
@@ -213,7 +231,7 @@ public class ActiveScan {
 
         long hashCode = compareKey.longMurmurHashCode();
         for (int i = 0; i < hashIndexHashFunctionCount; i++) {
-            long hashIndex = Math.abs(hashCode % hashIndexMaxCapacity);
+            long hashIndex = Math.abs(LABAppendableIndex.moduloIndexForHash(hashCode, hashIndexMaxCapacity));
             long readPointer = hashIndexHeadOffset + (hashIndex * hashIndexLongPrecision);
             long offset = readable.readVPLong(readPointer, hashIndexLongPrecision);
             if (offset == 0L) {
@@ -231,4 +249,37 @@ public class ActiveScan {
         }
         return -1;
     }
+
+    static private long getFibCuckoo(PointerReadableByteBufferFile readable,
+        byte hashIndexHashFunctionCount,
+        long hashIndexHeadOffset,
+        int twoPower,
+        byte hashIndexLongPrecision,
+        BolBuffer compareKey,
+        BolBuffer entryBuffer,
+        BolBuffer keyBuffer,
+        Rawhide rawhide) throws Exception {
+
+
+        long hashCode = compareKey.longMurmurHashCode();
+        for (int i = 0; i < hashIndexHashFunctionCount; i++) {
+            long hashIndex = Math.abs(LABAppendableIndex.fibonacciIndexForHash(hashCode, twoPower));
+            long readPointer = hashIndexHeadOffset + (hashIndex * hashIndexLongPrecision);
+            long offset = readable.readVPLong(readPointer, hashIndexLongPrecision);
+            if (offset == 0L) {
+                return -1L;
+            }
+            rawhide.rawEntryToBuffer(readable, Math.abs(offset) - 1, entryBuffer);
+            int c = rawhide.compareKey(entryBuffer, keyBuffer, compareKey);
+            if (c == 0) {
+                return Math.abs(offset) - 1;
+            }
+            if (offset > 0) {
+                return -1;
+            }
+            hashCode = compareKey.longMurmurHashCode(hashCode);
+        }
+        return -1;
+    }
+
 }

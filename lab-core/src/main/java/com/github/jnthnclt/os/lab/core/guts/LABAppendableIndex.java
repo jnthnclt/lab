@@ -93,7 +93,7 @@ public class LABAppendableIndex implements RawAppendableIndex {
             // Unfortunately this impl expect version to me timestampMillis
 
             long rawEntryTimestamp = rawhide.timestamp(rawEntryBuffer);
-            long version = rawhide.version( rawEntryBuffer);
+            long version = rawhide.version(rawEntryBuffer);
 
             if (deleteTombstonedVersionsAfterMillis > 0
                 && rawhide.tombstone(rawEntryBuffer)
@@ -107,9 +107,9 @@ public class LABAppendableIndex implements RawAppendableIndex {
             startOfEntryIndex[updatesSinceLeap] = fp + appendableHeap.length();
             appendableHeap.appendByte(ENTRY);
 
-            rawhide.writeRawEntry( rawEntryBuffer,appendableHeap);
+            rawhide.writeRawEntry(rawEntryBuffer, appendableHeap);
 
-            BolBuffer key = rawhide.key( rawEntryBuffer, keyBuffer);
+            BolBuffer key = rawhide.key(rawEntryBuffer, keyBuffer);
             int keyLength = key.length;
             keysSizeInBytes += keyLength;
             valuesSizeInBytes += rawEntryBuffer.length - keyLength;
@@ -209,14 +209,15 @@ public class LABAppendableIndex implements RawAppendableIndex {
     private void buildHashIndex(LABHashIndexType hashIndexType, long count) throws Exception {
         if (hashIndexLoadFactor > 0) {
             if (hashIndexType == LABHashIndexType.cuckoo) {
-                cuckoo(count);
+                cuckoo(count, false);
+            }
+            if (hashIndexType == LABHashIndexType.fibCuckoo) {
+                cuckoo(count, true);
             }
         }
     }
 
-
-    private void cuckoo(long count) throws Exception {
-
+    private void cuckoo(long count, boolean fib) throws Exception {
 
         RandomAccessFile f = new RandomAccessFile(appendOnlyFile.getFile(), "rw");
         long length = f.length();
@@ -245,6 +246,12 @@ public class LABAppendableIndex implements RawAppendableIndex {
 
                 numHashFunctions = (byte) (3 + extinctions);
                 long hashIndexMaxCapacity = (count + (long) (count * Math.max(1f, hashIndexLoadFactor))) + 1;
+                int twoPower = -1;
+                if (fib) {
+                    twoPower = UIO.chunkPower(hashIndexMaxCapacity, 1);
+                    hashIndexMaxCapacity = 1L << twoPower;
+                    twoPower = 63 - twoPower;
+                }
 
                 hashIndexSizeInBytes = hashIndexMaxCapacity * hashIndexLongPrecision;
                 f.setLength(length + hashIndexSizeInBytes + 1 + 1 + 8 + 4);
@@ -288,15 +295,16 @@ public class LABAppendableIndex implements RawAppendableIndex {
 
 
                         inserted++;
-                        long displaced = cuckooInsert(numHashFunctions, length, hashIndexLongPrecision, hashIndexMaxCapacity, c, k,
-                            startOfEntryOffset, histo);
+                        long displaced = fib ? fibCuckooInsert(numHashFunctions, length, hashIndexLongPrecision, twoPower, c, k, startOfEntryOffset, histo)
+                            : cuckooInsert(numHashFunctions, length, hashIndexLongPrecision, hashIndexMaxCapacity, c, k, startOfEntryOffset, histo);
 
                         long displaceable = inserted;
                         while (displaced != -1) { // cuckoo time
                             reinsertion++;
                             rawhide.rawEntryToBuffer(c, displaced, entryBuffer);
                             k = rawhide.key(entryBuffer, key);
-                            displaced = cuckooInsert(numHashFunctions, length, hashIndexLongPrecision, hashIndexMaxCapacity, c, k, displaced, histo);
+                            displaced = fib ? fibCuckooInsert(numHashFunctions, length, hashIndexLongPrecision, twoPower, c, k, displaced, histo)
+                                : cuckooInsert(numHashFunctions, length, hashIndexLongPrecision, hashIndexMaxCapacity, c, k, displaced, histo);
                             displaceable--;
                             if (displaceable < 0 || reinsertion > maxReinsertionsBeforeExtinction) {
                                 extinctions++;
@@ -339,7 +347,6 @@ public class LABAppendableIndex implements RawAppendableIndex {
             Arrays.toString(histo));
 
     }
-
     private long cuckooInsert(byte numHashFunctions,
         long length,
         byte hashIndexLongPrecision,
@@ -352,7 +359,7 @@ public class LABAppendableIndex implements RawAppendableIndex {
         long displaced = -1;
         long hashCode = k.longMurmurHashCode();
         for (int i = 0; i < numHashFunctions; i++) {
-            long hi = Math.abs(hashCode % hashIndexMaxCapacity);
+            long hi = Math.abs(moduloIndexForHash(hashCode, hashIndexMaxCapacity));
             long pos = length + (hi * hashIndexLongPrecision);
             long v = c.readVPLong(pos, hashIndexLongPrecision);
             if (v == 0) {
@@ -369,6 +376,74 @@ public class LABAppendableIndex implements RawAppendableIndex {
             hashCode = k.longMurmurHashCode(hashCode);
         }
         return displaced;
+    }
+
+    private long fibCuckooInsert(byte numHashFunctions,
+        long length,
+        byte hashIndexLongPrecision,
+        int hashIndexMaxCapacityTwoPower,
+        PointerReadableByteBufferFile c,
+        BolBuffer k,
+        long startOfEntryOffset,
+        long[] histo) throws IOException {
+
+        long displaced = -1;
+        long hashCode = k.longMurmurHashCode();
+        for (int i = 0; i < numHashFunctions; i++) {
+            long hi = Math.abs(fibonacciIndexForHash(hashCode, hashIndexMaxCapacityTwoPower));
+            long pos = length + (hi * hashIndexLongPrecision);
+            long v = c.readVPLong(pos, hashIndexLongPrecision);
+            if (v == 0) {
+                c.writeVPLong(pos, startOfEntryOffset + 1, hashIndexLongPrecision); // +1 so 0 can be null
+                break;
+            } else if (i + 1 == numHashFunctions) {
+                displaced = Math.abs(v) - 1;
+                c.writeVPLong(pos, (startOfEntryOffset + 1), hashIndexLongPrecision); // +1 so 0 can be null
+            } else if (v > 0) {
+                histo[i]++;
+                c.writeVPLong(pos, -v, hashIndexLongPrecision);
+            }
+
+            hashCode = k.longMurmurHashCode(hashCode);
+        }
+        return displaced;
+    }
+
+//    public static void main(String[] args)
+//    {
+//        System.out.printf("%d\n", largestFibonacciLong());
+//    }
+//
+//    public static long largestFibonacciLong()
+//    {
+//        long temp;
+//        long last = 1;
+//        long fib = 1;
+//
+//        while (fib + last > fib) {
+//            System.out.println(fib);
+//            temp = fib;
+//            fib += last;
+//            last = temp;
+//        }
+//
+//        return fib;
+//    }
+
+
+    public static long moduloIndexForHash(long hash, long hashIndexMaxCapacity) {
+        return hash % hashIndexMaxCapacity;
+    }
+
+    public static long fibonacciIndexForHash(long hash, int hashIndexMaxCapacityTwoPower) {
+        hash ^= hash >> hashIndexMaxCapacityTwoPower;
+        return (7540113804746346429L * hash) >> hashIndexMaxCapacityTwoPower;
+    }
+
+    public static void main(String[] args) {
+        for (int i = 0; i < 10; i++) {
+            System.out.println(fibonacciIndexForHash(i, 63 - 4));
+        }
     }
 
     public void close() throws IOException {
