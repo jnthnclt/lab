@@ -2,15 +2,11 @@ package com.github.jnthnclt.os.lab.core.search;
 
 import com.github.jnthnclt.os.lab.core.search.LABSearch.CachedFieldValue;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.roaringbitmap.RoaringBitmap;
 
 public class LABSearchFailFastOdometer {
 
@@ -140,8 +136,7 @@ public class LABSearchFailFastOdometer {
                     } else {
                         E compute = failFastOdometerEdge.compute(priorValue, priorResult, currentV);
                         if (compute == null) {
-                            next.reset();
-                            i++;
+                            next.preroll();
                             return null;
                         }
                         this.edge = compute;
@@ -149,6 +144,13 @@ public class LABSearchFailFastOdometer {
                     }
                 }
                 return next.internalNext(parts, this.edgeValue, this.edge, failFastOdometerEdge);
+            }
+        }
+
+        private void preroll() {
+            i = values.size();
+            if (next != null) {
+                next.preroll();
             }
         }
 
@@ -199,50 +201,4 @@ public class LABSearchFailFastOdometer {
         }
     }
 
-
-    public static void main(String[] args) {
-
-        Map<String, RoaringBitmap> index = Maps.newHashMap();
-        index.put("x", create(1, 2, 3, 4));
-        index.put("y", create(1, 2, 3, 4));
-        index.put("1", create(1, 2, 3));
-        index.put("3", create(5, 6, 7));
-        index.put("4", create(1, 2, 3));
-        index.put("a", create(1, 2));
-        index.put("b", create(1, 2));
-        index.put("c", create(1, 2));
-
-        FailFastdometer failFastdometer3 = new FailFastdometer(Arrays.asList("a", "b", "c", null), null);
-        FailFastdometer failFastdometer2 = new FailFastdometer(Arrays.asList("1", null, "3", "4"), failFastdometer3);
-        FailFastdometer<String, RoaringBitmap> failFastdometer1 = new FailFastdometer<>(Arrays.asList("x", "y"), failFastdometer2);
-
-        List<String> parts = Lists.newArrayList();
-
-        // [a,b,c], []
-
-        RoaringBitmap all = create(1, 2, 3, 4, 5);
-
-        while (failFastdometer1.hasNext()) {
-            parts.clear();
-            FailFastOdometerResult<String, RoaringBitmap> r = failFastdometer1.next(parts, "all", all,
-                (priorValue, priorResult, current) -> {
-                    RoaringBitmap got = index.get(current);
-                    RoaringBitmap and = RoaringBitmap.and(priorResult, got);
-                    System.out.println(priorValue+"->"+current + " " + and);
-                    if (and.getCardinality() == 0) {
-                        return null;
-                    }
-                    return and;
-                });
-            if (r != null) {
-                System.out.println("Result:" + r.pattern + " " + r.edge);
-            }
-        }
-    }
-
-    private static final RoaringBitmap create(int... value) {
-        RoaringBitmap bitmap = new RoaringBitmap();
-        bitmap.add(value);
-        return bitmap;
-    }
 }
