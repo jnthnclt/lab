@@ -341,7 +341,7 @@ public class CompactableIndexes {
                             rightAppendableIndex = rightHalfIndexFactory.createIndex(join, worstCaseCount - 1);
                             LABAppendableIndex effectiveFinalRightAppenableIndex = rightAppendableIndex;
                             InterleaveStream feedInterleaver = new InterleaveStream(rawhide,
-                                ActiveScan.indexToFeeds(readers, null, null, rawhide, null));
+                                ActiveScan.indexToFeeds(readers, false,false, null, null, rawhide, null));
                             try {
                                 LOG.debug("Splitting with a middle of:{}", Arrays.toString(middle));
 
@@ -445,7 +445,7 @@ public class CompactableIndexes {
                                     ReadIndex catchupReader = catchup.acquireReader();
                                     try {
                                         InterleaveStream catchupFeedInterleaver = new InterleaveStream(rawhide,
-                                            ActiveScan.indexToFeeds(new ReadIndex[] { catchup }, null, null, rawhide, null));
+                                            ActiveScan.indexToFeeds(new ReadIndex[] { catchup }, false,false,null, null, rawhide, null));
                                         try {
                                             LOG.debug("Doing a catchup split for a middle of:{}", Arrays.toString(middle));
                                             catchupLeftAppendableIndex.append((leftStream) -> {
@@ -632,7 +632,7 @@ public class CompactableIndexes {
                 try {
                     appendableIndex = indexFactory.createIndex(mergeRangeId, worstCaseCount);
                     InterleaveStream feedInterleaver = new InterleaveStream(rawhide,
-                        ActiveScan.indexToFeeds(readers, null, null, rawhide, null));
+                        ActiveScan.indexToFeeds(readers, false,false, null, null, rawhide, null));
                     try {
                         appendableIndex.append((stream) -> {
 
@@ -743,7 +743,7 @@ public class CompactableIndexes {
 
     }
 
-    public boolean tx(int index, byte[] fromKey, byte[] toKey, ReaderTx tx, boolean hydrateValues) throws Exception {
+    public boolean tx(int index, boolean pointFrom, byte[] fromKey, byte[] toKey, ReaderTx tx, boolean hydrateValues) throws Exception {
 
         ReadOnlyIndex[] stackIndexes;
 
@@ -776,7 +776,7 @@ public class CompactableIndexes {
         }
 
         try {
-            return tx.tx(index, fromKey, toKey, readIndexs, hydrateValues);
+            return tx.tx(index, pointFrom, fromKey, toKey, readIndexs, hydrateValues);
         } finally {
             releaseReaders(readIndexs);
         }

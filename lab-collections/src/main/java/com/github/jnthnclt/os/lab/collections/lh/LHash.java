@@ -37,7 +37,7 @@ public class LHash<V> {
             return null;
         }
         long capacity = s.capacity();
-        long start = hash(s, hashCode);
+        long start = s.indexForHash(hashCode);
         for (long i = start, j = 0, k = capacity; // stack vars for efficiency
             j < k; // max search for key
             i = (++i) % k, j++) { // wraps around table
@@ -73,7 +73,7 @@ public class LHash<V> {
             return;
         }
         long capacity = s.capacity();
-        long start = hash(s, hashCode);
+        long start = s.indexForHash(hashCode);
         for (long i = start, j = 0, k = capacity; // stack vars for efficiency
             j < k; // max search for key
             i = (++i) % k, j++) {					// wraps around table
@@ -122,7 +122,7 @@ public class LHash<V> {
 
     private void internalPut(LHMapState<V> s, long hashCode, long key, V value) {
         long capacity = s.capacity();
-        long start = hash(s, hashCode);
+        long start = s.indexForHash(hashCode);
         long nil = s.nil();
         long skipped = s.skipped();
         for (long i = start, j = 0, k = capacity; // stack vars for efficiency
@@ -156,14 +156,14 @@ public class LHash<V> {
         }
     }
 
-    private long hash(LHMapState state, long keyShuffle) {
-        keyShuffle += keyShuffle >> 8; // shuffle bits to avoid worst case clustering
-
-        if (keyShuffle < 0) {
-            keyShuffle = -keyShuffle;
-        }
-        return keyShuffle % state.capacity();
-    }
+//    private long hash(LHMapState state, long keyShuffle) {
+//        keyShuffle += keyShuffle >> 8; // shuffle bits to avoid worst case clustering
+//
+//        if (keyShuffle < 0) {
+//            keyShuffle = -keyShuffle;
+//        }
+//        return keyShuffle % state.capacity();
+//    }
 
     public boolean stream(Semaphore semaphore, LHashValueStream<V> stream) throws Exception {
         LHMapState<V> s = state;

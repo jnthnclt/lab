@@ -2,6 +2,7 @@ package com.github.jnthnclt.os.lab.core.bitmaps;
 
 import com.github.jnthnclt.os.lab.core.LABUtils;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
+import com.github.jnthnclt.os.lab.core.guts.IndexUtil;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.util.LABLogger;
 import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
@@ -22,8 +23,6 @@ import org.roaringbitmap.LABBitmapAndLastId;
 public class LABBitmapIndex<BM extends IBM, IBM> {
 
     private static final LABLogger LOG = LABLoggerFactory.getLogger();
-
-    public static final int LAST_ID_LENGTH = 4;
 
     private final LABBitmapIndexVersionProvider versionProvider;
     private final LABBitmaps<BM, IBM> bitmaps;
@@ -83,24 +82,28 @@ public class LABBitmapIndex<BM extends IBM, IBM> {
                         (index, key, timestamp, tombstoned, version, payload) -> {
                             if (payload != null) {
                                 int labKey = deatomize(key.asByteBuffer());
-                                atoms[0]++;
-                                in.setBuffer(payload.asByteBuffer());
-                                return atomStream.stream(labKey, in);
+                                if (labKey != Short.MAX_VALUE) {
+                                    atoms[0]++;
+                                    in.setBuffer(payload.asByteBuffer());
+                                    return atomStream.stream(labKey, in);
+                                }
                             }
                             return true;
                         },
                         true);
                 } else {
-                    byte[] from = bitmapKeyBytes;
-                    byte[] to = LABUtils.prefixUpperExclusive(bitmapKeyBytes);
+                    byte[] from = atomize(bitmapKeyBytes, Short.MAX_VALUE);
+                    byte[] to = atomize(LABUtils.prefixUpperExclusive(bitmapKeyBytes), Short.MAX_VALUE);
                     int[] atoms = { 0 };
-                    bitmapIndex.rangeScan(from, to,
+                    bitmapIndex.pointRangeScan(from, to,
                         (index, key, timestamp, tombstoned, version, payload) -> {
                             if (payload != null) {
                                 int labKey = deatomize(key.asByteBuffer());
-                                atoms[0]++;
-                                in.setBuffer(payload.asByteBuffer());
-                                return atomStream.stream(labKey, in);
+                                if (labKey != Short.MAX_VALUE) {
+                                    atoms[0]++;
+                                    in.setBuffer(payload.asByteBuffer());
+                                    return atomStream.stream(labKey, in);
+                                }
                             }
                             return true;
                         },
@@ -127,17 +130,20 @@ public class LABBitmapIndex<BM extends IBM, IBM> {
         bitmaps.deserializeAtomized(
             container,
             atomStream -> {
-                byte[] from = bitmapKeyBytes;
-                byte[] to = LABUtils.prefixUpperExclusive(bitmapKeyBytes);
+
+                byte[] from = atomize(bitmapKeyBytes, Short.MAX_VALUE);
+                byte[] to = atomize(LABUtils.prefixUpperExclusive(bitmapKeyBytes), Short.MAX_VALUE);
                 int[] atoms = { 0 };
-                bitmapIndex.rangeScan(from, to,
+                bitmapIndex.pointRangeScan(from, to,
                     (index, key, timestamp, tombstoned, version, payload) -> {
                         if (payload != null) {
                             int labKey = deatomize(key.asByteBuffer());
-                            bytes.addAndGet(payload.length);
-                            atoms[0]++;
-                            in.setBuffer(payload.asByteBuffer());
-                            return atomStream.stream(labKey, in);
+                            if (labKey != Short.MAX_VALUE) {
+                                bytes.addAndGet(payload.length);
+                                atoms[0]++;
+                                in.setBuffer(payload.asByteBuffer());
+                                return atomStream.stream(labKey, in);
+                            }
                         }
                         return true;
                     },
@@ -167,13 +173,13 @@ public class LABBitmapIndex<BM extends IBM, IBM> {
         return atom;
     }
 
-    public static int deatomize(byte[] key) {
-        int v = 0;
-        v |= (key[key.length - 2] & 0xFF);
-        v <<= 8;
-        v |= (key[key.length - 1] & 0xFF);
-        return 0xFFFF - v;
-    }
+//    public static int deatomize(byte[] key) {
+//        int v = 0;
+//        v |= (key[key.length - 2] & 0xFF);
+//        v <<= 8;
+//        v |= (key[key.length - 1] & 0xFF);
+//        return (0xFFFF - v);
+//    }
 
     public static int deatomize(ByteBuffer key) {
         key.clear();
@@ -181,7 +187,27 @@ public class LABBitmapIndex<BM extends IBM, IBM> {
         v |= (key.get(key.capacity() - 2) & 0xFF);
         v <<= 8;
         v |= (key.get(key.capacity() - 1) & 0xFF);
-        return 0xFFFF - v;
+        return (0xFFFF - v);
+    }
+
+    public static void main(String[] args) {
+
+        //for (int i = 0; i <= Short.MAX_VALUE; i+=1024) {
+            byte[] atomize = atomize(new byte[] { 0 }, Short.MAX_VALUE);
+            //byte[] upperExclusive = atomize(LABUtils.prefixUpperExclusive(new byte[] { 0 }),Short.MAX_VALUE);
+            byte[] upperExclusive = atomize(new byte[] { 1 }, Short.MAX_VALUE);
+
+        System.out.println(Arrays.toString(atomize));
+        System.out.println(Arrays.toString(upperExclusive));
+
+//            System.out.println(i+" "+Arrays.toString(atomize));
+//            System.out.println(i+" "+Arrays.toString(upperExclusive));
+
+            System.out.println(IndexUtil.compare(
+                atomize,0,3,
+                upperExclusive, 0, 3
+                ));
+        //}
     }
 
     private BM getOrCreateIndex(int[] keys) throws Exception {
@@ -235,6 +261,9 @@ public class LABBitmapIndex<BM extends IBM, IBM> {
 
         bitmapIndex.append(
             stream -> {
+                if (!stream.stream(-1, atomize(bitmapKeyBytes, Short.MAX_VALUE), timestamp, false, version, new byte[0])) {
+                    return false;
+                }
                 for (int i = 0; i < keys.length; i++) {
                     if (!stream.stream(-1, atomize(bitmapKeyBytes, keys[i]), timestamp, false, version, bytes[i])) {
                         return false;
@@ -248,12 +277,6 @@ public class LABBitmapIndex<BM extends IBM, IBM> {
 
         lastId = bitmaps.lastSetBit(index);
 
-        int bytesWritten = 0;
-        for (int i = 0; i < bytes.length; i++) {
-            if (bytes[i] != null) {
-                bytesWritten += bytes[i].length;
-            }
-        }
     }
 
     /*private int[] keysFromIds(int... ids) {
@@ -340,17 +363,19 @@ public class LABBitmapIndex<BM extends IBM, IBM> {
             synchronized (mutationLock) {
                 int[] id = { -1 };
                 LABReusableByteBufferDataInput in = new LABReusableByteBufferDataInput();
-                byte[] from = bitmapKeyBytes;
-                byte[] to = LABUtils.prefixUpperExclusive(bitmapKeyBytes);
-                bitmapIndex.rangeScan(from, to,
+                byte[] from = atomize(bitmapKeyBytes, Short.MAX_VALUE);
+                byte[] to = atomize(LABUtils.prefixUpperExclusive(bitmapKeyBytes), Short.MAX_VALUE);
+                bitmapIndex.pointRangeScan(from, to,
                     (index, key, timestamp, tombstoned, version, payload) -> {
                         if (payload != null) {
                             if (id[0] == -1) {
                                 bytes.addAndGet(payload.length);
                                 int labKey = LABBitmapIndex.deatomize(key.asByteBuffer());
-                                id[0] = LABBitmapIndex.deserLastId(bitmaps, labKey, in, payload.asByteBuffer());
-                                if (id[0] != -1) {
-                                    return false;
+                                if (labKey != Short.MAX_VALUE) {
+                                    id[0] = LABBitmapIndex.deserLastId(bitmaps, labKey, in, payload.asByteBuffer());
+                                    if (id[0] != -1) {
+                                        return false;
+                                    }
                                 }
                             } else {
                                 LOG.warn("Atomized multiGetLastIds failed to halt a range scan");

@@ -37,7 +37,7 @@ public class LABConcurrentSkipListMapNGTest {
         //System.out.println("first:" + UIO.bytesLong(map.firstKey()));
         //System.out.println("last:" + UIO.bytesLong(map.lastKey()));
 
-        Scanner scanner = map.scanner(null, null, new BolBuffer(), new BolBuffer());
+        Scanner scanner = map.scanner(false,null, null, new BolBuffer(), new BolBuffer());
 
         BolBuffer rawEntry = new BolBuffer();
         while ((rawEntry =scanner.next(rawEntry,null)) != null) {

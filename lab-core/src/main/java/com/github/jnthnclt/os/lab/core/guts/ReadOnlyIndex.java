@@ -220,8 +220,8 @@ public class ReadOnlyIndex implements ReadIndex {
         activeScan.leaps[0] = leaps;
         activeScan.cacheKey = cacheKey;
         activeScan.leapsCache = leapsCache;
-        activeScan.cacheKeyBuffer = new byte[16];
         activeScan.readable = readOnlyFile.pointerReadable(-1);
+        activeScan.cacheKeyBuffer = new byte[16];
         return activeScan;
     }
 
@@ -250,13 +250,34 @@ public class ReadOnlyIndex implements ReadIndex {
     }
 
     @Override
-    public Scanner rangeScan(byte[] from, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+    public Scanner rangeScan(boolean hashIndexEnabled, boolean pointFrom, byte[] from, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
 
         BolBuffer bbFrom = from == null ? null : new BolBuffer(from);
         BolBuffer bbTo = to == null ? null : new BolBuffer(to);
 
         ActiveScanRange scan = setup(new ActiveScanRange());
-        long fp = scan.getInclusiveStartOfRow(new BolBuffer(from), entryBuffer, entryKeyBuffer, false);
+        long fp;
+        if (pointFrom && from != null) {
+            byte[] cacheKeyBuffer = new byte[16];
+            fp = ActiveScan.getInclusiveStartOfRow(scan.readable,
+                leaps,
+                cacheKey,
+                leapsCache,
+                cacheKeyBuffer,
+                rawhide,
+                hashIndexEnabled,
+                hashIndexType,
+                hashIndexHashFunctionCount,
+                hashIndexHeadOffset,
+                hashIndexMaxCapacity,
+                hashIndexLongPrecision,
+                new BolBuffer(from),
+                new BolBuffer(),
+                new BolBuffer(),
+                true);
+        } else {
+            fp = scan.getInclusiveStartOfRow(new BolBuffer(from), entryBuffer, entryKeyBuffer, false);
+        }
         if (fp < 0) {
             return null;
         }

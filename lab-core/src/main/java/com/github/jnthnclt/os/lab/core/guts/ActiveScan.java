@@ -19,6 +19,8 @@ public class ActiveScan {
     private static final LABLogger LOG = LABLoggerFactory.getLogger();
 
     public static PriorityQueue<InterleavingStreamFeed> indexToFeeds(ReadIndex[] indexs,
+        boolean hashIndexEnabled,
+        boolean pointFrom,
         byte[] from,
         byte[] to,
         Rawhide rawhide,
@@ -33,7 +35,7 @@ public class ActiveScan {
                 if (rowScan) {
                     scanner = indexs[i].rowScan(new BolBuffer(), new BolBuffer());
                 } else {
-                    scanner = indexs[i].rangeScan(from, to, new BolBuffer(), new BolBuffer());
+                    scanner = indexs[i].rangeScan(hashIndexEnabled, pointFrom, from, to, new BolBuffer(), new BolBuffer());
                 }
                 if (scanner != null) {
                     InterleavingStreamFeed e = new InterleavingStreamFeed(i, scanner, rawhide);

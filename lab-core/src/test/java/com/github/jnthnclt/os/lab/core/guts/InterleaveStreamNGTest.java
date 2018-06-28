@@ -37,7 +37,7 @@ public class InterleaveStreamNGTest {
         InterleaveStream ips = new InterleaveStream(LABRawhide.SINGLETON,
             ActiveScan.indexToFeeds(new ReadIndex[] {
                 sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 3, 3, 3, 3, 3 })
-            }, null, null, LABRawhide.SINGLETON, null));
+            }, false,false, null, null, LABRawhide.SINGLETON, null));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(1, 3));
@@ -57,7 +57,7 @@ public class InterleaveStreamNGTest {
             ActiveScan.indexToFeeds(new ReadIndex[] {
                 sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 3, 3, 3, 3, 3 }),
                 sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 1, 1, 1, 1, 1 })
-            }, null, null, LABRawhide.SINGLETON, null));
+            }, false,false, null, null, LABRawhide.SINGLETON, null));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(1, 3));
@@ -78,7 +78,7 @@ public class InterleaveStreamNGTest {
                 sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 3, 3, 3, 3, 3 }),
                 sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 2, 2, 2, 2, 2 }),
                 sequenceIndex(new long[] { 1, 2, 3, 4, 5 }, new long[] { 1, 1, 1, 1, 1 })
-            }, null, null, LABRawhide.SINGLETON, null));
+            }, false,false, null, null, LABRawhide.SINGLETON, null));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(1, 3));
@@ -99,7 +99,7 @@ public class InterleaveStreamNGTest {
                 sequenceIndex(new long[] { 10, 21, 29, 41, 50 }, new long[] { 1, 0, 0, 0, 1 }),
                 sequenceIndex(new long[] { 10, 21, 29, 40, 50 }, new long[] { 0, 0, 0, 1, 0 }),
                 sequenceIndex(new long[] { 10, 20, 30, 39, 50 }, new long[] { 0, 1, 1, 0, 0 })
-            }, null, null, LABRawhide.SINGLETON, null));
+            }, false,false, null, null, LABRawhide.SINGLETON, null));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(10, 1));
@@ -125,7 +125,7 @@ public class InterleaveStreamNGTest {
                 sequenceIndex(new long[] { 10, 21, 29, 41, 50 }, new long[] { 1, 0, 0, 0, 1 }),
                 sequenceIndex(new long[] { 10, 20, 30, 39, 50 }, new long[] { 0, 1, 1, 0, 0 }),
                 sequenceIndex(new long[] { 10, 21, 29, 40, 50 }, new long[] { 0, 0, 0, 1, 0 })
-            }, null, null, LABRawhide.SINGLETON, null));
+            }, false,false, null, null, LABRawhide.SINGLETON, null));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(10, 1));
@@ -151,7 +151,7 @@ public class InterleaveStreamNGTest {
                 sequenceIndex(new long[] { 9, 20, 30, 39, 50 }, new long[] { 0, 1, 1, 0, 0 }),
                 sequenceIndex(new long[] { 10, 21, 29, 41, 50 }, new long[] { 1, 0, 0, 0, 1 }),
                 sequenceIndex(new long[] { 10, 21, 31, 40, 50 }, new long[] { 0, 0, 0, 1, 0 })
-            }, null, null, LABRawhide.SINGLETON, null));
+            }, false,false, null, null, LABRawhide.SINGLETON, null));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(9, 0));
@@ -179,7 +179,7 @@ public class InterleaveStreamNGTest {
                 sequenceIndex(new long[] { 1,2,3 }, new long[] { 1,2,3 }),
                 sequenceIndex(new long[] { 4,5,6 }, new long[] { 4,5,6 }),
                 sequenceIndex(new long[] { 7,8,9 }, new long[] { 7,8,9 })
-            }, null, null, LABRawhide.SINGLETON, null));
+            }, false,false, null, null, LABRawhide.SINGLETON, null));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(1, 1));
@@ -205,7 +205,7 @@ public class InterleaveStreamNGTest {
                 sequenceIndex(new long[] { 1 }, new long[] { 1 }),
                 sequenceIndex(new long[] { 4 }, new long[] { 4 }),
                 sequenceIndex(new long[] { 7 }, new long[] { 7 })
-            }, null, null, LABRawhide.SINGLETON, null));
+            }, false,false, null, null, LABRawhide.SINGLETON, null));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(1, 1));
@@ -225,7 +225,7 @@ public class InterleaveStreamNGTest {
                 sequenceIndex(new long[] { 1 }, new long[] { 3 }),
                 sequenceIndex(new long[] { 1 }, new long[] { 1 }),
                 sequenceIndex(new long[] { 1 }, new long[] { 2 })
-            }, null, null, LABRawhide.SINGLETON, null));
+            }, false,false, null, null, LABRawhide.SINGLETON, null));
 
         List<Expected> expected = new ArrayList<>();
         expected.add(new Expected(1, 3));
@@ -244,7 +244,7 @@ public class InterleaveStreamNGTest {
             }
 
             @Override
-            public Scanner rangeScan(byte[] from, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+            public Scanner rangeScan(boolean hashIndexEnabled, boolean pointFrom, byte[] from, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
                 throw new UnsupportedOperationException("Not supported.");
             }
 
@@ -330,12 +330,12 @@ public class InterleaveStreamNGTest {
             //System.out.println("\n");
 
             InterleaveStream ips = new InterleaveStream(rawhide,
-                ActiveScan.indexToFeeds(reorderIndexReaders, null, null, rawhide,
+                ActiveScan.indexToFeeds(reorderIndexReaders, false,false, null, null, rawhide,
                     new BolBuffer(UIO.longBytes(skipScanExpected.get(0).key))));
             assertExpectedSkipScan(ips, skipScanExpected);
 
             ips = new InterleaveStream(rawhide,
-                ActiveScan.indexToFeeds(reorderIndexReaders, null, null, rawhide, null));
+                ActiveScan.indexToFeeds(reorderIndexReaders, false,false,null, null, rawhide, null));
             assertExpected(ips, expected);
         } finally {
             for (ReadIndex readerIndex : readerIndexs) {

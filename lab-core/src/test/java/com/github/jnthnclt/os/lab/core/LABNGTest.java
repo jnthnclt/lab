@@ -6,7 +6,6 @@ import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
 import com.github.jnthnclt.os.lab.core.api.ScanKeys;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
-import com.github.jnthnclt.os.lab.core.api.rawhide.LABKeyValueRawhide;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
 import com.github.jnthnclt.os.lab.core.guts.IndexUtil;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
@@ -32,10 +31,7 @@ import static org.testng.Assert.assertEquals;
  */
 public class LABNGTest {
 
-    @Test
-    public void testRangeScanInsane() throws Exception {
-
-        boolean fsync = true;
+    private LABEnvironment buildTmpEnv() throws Exception {
         File root = Files.createTempDir();
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
         AtomicLong globalHeapCostInBytes = new AtomicLong();
@@ -47,7 +43,7 @@ public class LABNGTest {
             1024 * 1024 * 10,
             globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
-        LABEnvironment env = new LABEnvironment(stats,
+        return new LABEnvironment(stats,
             null,
             LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(4),
@@ -58,7 +54,9 @@ public class LABNGTest {
             new StripingBolBufferLocks(1024),
             true,
             false);
+    }
 
+    private ValueIndex buildTmpValueIndex(LABEnvironment env) throws Exception {
         long splitAfterSizeInBytes = 16; //1024 * 1024 * 1024;
 
         ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo",
@@ -76,7 +74,14 @@ public class LABNGTest {
             false,
             Long.MAX_VALUE);
 
-        ValueIndex index = env.open(valueIndexConfig);
+        return env.open(valueIndexConfig);
+    }
+
+    @Test
+    public void testRangeScanInsane() throws Exception {
+        boolean fsync = false;
+        LABEnvironment env = buildTmpEnv();
+        ValueIndex index = buildTmpValueIndex(env);
 
         AtomicLong count = new AtomicLong();
         AtomicLong fails = new AtomicLong();
@@ -87,7 +92,7 @@ public class LABNGTest {
             index.append((stream) -> {
                 for (int i = 0; i < 10; i++) {
                     long v = count.get();
-                    stream.stream(-1, UIO.longBytes(v, new byte[8], 0), v, false, 0, UIO.longBytes(v, new byte[8], 0));
+                    stream.stream(-1, UIO.longBytes(v), v, false, 0, UIO.longBytes(v));
                     count.incrementAndGet();
                 }
                 return true;
@@ -120,6 +125,7 @@ public class LABNGTest {
 
         //System.out.println("fails:" + fails.get());
         assertEquals(fails.get(), 0);
+        env.shutdown();
     }
 
     private void assertRangeScan(long c, ValueIndex index, AtomicLong fails) throws Exception {
@@ -133,7 +139,7 @@ public class LABNGTest {
 
                 //System.out.println("scan:" + ff + " -> " + tt);
                 HashSet<Long> rangeScan = new HashSet<>();
-                index.rangeScan(UIO.longBytes(f, new byte[8], 0), UIO.longBytes(t, new byte[8], 0),
+                index.rangeScan(UIO.longBytes(f), UIO.longBytes(t),
                     (index1, key, timestamp, tombstoned, version, payload) -> {
                         long got = key.getLong(0);
                         boolean added = rangeScan.add(got);
@@ -188,53 +194,16 @@ public class LABNGTest {
     @Test
     public void testRowScan() throws Exception {
 
-        boolean fsync = true;
-        File root = Files.createTempDir();
-        LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-        AtomicLong globalHeapCostInBytes = new AtomicLong();
-        LABStats stats = new LABStats(globalHeapCostInBytes);
-        LABHeapPressure labHeapPressure = new LABHeapPressure(stats,
-            LABEnvironment.buildLABHeapSchedulerThreadPool(1),
-            "default",
-            1024 * 1024 * 10,
-            1024 * 1024 * 10,
-            globalHeapCostInBytes,
-            LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
-        LABEnvironment env = new LABEnvironment(
-            stats,
-            null,
-            LABEnvironment.buildLABSchedulerThreadPool(1),
-            LABEnvironment.buildLABCompactorThreadPool(4),
-            LABEnvironment.buildLABDestroyThreadPool(1),
-            null,
-            root,
-            labHeapPressure, 1, 2, leapsCache,
-            new StripingBolBufferLocks(1024),
-            true,
-            false);
+        boolean fsync = false;
+        LABEnvironment env = buildTmpEnv();
+        ValueIndex index = buildTmpValueIndex(env);
 
-        ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo",
-            4096,
-            1024 * 1024 * 10,
-            16,
-            -1,
-            -1,
-            "deprecated",
-            LABRawhide.NAME,
-            MemoryRawEntryFormat.NAME,
-            2,
-            TestUtils.indexType,
-            0.1d,
-            false,
-            Long.MAX_VALUE);
-
-        ValueIndex index = env.open(valueIndexConfig);
         BolBuffer rawEntryBuffer = new BolBuffer();
         BolBuffer keyBuffer = new BolBuffer();
         index.append((stream) -> {
-            stream.stream(-1, UIO.longBytes(1, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(1, new byte[8], 0));
-            stream.stream(-1, UIO.longBytes(2, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(2, new byte[8], 0));
-            stream.stream(-1, UIO.longBytes(3, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(3, new byte[8], 0));
+            stream.stream(-1, UIO.longBytes(1), System.currentTimeMillis(), false, 0, UIO.longBytes(1));
+            stream.stream(-1, UIO.longBytes(2), System.currentTimeMillis(), false, 0, UIO.longBytes(2));
+            stream.stream(-1, UIO.longBytes(3), System.currentTimeMillis(), false, 0, UIO.longBytes(3));
             return true;
         }, fsync, rawEntryBuffer, keyBuffer);
         commitAndWait(index, fsync);
@@ -247,57 +216,78 @@ public class LABNGTest {
     }
 
     @Test
-    public void testSkipRowScan() throws Exception {
+    public void testPointRangeScan() throws Exception {
 
-        boolean fsync = true;
-        File root = Files.createTempDir();
-        LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-        AtomicLong globalHeapCostInBytes = new AtomicLong();
-        LABStats stats = new LABStats(globalHeapCostInBytes);
-        LABHeapPressure labHeapPressure = new LABHeapPressure(stats,
-            LABEnvironment.buildLABHeapSchedulerThreadPool(1),
-            "default",
-            1024 * 1024 * 10,
-            1024 * 1024 * 10,
-            globalHeapCostInBytes,
-            LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
-        LABEnvironment env = new LABEnvironment(
-            stats,
-            null,
-            LABEnvironment.buildLABSchedulerThreadPool(1),
-            LABEnvironment.buildLABCompactorThreadPool(4),
-            LABEnvironment.buildLABDestroyThreadPool(1),
-            null,
-            root,
-            labHeapPressure, 1, 2, leapsCache,
-            new StripingBolBufferLocks(1024),
-            true,
-            false);
+        boolean fsync = false;
+        LABEnvironment env = buildTmpEnv();
+        ValueIndex index = buildTmpValueIndex(env);
 
-        ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo",
-            4096,
-            1024 * 1024 * 10,
-            16,
-            -1,
-            -1,
-            "deprecated",
-            LABRawhide.NAME,
-            MemoryRawEntryFormat.NAME,
-            2,
-            TestUtils.indexType,
-            0.1d,
-            false,
-            Long.MAX_VALUE);
-
-        ValueIndex index = env.open(valueIndexConfig);
         BolBuffer rawEntryBuffer = new BolBuffer();
         BolBuffer keyBuffer = new BolBuffer();
         index.append((stream) -> {
-            stream.stream(-1, UIO.longBytes(10, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(10, new byte[8], 0));
-            stream.stream(-1, UIO.longBytes(30, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(30, new byte[8], 0));
-            stream.stream(-1, UIO.longBytes(50, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(50, new byte[8], 0));
-            stream.stream(-1, UIO.longBytes(70, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(70, new byte[8], 0));
-            stream.stream(-1, UIO.longBytes(90, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(90, new byte[8], 0));
+            long timestamp = System.currentTimeMillis();
+            stream.stream(-1, UIO.longBytes(10), timestamp, false, 0, UIO.longBytes(10));
+            stream.stream(-1, UIO.longBytes(30), timestamp, false, 0, UIO.longBytes(30));
+            stream.stream(-1, UIO.longBytes(50), timestamp, false, 0, UIO.longBytes(50));
+            stream.stream(-1, UIO.longBytes(70), timestamp, false, 0, UIO.longBytes(70));
+            stream.stream(-1, UIO.longBytes(90), timestamp, false, 0, UIO.longBytes(90));
+            return true;
+        }, fsync, rawEntryBuffer, keyBuffer);
+        commitAndWait(index, fsync);
+
+        testPointRangeScanExpected(index, UIO.longBytes(9),UIO.longBytes(10), new long[]{});
+        testPointRangeScanExpected(index, UIO.longBytes(10),UIO.longBytes(10), new long[]{});
+        testPointRangeScanExpected(index, UIO.longBytes(10),UIO.longBytes(11), new long[]{10});
+        testPointRangeScanExpected(index, UIO.longBytes(10),UIO.longBytes(30), new long[]{10});
+        testPointRangeScanExpected(index, UIO.longBytes(10),UIO.longBytes(31), new long[]{10,30});
+        testPointRangeScanExpected(index, UIO.longBytes(10),UIO.longBytes(71), new long[]{10,30,50,70});
+        testPointRangeScanExpected(index, UIO.longBytes(70),null, new long[]{70,90});
+        testPointRangeScanExpected(index, UIO.longBytes(69),null, new long[]{});
+        testPointRangeScanExpected(index, UIO.longBytes(91),null, new long[]{});
+
+        env.shutdown();
+
+    }
+
+    @Test
+    public void testPointRangeScan2() throws Exception {
+
+        boolean fsync = false;
+        LABEnvironment env = buildTmpEnv();
+        ValueIndex index = buildTmpValueIndex(env);
+
+        BolBuffer rawEntryBuffer = new BolBuffer();
+        BolBuffer keyBuffer = new BolBuffer();
+        index.append((stream) -> {
+            long timestamp = System.currentTimeMillis();
+            stream.stream(-1, UIO.longBytes(10), timestamp, false, 0, UIO.longBytes(10));
+            return true;
+        }, fsync, rawEntryBuffer, keyBuffer);
+        commitAndWait(index, fsync);
+
+        testPointRangeScanExpected(index, UIO.longBytes(9),UIO.longBytes(10), new long[]{});
+        testPointRangeScanExpected(index, UIO.longBytes(10),UIO.longBytes(10), new long[]{});
+        testPointRangeScanExpected(index, UIO.longBytes(10),UIO.longBytes(11), new long[]{10});
+        env.shutdown();
+
+    }
+
+    @Test
+    public void testSkipRowScan() throws Exception {
+
+        boolean fsync = false;
+        LABEnvironment env = buildTmpEnv();
+        ValueIndex index = buildTmpValueIndex(env);
+
+        BolBuffer rawEntryBuffer = new BolBuffer();
+        BolBuffer keyBuffer = new BolBuffer();
+        index.append((stream) -> {
+            long timestamp = System.currentTimeMillis();
+            stream.stream(-1, UIO.longBytes(10), timestamp, false, 0, UIO.longBytes(10));
+            stream.stream(-1, UIO.longBytes(30), timestamp, false, 0, UIO.longBytes(30));
+            stream.stream(-1, UIO.longBytes(50), timestamp, false, 0, UIO.longBytes(50));
+            stream.stream(-1, UIO.longBytes(70), timestamp, false, 0, UIO.longBytes(70));
+            stream.stream(-1, UIO.longBytes(90), timestamp, false, 0, UIO.longBytes(90));
             return true;
         }, fsync, rawEntryBuffer, keyBuffer);
         commitAndWait(index, fsync);
@@ -374,61 +364,24 @@ public class LABNGTest {
     @Test
     public void testEnv() throws Exception {
 
-        boolean fsync = true;
-        File root = Files.createTempDir();
-        LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-        AtomicLong globalHeapCostInBytes = new AtomicLong();
-        LABStats stats = new LABStats(globalHeapCostInBytes);
-        LABHeapPressure labHeapPressure = new LABHeapPressure(stats,
-            LABEnvironment.buildLABHeapSchedulerThreadPool(1),
-            "default",
-            1024 * 1024 * 10,
-            1024 * 1024 * 10,
-            globalHeapCostInBytes,
-            LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
-        LABEnvironment env = new LABEnvironment(
-            stats,
-            null,
-            LABEnvironment.buildLABSchedulerThreadPool(1),
-            LABEnvironment.buildLABCompactorThreadPool(4),
-            LABEnvironment.buildLABDestroyThreadPool(1),
-            null,
-            root,
-            labHeapPressure, 1, 2, leapsCache,
-            new StripingBolBufferLocks(1024),
-            true,
-            false);
+        boolean fsync = false;
+        LABEnvironment env = buildTmpEnv();
+        ValueIndex index = buildTmpValueIndex(env);
 
-        ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo",
-            4096,
-            1024 * 1024 * 10,
-            16,
-            -1,
-            -1,
-            "deprecated",
-            LABRawhide.NAME,
-            MemoryRawEntryFormat.NAME,
-            2,
-            TestUtils.indexType,
-            0.1d,
-            false,
-            Long.MAX_VALUE);
-
-        ValueIndex index = env.open(valueIndexConfig);
         BolBuffer rawEntryBuffer = new BolBuffer();
         BolBuffer keyBuffer = new BolBuffer();
         index.append((stream) -> {
-            stream.stream(-1, UIO.longBytes(1, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(1, new byte[8], 0));
-            stream.stream(-1, UIO.longBytes(2, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(2, new byte[8], 0));
-            stream.stream(-1, UIO.longBytes(3, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(3, new byte[8], 0));
+            stream.stream(-1, UIO.longBytes(1), System.currentTimeMillis(), false, 0, UIO.longBytes(1));
+            stream.stream(-1, UIO.longBytes(2), System.currentTimeMillis(), false, 0, UIO.longBytes(2));
+            stream.stream(-1, UIO.longBytes(3), System.currentTimeMillis(), false, 0, UIO.longBytes(3));
             return true;
         }, fsync, rawEntryBuffer, keyBuffer);
         commitAndWait(index, fsync);
 
         index.append((stream) -> {
-            stream.stream(-1, UIO.longBytes(7, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(7, new byte[8], 0));
-            stream.stream(-1, UIO.longBytes(8, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(8, new byte[8], 0));
-            stream.stream(-1, UIO.longBytes(9, new byte[8], 0), System.currentTimeMillis(), false, 0, UIO.longBytes(9, new byte[8], 0));
+            stream.stream(-1, UIO.longBytes(7), System.currentTimeMillis(), false, 0, UIO.longBytes(7));
+            stream.stream(-1, UIO.longBytes(8), System.currentTimeMillis(), false, 0, UIO.longBytes(8));
+            stream.stream(-1, UIO.longBytes(9), System.currentTimeMillis(), false, 0, UIO.longBytes(9));
             return true;
         }, fsync, rawEntryBuffer, keyBuffer);
         commitAndWait(index, fsync);
@@ -446,16 +399,16 @@ public class LABNGTest {
         testNotExpected(index, new long[] { 0, 4, 5, 6, 10 });
         testNotExpectedMultiGet(index, new long[] { 0, 4, 5, 6, 10 });
         testScanExpected(index, expected);
-        testRangeScanExpected(index, UIO.longBytes(2, new byte[8], 0), null, new long[] { 2, 3, 7, 8, 9 });
-        testRangeScanExpected(index, UIO.longBytes(2, new byte[8], 0), UIO.longBytes(7, new byte[8], 0), new long[] { 2, 3 });
-        testRangeScanExpected(index, UIO.longBytes(4, new byte[8], 0), UIO.longBytes(7, new byte[8], 0), new long[] {});
+        testRangeScanExpected(index, UIO.longBytes(2), null, new long[] { 2, 3, 7, 8, 9 });
+        testRangeScanExpected(index, UIO.longBytes(2), UIO.longBytes(7), new long[] { 2, 3 });
+        testRangeScanExpected(index, UIO.longBytes(4), UIO.longBytes(7), new long[] {});
 
         index.commit(fsync, true);
 
         index.append((stream) -> {
-            stream.stream(-1, UIO.longBytes(1, new byte[8], 0), System.currentTimeMillis(), true, 1, UIO.longBytes(1, new byte[8], 0));
-            stream.stream(-1, UIO.longBytes(2, new byte[8], 0), System.currentTimeMillis(), true, 1, UIO.longBytes(2, new byte[8], 0));
-            stream.stream(-1, UIO.longBytes(3, new byte[8], 0), System.currentTimeMillis(), true, 1, UIO.longBytes(3, new byte[8], 0));
+            stream.stream(-1, UIO.longBytes(1), System.currentTimeMillis(), true, 1, UIO.longBytes(1));
+            stream.stream(-1, UIO.longBytes(2), System.currentTimeMillis(), true, 1, UIO.longBytes(2));
+            stream.stream(-1, UIO.longBytes(3), System.currentTimeMillis(), true, 1, UIO.longBytes(3));
             return true;
         }, fsync, rawEntryBuffer, keyBuffer);
 
@@ -465,7 +418,7 @@ public class LABNGTest {
         testNotExpected(index, new long[] { 0, 4, 5, 6, 10 });
         testNotExpectedMultiGet(index, new long[] { 0, 4, 5, 6, 10 });
         testScanExpected(index, expected);
-        testRangeScanExpected(index, UIO.longBytes(1, new byte[8], 0), UIO.longBytes(9, new byte[8], 0), new long[] { 7, 8 });
+        testRangeScanExpected(index, UIO.longBytes(1), UIO.longBytes(9), new long[] { 7, 8 });
 
         env.shutdown();
 
@@ -474,64 +427,28 @@ public class LABNGTest {
     @Test
     public void testClobber() throws Exception {
 
-        boolean fsync = true;
-        File root = Files.createTempDir();
-        LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-        AtomicLong globalHeapCostInBytes = new AtomicLong();
-        LABStats stats = new LABStats(globalHeapCostInBytes);
-        LABHeapPressure labHeapPressure = new LABHeapPressure(stats,
-            LABEnvironment.buildLABHeapSchedulerThreadPool(1),
-            "default",
-            1024 * 1024 * 10,
-            1024 * 1024 * 10,
-            globalHeapCostInBytes,
-            LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
-        LABEnvironment env = new LABEnvironment(stats,
-            null,
-            LABEnvironment.buildLABSchedulerThreadPool(1),
-            LABEnvironment.buildLABCompactorThreadPool(4),
-            LABEnvironment.buildLABDestroyThreadPool(1),
-            null,
-            root,
-            labHeapPressure, 1, 2, leapsCache,
-            new StripingBolBufferLocks(1024),
-            true,
-            false);
+        boolean fsync = false;
+        LABEnvironment env = buildTmpEnv();
+        ValueIndex index = buildTmpValueIndex(env);
 
-        ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo",
-            4096,
-            1024 * 1024 * 10,
-            16,
-            -1,
-            -1,
-            "deprecated",
-            LABRawhide.NAME,
-            MemoryRawEntryFormat.NAME,
-            2,
-            TestUtils.indexType,
-            0.75d,
-            false,
-            Long.MAX_VALUE);
-
-        ValueIndex index = env.open(valueIndexConfig);
         BolBuffer rawEntryBuffer = new BolBuffer();
         BolBuffer keyBuffer = new BolBuffer();
 
         index.append((stream) -> {
-            stream.stream(-1, UIO.longBytes(1, new byte[8], 0), 1, false, 0, UIO.longBytes(1, new byte[8], 0));
+            stream.stream(-1, UIO.longBytes(1), 1, false, 0, UIO.longBytes(1));
             return true;
         }, fsync, rawEntryBuffer, keyBuffer);
 
         commitAndWait(index, fsync);
 
         index.append((stream) -> {
-            stream.stream(-1, UIO.longBytes(1, new byte[8], 0), 4, false, 0, UIO.longBytes(7, new byte[8], 0));
+            stream.stream(-1, UIO.longBytes(1), 4, false, 0, UIO.longBytes(7));
             return true;
         }, fsync, rawEntryBuffer, keyBuffer);
         commitAndWait(index, fsync);
 
         index.append((stream) -> {
-            stream.stream(-1, UIO.longBytes(1, new byte[8], 0), 1, false, 0, UIO.longBytes(1, new byte[8], 0));
+            stream.stream(-1, UIO.longBytes(1), 1, false, 0, UIO.longBytes(1));
             return true;
         }, fsync, rawEntryBuffer, keyBuffer);
 
@@ -560,57 +477,20 @@ public class LABNGTest {
     public void testBackwards() throws Exception {
 
         boolean fsync = false;
-        File root = Files.createTempDir();
-        LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-        AtomicLong globalHeapCostInBytes = new AtomicLong();
-        LABStats stats = new LABStats(globalHeapCostInBytes);
-        LABHeapPressure labHeapPressure = new LABHeapPressure(stats,
-            LABEnvironment.buildLABHeapSchedulerThreadPool(1),
-            "default",
-            1024 * 1024 * 10,
-            1024 * 1024 * 10,
-            globalHeapCostInBytes,
-            LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
-        LABEnvironment env = new LABEnvironment(stats,
-            null,
-            LABEnvironment.buildLABSchedulerThreadPool(1),
-            LABEnvironment.buildLABCompactorThreadPool(4),
-            LABEnvironment.buildLABDestroyThreadPool(1),
-            null,
-            root,
-            labHeapPressure,
-            1, 2,
-            leapsCache,
-            new StripingBolBufferLocks(1024),
-            true,
-            false);
+        LABEnvironment env = buildTmpEnv();
+        ValueIndex index = buildTmpValueIndex(env);
 
-        ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo",
-            4096,
-            1024 * 1024 * 10,
-            16,
-            -1,
-            -1,
-            "deprecated",
-            LABRawhide.NAME,
-            MemoryRawEntryFormat.NAME,
-            2,
-            TestUtils.indexType,
-            0.75d,
-            false,
-            Long.MAX_VALUE);
 
-        ValueIndex<byte[]> index = env.open(valueIndexConfig);
         BolBuffer rawEntryBuffer = new BolBuffer();
         BolBuffer keyBuffer = new BolBuffer();
 
-        byte[] key = UIO.longBytes(1234, new byte[8], 0);
+        byte[] key = UIO.longBytes(1234);
         for (int i = 0; i < 10; i++) {
             long timestamp = Integer.MAX_VALUE - i;
             long version = timestamp + 1;
             index.append((stream) -> {
                 //System.out.println("wrote timestamp:" + timestamp + " version:" + version);
-                stream.stream(-1, key, timestamp, false, version, UIO.longBytes(timestamp, new byte[8], 0));
+                stream.stream(-1, key, timestamp, false, version, UIO.longBytes(timestamp));
                 return true;
             }, fsync, rawEntryBuffer, keyBuffer);
         }
@@ -622,7 +502,7 @@ public class LABNGTest {
             long version = timestamp + 1;
             index.append((stream) -> {
                 //System.out.println("wrote timestamp:" + timestamp + " version:" + version);
-                stream.stream(-1, key, timestamp, false, version, UIO.longBytes(timestamp, new byte[8], 0));
+                stream.stream(-1, key, timestamp, false, version, UIO.longBytes(timestamp));
                 return true;
             }, fsync, rawEntryBuffer, keyBuffer);
         }
@@ -645,56 +525,19 @@ public class LABNGTest {
     public void testKeyValue() throws Exception {
 
         boolean fsync = false;
-        File root = Files.createTempDir();
-        LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-        AtomicLong globalHeapCostInBytes = new AtomicLong();
-        LABStats stats = new LABStats(globalHeapCostInBytes);
-        LABHeapPressure labHeapPressure = new LABHeapPressure(stats,
-            LABEnvironment.buildLABHeapSchedulerThreadPool(1),
-            "default",
-            1024 * 1024 * 10,
-            1024 * 1024 * 10,
-            globalHeapCostInBytes,
-            LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
-        LABEnvironment env = new LABEnvironment(stats,
-            null,
-            LABEnvironment.buildLABSchedulerThreadPool(1),
-            LABEnvironment.buildLABCompactorThreadPool(4),
-            LABEnvironment.buildLABDestroyThreadPool(1),
-            null,
-            root,
-            labHeapPressure,
-            1, 2,
-            leapsCache,
-            new StripingBolBufferLocks(1024),
-            true,
-            false);
+        LABEnvironment env = buildTmpEnv();
+        ValueIndex index = buildTmpValueIndex(env);
 
-        ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo",
-            4096,
-            1024 * 1024 * 10,
-            16,
-            -1,
-            -1,
-            "deprecated",
-            LABKeyValueRawhide.NAME,
-            MemoryRawEntryFormat.NAME,
-            2,
-            TestUtils.indexType,
-            0.75d,
-            false,
-            Long.MAX_VALUE);
 
-        ValueIndex<byte[]> index = env.open(valueIndexConfig);
         BolBuffer rawEntryBuffer = new BolBuffer();
         BolBuffer keyBuffer = new BolBuffer();
 
-        byte[] key = UIO.longBytes(1234, new byte[8], 0);
+        byte[] key = UIO.longBytes(1234);
         for (int i = 0; i < 10; i++) {
             long timestamp = i;
             index.append((stream) -> {
                 //System.out.println("wrote timestamp:" + timestamp);
-                stream.stream(-1, key, 0, false, 0, UIO.longBytes(timestamp, new byte[8], 0));
+                stream.stream(-1, key, 0, false, 0, UIO.longBytes(timestamp));
                 return true;
             }, fsync, rawEntryBuffer, keyBuffer);
         }
@@ -705,7 +548,7 @@ public class LABNGTest {
             long timestamp = i;
             index.append((stream) -> {
                 //System.out.println("wrote timestamp:" + timestamp);
-                stream.stream(-1, key, 0, false, 0, UIO.longBytes(timestamp, new byte[8], 0));
+                stream.stream(-1, key, 0, false, 0, UIO.longBytes(timestamp));
                 return true;
             }, fsync, rawEntryBuffer, keyBuffer);
         }
@@ -734,7 +577,7 @@ public class LABNGTest {
     private void testExpectedMultiGet(ValueIndex index, long[] expected) throws Exception {
         index.get((KeyStream keyStream) -> {
             for (int i = 0; i < expected.length; i++) {
-                keyStream.key(i, UIO.longBytes(expected[i], new byte[8], 0), 0, 8);
+                keyStream.key(i, UIO.longBytes(expected[i]), 0, 8);
             }
             return true;
         }, (index1, key, timestamp, tombstoned, version, payload) -> {
@@ -749,7 +592,7 @@ public class LABNGTest {
             int ii = i;
             index.get(
                 (keyStream) -> {
-                    byte[] key = UIO.longBytes(expected[ii], new byte[8], 0);
+                    byte[] key = UIO.longBytes(expected[ii]);
                     keyStream.key(0, key, 0, key.length);
                     return true;
                 },
@@ -763,7 +606,7 @@ public class LABNGTest {
     private void testNotExpectedMultiGet(ValueIndex index, long[] notExpected) throws Exception {
         index.get((KeyStream keyStream) -> {
             for (long i : notExpected) {
-                keyStream.key(-1, UIO.longBytes(i, new byte[8], 0), 0, 8);
+                keyStream.key(-1, UIO.longBytes(i), 0, 8);
             }
             return true;
         }, (index1, key, timestamp, tombstoned, version, payload) -> {
@@ -779,7 +622,7 @@ public class LABNGTest {
             long ii = i;
             index.get(
                 (keyStream) -> {
-                    byte[] key = UIO.longBytes(ii, new byte[8], 0);
+                    byte[] key = UIO.longBytes(ii);
                     keyStream.key(0, key, 0, key.length);
                     return true;
                 },
@@ -826,6 +669,26 @@ public class LABNGTest {
         assertEquals(scanned.size(), expected.length);
         for (int i = 0; i < expected.length; i++) {
             //System.out.println((long) scanned.get(i) + " vs " + expected[i]);
+            assertEquals((long) scanned.get(i), expected[i]);
+        }
+    }
+
+    private void testPointRangeScanExpected(ValueIndex index, byte[] from, byte[] to, long[] expected) throws Exception {
+
+        //System.out.println("Checking point range scan:" + Arrays.toString(from) + "->" + Arrays.toString(to));
+        List<Long> scanned = new ArrayList<>();
+        index.pointRangeScan(from, to, (index1, key, timestamp, tombstoned, version, payload) -> {
+            if (!tombstoned) {
+                //System.out.println("scan:" + IndexUtil.toString(key) + " " + timestamp + " " + tombstoned + " " + version + " " + IndexUtil.toString(payload));
+                scanned.add(payload.getLong(0));
+            }
+            return true;
+        }, true);
+
+
+        assertEquals(expected.length, scanned.size(), "size miss match");
+        for (int i = 0; i < expected.length; i++) {
+            //System.out.println(scanned.get(i) + " vs " + expected[i]);
             assertEquals((long) scanned.get(i), expected[i]);
         }
     }

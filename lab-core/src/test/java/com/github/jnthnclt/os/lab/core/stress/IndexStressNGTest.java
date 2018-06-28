@@ -134,7 +134,8 @@ public class IndexStressNGTest {
                     Thread.sleep(10);
                     continue;
                 }
-                while (indexs.tx(-1, null, null, (index, fromKey, toKey, acquired, hydrateValues) -> {
+                while (indexs.tx(-1, false, null, null,
+                    (index, pointFrom, fromKey, toKey, acquired, hydrateValues) -> {
 
                     try {
 

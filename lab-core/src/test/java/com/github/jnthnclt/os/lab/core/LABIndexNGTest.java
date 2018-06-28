@@ -1,7 +1,6 @@
 package com.github.jnthnclt.os.lab.core;
 
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
-import com.github.jnthnclt.os.lab.core.guts.LABCSLMIndex;
 import com.github.jnthnclt.os.lab.core.guts.LABIndex;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABAppendOnlyAllocator;
@@ -19,13 +18,6 @@ import org.testng.annotations.Test;
  * @author jonathan.colt
  */
 public class LABIndexNGTest {
-
-    @Test
-    public void testCSLGet() throws Exception {
-        LABIndex<BolBuffer, BolBuffer> map = new LABCSLMIndex(LABRawhide.SINGLETON, new StripingBolBufferLocks(1024));
-        testLABIndex(map);
-
-    }
 
     @Test
     public void testGet() throws Exception {

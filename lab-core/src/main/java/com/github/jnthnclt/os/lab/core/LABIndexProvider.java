@@ -72,7 +72,7 @@ public class LABIndexProvider<T> {
             "deprecated",
             LABRawhide.NAME,
             MemoryRawEntryFormat.NAME,
-            24,
+            27,
             LABHashIndexType.cuckoo,
             2d,
             true,

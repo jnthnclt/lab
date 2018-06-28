@@ -115,97 +115,101 @@ public class TestUtils {
 
         int[] index = new int[1];
 
-        indexes.tx(-1, null, null, (index1, fromKey, toKey, acquired, hydrateValues) -> {
-            Scanner rowScan = new InterleaveStream(LABRawhide.SINGLETON,
-                ActiveScan.indexToFeeds(acquired, null, null, LABRawhide.SINGLETON, null));
-            try {
-
-
-                BolBuffer rawEntry = new BolBuffer();
-                while ((rawEntry =rowScan.next(rawEntry,null)) != null) {
-                    Assert.assertEquals(UIO.bytesLong(keys.get(index[0])), key(rawEntry));
-                    index[0]++;
-                }
-
-            } finally {
-                rowScan.close();
-            }
-            //System.out.println("rowScan PASSED");
-            return true;
-        }, true);
-
-        indexes.tx(-1, null, null, (index1, fromKey, toKey, acquired, hydrateValues) -> {
-            for (int i = 0; i < count * step; i++) {
-                long k = i;
-
-
-                BolBuffer rawEntry = PointInterleave.get(acquired,  UIO.longBytes(k, new byte[8], 0), LABRawhide.SINGLETON, true);
-                if (rawEntry != null) {
-                    byte[] expectedFP = desired.get(UIO.longBytes(key(rawEntry), new byte[8], 0));
-                    if (expectedFP == null) {
-                        Assert.assertTrue(expectedFP == null && value(rawEntry) == -1);
-                    } else {
-                        Assert.assertEquals(value(expectedFP), value(rawEntry));
-                    }
-                }
-            }
-            //System.out.println("gets PASSED");
-            return true;
-        }, true);
-
-        indexes.tx(-1, null, null, (index1, fromKey, toKey, acquired, hydrateValues) -> {
-            for (int i = 0; i < keys.size() - 3; i++) {
-                int _i = i;
-
-                int[] streamed = new int[1];
-
-                //System.out.println("Asked:" + UIO.bytesLong(keys.get(_i)) + " to " + UIO.bytesLong(keys.get(_i + 3)));
-                Scanner rangeScan = new InterleaveStream(LABRawhide.SINGLETON,
-                    ActiveScan.indexToFeeds(acquired, keys.get(_i), keys.get(_i + 3), LABRawhide.SINGLETON, null));
+        indexes.tx(-1, false, null, null,
+            (index1, pointFrom1, fromKey, toKey, acquired, hydrateValues) -> {
+                Scanner rowScan = new InterleaveStream(LABRawhide.SINGLETON,
+                    ActiveScan.indexToFeeds(acquired, false, false, null, null, LABRawhide.SINGLETON, null));
                 try {
+
+
                     BolBuffer rawEntry = new BolBuffer();
-                    while ((rawEntry =rangeScan.next(rawEntry,null)) != null) {
-                        if (value(rawEntry) > -1) {
-                            //System.out.println("Streamed:" + key(rawEntry));
-                            streamed[0]++;
-                        }
+                    while ((rawEntry = rowScan.next(rawEntry, null)) != null) {
+                        Assert.assertEquals(UIO.bytesLong(keys.get(index[0])), key(rawEntry));
+                        index[0]++;
                     }
 
                 } finally {
-                    rangeScan.close();
+                    rowScan.close();
                 }
-                Assert.assertEquals(3, streamed[0]);
-            }
+                //System.out.println("rowScan PASSED");
+                return true;
+            }, true);
 
-            //System.out.println("rangeScan PASSED");
-            return true;
-        }, true);
+        indexes.tx(-1, false, null, null,
+            (index1, pointFrom1, fromKey, toKey, acquired, hydrateValues) -> {
+                for (int i = 0; i < count * step; i++) {
+                    long k = i;
 
-        indexes.tx(-1, null, null, (index1, fromKey, toKey, acquired, hydrateValues) -> {
-            for (int i = 0; i < keys.size() - 3; i++) {
-                int _i = i;
-                int[] streamed = new int[1];
 
-                Scanner rangeScan = new InterleaveStream(LABRawhide.SINGLETON,
-                    ActiveScan.indexToFeeds(acquired, UIO.longBytes(UIO.bytesLong(keys.get(_i)) + 1, new byte[8], 0), keys.get(_i + 3),
-                    LABRawhide.SINGLETON, null));
-                try {
-
-                    BolBuffer rawEntry = new BolBuffer();
-                    while ((rawEntry =rangeScan.next(rawEntry,null)) != null) {
-                        if (value(rawEntry) > -1) {
-                            streamed[0]++;
+                    BolBuffer rawEntry = PointInterleave.get(acquired, UIO.longBytes(k, new byte[8], 0), LABRawhide.SINGLETON, true);
+                    if (rawEntry != null) {
+                        byte[] expectedFP = desired.get(UIO.longBytes(key(rawEntry), new byte[8], 0));
+                        if (expectedFP == null) {
+                            Assert.assertTrue(expectedFP == null && value(rawEntry) == -1);
+                        } else {
+                            Assert.assertEquals(value(expectedFP), value(rawEntry));
                         }
                     }
-                } finally {
-                    rangeScan.close();
                 }
-                Assert.assertEquals(2, streamed[0]);
+                //System.out.println("gets PASSED");
+                return true;
+            }, true);
 
-            }
+        indexes.tx(-1, false, null, null,
+            (index1, pointFrom1, fromKey, toKey, acquired, hydrateValues) -> {
+                for (int i = 0; i < keys.size() - 3; i++) {
+                    int _i = i;
 
-            //System.out.println("rangeScan2 PASSED");
-            return true;
-        }, true);
+                    int[] streamed = new int[1];
+
+                    //System.out.println("Asked:" + UIO.bytesLong(keys.get(_i)) + " to " + UIO.bytesLong(keys.get(_i + 3)));
+                    Scanner rangeScan = new InterleaveStream(LABRawhide.SINGLETON,
+                        ActiveScan.indexToFeeds(acquired, false, false, keys.get(_i), keys.get(_i + 3), LABRawhide.SINGLETON, null));
+                    try {
+                        BolBuffer rawEntry = new BolBuffer();
+                        while ((rawEntry = rangeScan.next(rawEntry, null)) != null) {
+                            if (value(rawEntry) > -1) {
+                                //System.out.println("Streamed:" + key(rawEntry));
+                                streamed[0]++;
+                            }
+                        }
+
+                    } finally {
+                        rangeScan.close();
+                    }
+                    Assert.assertEquals(3, streamed[0]);
+                }
+
+                //System.out.println("rangeScan PASSED");
+                return true;
+            }, true);
+
+        indexes.tx(-1, false, null, null,
+            (index1, pointFrom1, fromKey, toKey, acquired, hydrateValues) -> {
+                for (int i = 0; i < keys.size() - 3; i++) {
+                    int _i = i;
+                    int[] streamed = new int[1];
+
+                    Scanner rangeScan = new InterleaveStream(LABRawhide.SINGLETON,
+                        ActiveScan.indexToFeeds(acquired, false, false, UIO.longBytes(UIO.bytesLong(keys.get(_i)) + 1, new byte[8], 0), keys.get(_i + 3),
+                            LABRawhide.SINGLETON, null));
+                    try {
+
+                        BolBuffer rawEntry = new BolBuffer();
+                        while ((rawEntry = rangeScan.next(rawEntry, null)) != null) {
+                            if (value(rawEntry) > -1) {
+                                streamed[0]++;
+                            }
+                        }
+                    } finally {
+                        rangeScan.close();
+                    }
+                    Assert.assertEquals(2, streamed[0]);
+
+                }
+
+                //System.out.println("rangeScan2 PASSED");
+                return true;
+            }, true);
     }
 }

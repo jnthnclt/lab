@@ -72,21 +72,25 @@ public class FailFastOdometerTest {
     @Test
     public void testSimpleFastCombinations() throws Exception {
         Map<String, RoaringBitmap> index = Maps.newHashMap();
-        index.put("x", create(1, 2, 3, 4));
-        index.put("y", create(1, 2, 3, 4));
+        index.put("x", create(6, 7));
+        index.put("y", create(1, 2, 3, 4, 5));
         index.put("1", create(1, 2, 3));
         index.put("3", create(5, 6, 7));
         index.put("4", create(1, 2, 3));
-        index.put("a", create(1, 2));
+        index.put("a", create(5, 1, 2));
         index.put("b", create(1, 2));
-        index.put("c", create(1, 2));
+        index.put("c", create(6));
+        index.put("p", create(1, 2, 3, 4));
+        index.put("q", create(5, 6, 7));
 
-        FailFastdometer failFastdometer3 = new FailFastdometer(Arrays.asList("a", "b", "c", null), null);
+
+        FailFastdometer failFastdometer4 = new FailFastdometer(Arrays.asList(null, "p", "q"), null);
+        FailFastdometer failFastdometer3 = new FailFastdometer(Arrays.asList("a", "b", null, "c"), failFastdometer4);
         FailFastdometer failFastdometer2 = new FailFastdometer(Arrays.asList("1", null, "3", "4"), failFastdometer3);
         FailFastdometer<String, RoaringBitmap> failFastdometer1 = new FailFastdometer<>(Arrays.asList("x", "y"), failFastdometer2);
 
         List<String> parts = Lists.newArrayList();
-        RoaringBitmap all = create(1, 2, 3, 4, 5);
+        RoaringBitmap all = create(1, 2, 3, 4, 5, 6, 7);
 
         List<String> results = Lists.newArrayList();
 
@@ -96,6 +100,9 @@ public class FailFastOdometerTest {
                 (priorValue, priorResult, current) -> {
                     RoaringBitmap got = index.get(current);
                     RoaringBitmap and = RoaringBitmap.and(priorResult, got);
+
+                    //System.out.println(priorValue + " " + current + " " + got);
+
                     if (and.getCardinality() == 0) {
                         return null;
                     }
@@ -103,25 +110,25 @@ public class FailFastOdometerTest {
                 });
             if (r != null) {
                 String m = "Result:" + r.pattern + " " + r.edge;
+                //System.out.println(m);
                 results.add(m);
             }
         }
 
 
-        Odometer odometer3 = new Odometer(false, Arrays.asList("a", "b", "c", null), null);
+        Odometer odometer4 = new Odometer(false, Arrays.asList(null, "p", "q"), null);
+        Odometer odometer3 = new Odometer(false, Arrays.asList("a", "b", null, "c"), odometer4);
         Odometer odometer2 = new Odometer(false, Arrays.asList("1", null, "3", "4"), odometer3);
         Odometer<String> odometer1 = new Odometer<>(true, Arrays.asList("x", "y"), odometer2);
-
         int i = 0;
-        while(odometer1.hasNext()) {
+        while (odometer1.hasNext()) {
             List<String> next = odometer1.next();
             RoaringBitmap answer = all.clone();
-
             for (String s : next) {
                 if (s != null) {
                     RoaringBitmap got = index.get(s);
                     if (got != null) {
-                        answer = RoaringBitmap.and(answer,got);
+                        answer = RoaringBitmap.and(answer, got);
                     }
                 }
             }
@@ -131,12 +138,9 @@ public class FailFastOdometerTest {
                 Assert.assertEquals(m, results.get(i));
                 i++;
             }
-
         }
 
     }
-
-
 
 
     @Test

@@ -28,7 +28,7 @@ public interface LABIndex<E, B> {
 
     boolean contains(byte[] from, byte[] to) throws Exception;
 
-    Scanner scanner(byte[] from, byte[] to, B entryBuffer, B entryKeyBuffer) throws Exception;
+    Scanner scanner(boolean pointFrom, byte[] from, byte[] to, B entryBuffer, B entryKeyBuffer) throws Exception;
 
     void clear() throws Exception;
 

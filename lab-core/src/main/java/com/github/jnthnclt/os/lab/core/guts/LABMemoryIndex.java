@@ -97,13 +97,13 @@ public class LABMemoryIndex implements RawAppendableIndex {
             }
 
             @Override
-            public Scanner rangeScan(byte[] from, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
-                return index.scanner(from, to, entryBuffer, entryKeyBuffer);
+            public Scanner rangeScan(boolean hashIndexEnabled, boolean pointFrom, byte[] from, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+                return index.scanner(pointFrom, from, to, entryBuffer, entryKeyBuffer);
             }
 
             @Override
             public Scanner rowScan(BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
-                return index.scanner(null, null, entryBuffer, entryKeyBuffer);
+                return index.scanner(false,null, null, entryBuffer, entryKeyBuffer);
             }
 
             @Override

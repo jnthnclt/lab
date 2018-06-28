@@ -178,35 +178,86 @@ public class LAB implements ValueIndex<byte[]> {
     }
 
     @Override
+    public boolean pointRangeScan(byte[] from, byte[] to, ValueStream stream, boolean hydrateValues) throws Exception {
+
+        if (from == null) {
+            LOG.warn("Using pointRangeScan with null from is pointless. Using range scan instead.");
+            return rangeScan(from, to, stream, hydrateValues);
+        }
+
+        BolBuffer streamKeyBuffer = new BolBuffer();
+        BolBuffer streamValueBuffer = hydrateValues ? new BolBuffer() : null;
+
+        ReaderTx readerTx = (index, pointFrom, fromKey, toKey, readIndexes, hydrateValues1) -> {
+
+            InterleaveStream interleaveStream = new InterleaveStream(rawhide,
+                ActiveScan.indexToFeeds(readIndexes, hashIndexEnabled, pointFrom, fromKey, toKey, rawhide, null));
+            try {
+
+                while (true) {
+                    BolBuffer next = interleaveStream.next(new BolBuffer(), null);
+                    if (next == null) {
+                        break;
+                    }
+                    if (!rawhide.streamRawEntry(index,
+                        next,
+                        streamKeyBuffer,
+                        streamValueBuffer,
+                        stream)) {
+                        return false;
+                    }
+                }
+                return true;
+            } finally {
+                interleaveStream.close();
+            }
+        };
+
+        boolean r = rangeTx(true,
+            -1,
+            true,
+            from,
+            to,
+            -1,
+            -1,
+            readerTx,
+            hydrateValues
+        );
+        stats.rangeScan.increment();
+        return r;
+    }
+
+    @Override
     public boolean rangeScan(byte[] from, byte[] to, ValueStream stream, boolean hydrateValues) throws Exception {
         BolBuffer streamKeyBuffer = new BolBuffer();
         BolBuffer streamValueBuffer = hydrateValues ? new BolBuffer() : null;
 
-        boolean r = rangeTx(true, -1, from, to, -1, -1,
-            (index, fromKey, toKey, readIndexes, hydrateValues1) -> {
+        ReaderTx readerTx = (index, pointFrom, fromKey, toKey, readIndexes, hydrateValues1) -> {
 
-                InterleaveStream interleaveStream = new InterleaveStream(rawhide,
-                    ActiveScan.indexToFeeds(readIndexes, fromKey, toKey, rawhide, null));
-                try {
+            InterleaveStream interleaveStream = new InterleaveStream(rawhide,
+                ActiveScan.indexToFeeds(readIndexes, false, false, fromKey, toKey, rawhide, null));
+            try {
 
-                    while (true) {
-                        BolBuffer next = interleaveStream.next(new BolBuffer(), null);
-                        if (next == null) {
-                            break;
-                        }
-                        if (!rawhide.streamRawEntry(index,
-                            next,
-                            streamKeyBuffer,
-                            streamValueBuffer,
-                            stream)) {
-                            return false;
-                        }
+                while (true) {
+                    BolBuffer next = interleaveStream.next(new BolBuffer(), null);
+                    if (next == null) {
+                        break;
                     }
-                    return true;
-                } finally {
-                    interleaveStream.close();
+                    if (!rawhide.streamRawEntry(index,
+                        next,
+                        streamKeyBuffer,
+                        streamValueBuffer,
+                        stream)) {
+                        return false;
+                    }
                 }
-            },
+                return true;
+            } finally {
+                interleaveStream.close();
+            }
+        };
+        boolean r = rangeTx(true, -1, false, from, to, -1, -1,
+            readerTx,
             hydrateValues
         );
         stats.rangeScan.increment();
@@ -218,11 +269,11 @@ public class LAB implements ValueIndex<byte[]> {
         BolBuffer streamKeyBuffer = new BolBuffer();
         BolBuffer streamValueBuffer = hydrateValues ? new BolBuffer() : null;
         boolean r = ranges.ranges((index, from, to) -> {
-            return rangeTx(true, index, from, to, -1, -1,
-                (index1, fromKey, toKey, readIndexes, hydrateValues1) -> {
+            return rangeTx(true, index, false, from, to, -1, -1,
+                (index1, pointFrom1, fromKey, toKey, readIndexes, hydrateValues1) -> {
 
                     InterleaveStream interleaveStream = new InterleaveStream(rawhide,
-                        ActiveScan.indexToFeeds(readIndexes, fromKey, toKey, rawhide, null));
+                        ActiveScan.indexToFeeds(readIndexes, false, false, fromKey, toKey, rawhide, null));
                     try {
                         while (true) {
                             BolBuffer next = interleaveStream.next(new BolBuffer(), null);
@@ -265,16 +316,17 @@ public class LAB implements ValueIndex<byte[]> {
 
         boolean r = rangeTx(true,
             -1,
+            false,
             SMALLEST_POSSIBLE_KEY,
             null,
             -1,
             -1,
-            (index, fromKey, toKey, readIndexes, hydrateValues1) -> {
+            (index, pointFrom, fromKey, toKey, readIndexes, hydrateValues1) -> {
 
                 AtomicBoolean eos = new AtomicBoolean();
 
                 PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds = ActiveScan.indexToFeeds(readIndexes,
-                    fromKey, toKey, rawhide, keyHint[0]);
+                    false, false, fromKey, toKey, rawhide, keyHint[0]);
                 InterleaveStream interleaveStream = new InterleaveStream(rawhide, interleavingStreamFeeds);
 
                 try {
@@ -366,13 +418,20 @@ public class LAB implements ValueIndex<byte[]> {
         BolBuffer streamValueBuffer = hydrateValues ? new BolBuffer() : null;
         boolean r = rangeTx(true,
             -1,
+            false,
             SMALLEST_POSSIBLE_KEY,
             null,
             -1,
             -1,
-            (index, fromKey, toKey, readIndexes, hydrateValues1) -> {
+            (index, pointFrom, fromKey, toKey, readIndexes, hydrateValues1) -> {
 
-                PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds = ActiveScan.indexToFeeds(readIndexes, fromKey, toKey, rawhide, null);
+                PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds = ActiveScan.indexToFeeds(readIndexes,
+                    false,
+                    false,
+                    fromKey,
+                    toKey,
+                    rawhide,
+                    null);
                 InterleaveStream interleaveStream = new InterleaveStream(rawhide, interleavingStreamFeeds);
                 try {
                     BolBuffer rawEntry = new BolBuffer();
@@ -504,6 +563,7 @@ public class LAB implements ValueIndex<byte[]> {
 
     private boolean rangeTx(boolean acquireCommitSemaphore,
         int index,
+        boolean pointFrom,
         byte[] from,
         byte[] to,
         long newerThanTimestamp,
@@ -564,11 +624,12 @@ public class LAB implements ValueIndex<byte[]> {
             ReadIndex reader = memoryIndexReader;
             ReadIndex flushingReader = flushingMemoryIndexReader;
             return rangeStripedCompactableIndexes.rangeTx(index,
+                pointFrom,
                 from,
                 to,
                 newerThanTimestamp,
                 newerThanTimestampVersion,
-                (index1, fromKey, toKey, acquired, hydrateValues1) -> {
+                (index1, pointFrom1, fromKey, toKey, acquired, hydrateValues1) -> {
                     int active = (reader == null) ? 0 : 1;
                     int flushing = (flushingReader == null) ? 0 : 1;
                     ReadIndex[] indexes = new ReadIndex[acquired.length + active + flushing];
@@ -581,7 +642,7 @@ public class LAB implements ValueIndex<byte[]> {
                         indexes[i] = flushingReader;
                     }
                     System.arraycopy(acquired, 0, indexes, active + flushing, acquired.length);
-                    return tx.tx(index1, fromKey, toKey, indexes, hydrateValues1);
+                    return tx.tx(index1, pointFrom1, fromKey, toKey, indexes, hydrateValues1);
                 },
                 hydrateValues
             );

@@ -115,7 +115,7 @@ public class RangeStripedCompactableIndexesStressNGTest {
                 }
                 int longKey = rand.nextInt(i);
                 byte[] longAsBytes = UIO.longBytes(longKey, new byte[8], 0);
-                indexs.rangeTx(-1, longAsBytes, longAsBytes, -1, -1, (index, fromKey, toKey, acquired, hydrateValues) -> {
+                indexs.rangeTx(-1, false, longAsBytes, longAsBytes, -1, -1, (index, pointFrom, fromKey, toKey, acquired, hydrateValues) -> {
 
 
                     BolBuffer rawEntry = PointInterleave.get(acquired,  key, LABRawhide.SINGLETON, true);

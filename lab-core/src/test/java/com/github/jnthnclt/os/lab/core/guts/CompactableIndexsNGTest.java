@@ -62,7 +62,7 @@ public class CompactableIndexsNGTest {
                 for (int i = 0; i < counts[ci]; i++) {
                     long time = timeProvider.incrementAndGet();
                     byte[] rawEntry = TestUtils.rawEntry(id.incrementAndGet(), time);
-                    if (!stream.stream( new BolBuffer(rawEntry))) {
+                    if (!stream.stream(new BolBuffer(rawEntry))) {
                         break;
                     }
                 }
@@ -72,7 +72,7 @@ public class CompactableIndexsNGTest {
 
             ReadOnlyFile readOnlyFile = new ReadOnlyFile(file);
             LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-            indexs.append(new ReadOnlyIndex(null, destroy, indexRangeId, readOnlyFile,  rawhide, leapsCache));
+            indexs.append(new ReadOnlyIndex(null, destroy, indexRangeId, readOnlyFile, rawhide, leapsCache));
         }
 
         for (int i = 1; i <= id.get(); i++) {
@@ -80,18 +80,19 @@ public class CompactableIndexsNGTest {
             byte[] k = UIO.longBytes(i, new byte[8], 0);
             boolean[] passed = { false };
             //System.out.println("Get:" + i);
-            indexs.tx(-1, null, null, (index, fromKey, toKey, readIndexs, hydrateValues) -> {
+            indexs.tx(-1, false, null, null,
+                (index, pointFrom, fromKey, toKey, readIndexs, hydrateValues) -> {
 
 
-                BolBuffer got = PointInterleave.get(readIndexs, k, rawhide, true);
-                if (got != null) {
-                    if (UIO.bytesLong(got.copy(), 4) == g) {
-                        passed[0] = true;
+                    BolBuffer got = PointInterleave.get(readIndexs, k, rawhide, true);
+                    if (got != null) {
+                        if (UIO.bytesLong(got.copy(), 4) == g) {
+                            passed[0] = true;
+                        }
                     }
-                }
 
-                return true;
-            }, true);
+                    return true;
+                }, true);
             if (!passed[0]) {
                 Assert.fail();
             }
@@ -137,7 +138,7 @@ public class CompactableIndexsNGTest {
 
                 ReadOnlyFile readOnlyFile = new ReadOnlyFile(file);
                 LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-                indexs.append(new ReadOnlyIndex(null, destroy, indexRangeId, readOnlyFile,rawhide, leapsCache));
+                indexs.append(new ReadOnlyIndex(null, destroy, indexRangeId, readOnlyFile, rawhide, leapsCache));
 
             }
             Thread.sleep(10);
@@ -215,27 +216,29 @@ public class CompactableIndexsNGTest {
 
             ReadOnlyFile readOnlyFile = new ReadOnlyFile(file);
             LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-            ReadOnlyIndex readOnlyIndex = new ReadOnlyIndex(null, destroy, indexRangeId, readOnlyFile,  rawhide, leapsCache);
+            ReadOnlyIndex readOnlyIndex = new ReadOnlyIndex(null, destroy, indexRangeId, readOnlyFile, rawhide, leapsCache);
             ReadIndex readIndex = readOnlyIndex.acquireReader();
-            Scanner scanner = readIndex.rowScan( new BolBuffer(), new BolBuffer());
+            Scanner scanner = readIndex.rowScan(new BolBuffer(), new BolBuffer());
 
             BolBuffer rawEntry = new BolBuffer();
-            while ((rawEntry =scanner.next(rawEntry,null)) != null) {
+            while ((rawEntry = scanner.next(rawEntry, null)) != null) {
             }
             readIndex.release();
             indexs.append(readOnlyIndex);
         }
 
-        indexs.tx(-1, null, null, (index1, fromKey, toKey, readIndexs, hydrateValues) -> {
-            for (ReadIndex readIndex : readIndexs) {
-                Scanner rowScan = readIndex.rowScan( new BolBuffer(), new BolBuffer());
-                BolBuffer rawEntry = new BolBuffer();
-                while ((rawEntry = rowScan.next(rawEntry,null)) != null) {
+        indexs.tx(-1, false, null, null,
+            (index1, pointFrom1, fromKey, toKey, readIndexs, hydrateValues) -> {
 
+                for (ReadIndex readIndex : readIndexs) {
+                    Scanner rowScan = readIndex.rowScan(new BolBuffer(), new BolBuffer());
+                    BolBuffer rawEntry = new BolBuffer();
+                    while ((rawEntry = rowScan.next(rawEntry, null)) != null) {
+
+                    }
                 }
-            }
-            return true;
-        }, true);
+                return true;
+            }, true);
 
         assertions(indexs, count, step, desired);
 
@@ -267,25 +270,27 @@ public class CompactableIndexsNGTest {
             Assert.fail();
         }
 
-        indexs.tx(-1, null, null, (index1, fromKey, toKey, readIndexs, hydrateValues) -> {
-            for (ReadIndex readIndex : readIndexs) {
-                //System.out.println("---------------------");
-                Scanner rowScan = readIndex.rowScan( new BolBuffer(), new BolBuffer());
+        indexs.tx(-1, false, null, null,
+            (index1, pointFrom1, fromKey, toKey, readIndexs, hydrateValues) -> {
+
+                for (ReadIndex readIndex : readIndexs) {
+                    //System.out.println("---------------------");
+                    Scanner rowScan = readIndex.rowScan(new BolBuffer(), new BolBuffer());
 
 
-                BolBuffer rawEntry = new BolBuffer();
-                while ((rawEntry =rowScan.next(rawEntry,null)) != null) {
+                    BolBuffer rawEntry = new BolBuffer();
+                    while ((rawEntry = rowScan.next(rawEntry, null)) != null) {
 
+                    }
                 }
-            }
-            return true;
-        }, true);
+                return true;
+            }, true);
 
         indexs = new CompactableIndexes(new LABStats(new AtomicLong()), rawhide);
         IndexRangeId indexRangeId = new IndexRangeId(0, 0, 0);
         ReadOnlyFile indexFile = new ReadOnlyFile(indexFiler);
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-        indexs.append(new ReadOnlyIndex(null, destroy, indexRangeId, indexFile,  rawhide, leapsCache));
+        indexs.append(new ReadOnlyIndex(null, destroy, indexRangeId, indexFile, rawhide, leapsCache));
 
         assertions(indexs, count, step, desired);
     }
@@ -298,110 +303,116 @@ public class CompactableIndexsNGTest {
         ArrayList<byte[]> keys = new ArrayList<>(desired.navigableKeySet());
 
         int[] index = new int[1];
-        indexs.tx(-1, null, null, (index1, fromKey, toKey, acquired, hydrateValues) -> {
-            AtomicBoolean failed = new AtomicBoolean();
-            Scanner rowScan = new InterleaveStream(rawhide,
-                ActiveScan.indexToFeeds(acquired, null, null, rawhide, null));
-            try {
-                BolBuffer rawEntry = new BolBuffer();
-                while ((rawEntry =rowScan.next(rawEntry,null)) != null) {
-                    if (UIO.bytesLong(keys.get(index[0])) != TestUtils.key(rawEntry)) {
-                        failed.set(true);
+        indexs.tx(-1, false, null, null,
+            (index1, pointFrom1, fromKey, toKey, acquired, hydrateValues) -> {
+
+                AtomicBoolean failed = new AtomicBoolean();
+                Scanner rowScan = new InterleaveStream(rawhide,
+                    ActiveScan.indexToFeeds(acquired, false,false, null, null, rawhide, null));
+                try {
+                    BolBuffer rawEntry = new BolBuffer();
+                    while ((rawEntry = rowScan.next(rawEntry, null)) != null) {
+                        if (UIO.bytesLong(keys.get(index[0])) != TestUtils.key(rawEntry)) {
+                            failed.set(true);
+                        }
+                        index[0]++;
                     }
-                    index[0]++;
+                } finally {
+                    rowScan.close();
                 }
-            } finally {
-                rowScan.close();
-            }
-            Assert.assertFalse(failed.get());
+                Assert.assertFalse(failed.get());
 
-            Assert.assertEquals(index[0], keys.size());
-            //System.out.println("rowScan PASSED");
-            return true;
-        }, true);
+                Assert.assertEquals(index[0], keys.size());
+                //System.out.println("rowScan PASSED");
+                return true;
+            }, true);
 
-        indexs.tx(-1, null, null, (index1, fromKey, toKey, acquired, hydrateValues) -> {
-            for (int i = 0; i < count * step; i++) {
-                long k = i;
-                byte[] key = UIO.longBytes(k, new byte[8], 0);
-               
-                BolBuffer rawEntry = PointInterleave.get(acquired, key, rawhide, true);
-                if (rawEntry != null) {
+        indexs.tx(-1, false, null, null,
+            (index1, pointFrom1, fromKey, toKey, acquired, hydrateValues) -> {
 
+                for (int i = 0; i < count * step; i++) {
+                    long k = i;
+                    byte[] key = UIO.longBytes(k, new byte[8], 0);
+
+                    BolBuffer rawEntry = PointInterleave.get(acquired, key, rawhide, true);
                     if (rawEntry != null) {
-                        //System.out.println("Got: " + TestUtils.toString(rawEntry));
-                        byte[] rawKey = UIO.longBytes(TestUtils.key(rawEntry), new byte[8], 0);
-                        Assert.assertEquals(rawKey, key);
-                        byte[] d = desired.get(key);
-                        if (d == null) {
-                            Assert.fail();
+
+                        if (rawEntry != null) {
+                            //System.out.println("Got: " + TestUtils.toString(rawEntry));
+                            byte[] rawKey = UIO.longBytes(TestUtils.key(rawEntry), new byte[8], 0);
+                            Assert.assertEquals(rawKey, key);
+                            byte[] d = desired.get(key);
+                            if (d == null) {
+                                Assert.fail();
+                            } else {
+                                Assert.assertEquals(TestUtils.value(rawEntry.copy()), TestUtils.value(d));
+                            }
                         } else {
-                            Assert.assertEquals(TestUtils.value(rawEntry.copy()), TestUtils.value(d));
-                        }
-                    } else {
-                        Assert.assertFalse(desired.containsKey(key), "Desired doesn't contain:" + UIO.bytesLong(key));
-                    }
-                }
-
-
-            }
-            //System.out.println("gets PASSED");
-            return true;
-        }, true);
-
-        indexs.tx(-1, null, null, (index1, fromKey, toKey, acquired, hydrateValues) -> {
-            for (int i = 0; i < keys.size() - 3; i++) {
-                int _i = i;
-
-                int[] streamed = new int[1];
-
-
-                //System.out.println("Asked index:" + _i + " key:" + UIO.bytesLong(keys.get(_i)) + " to:" + UIO.bytesLong(keys.get(_i + 3)));
-                Scanner rangeScan = new InterleaveStream(rawhide,
-                    ActiveScan.indexToFeeds(acquired, keys.get(_i), keys.get(_i + 3), rawhide, null));
-                try {
-                    BolBuffer rawEntry = new BolBuffer();
-                    while ((rawEntry =rangeScan.next(rawEntry,null)) != null) {
-                        if (TestUtils.value(rawEntry.copy()) > -1) {
-                            //System.out.println("Streamed:" + TestUtils.toString(rawEntry));
-                            streamed[0]++;
+                            Assert.assertFalse(desired.containsKey(key), "Desired doesn't contain:" + UIO.bytesLong(key));
                         }
                     }
-                } finally {
-                    rangeScan.close();
+
+
                 }
-                Assert.assertEquals(3, streamed[0]);
+                //System.out.println("gets PASSED");
+                return true;
+            }, true);
 
-            }
-            //System.out.println("rangeScan PASSED");
-            return true;
-        }, true);
+        indexs.tx(-1, false, null, null,
+            (index1, pointFrom1, fromKey, toKey, acquired, hydrateValues) -> {
+                for (int i = 0; i < keys.size() - 3; i++) {
+                    int _i = i;
 
-        indexs.tx(-1, null, null, (index1, fromKey, toKey, acquired, hydrateValues) -> {
-            for (int i = 0; i < keys.size() - 3; i++) {
-                int _i = i;
-                int[] streamed = new int[1];
+                    int[] streamed = new int[1];
 
-                Scanner rangeScan = new InterleaveStream(rawhide,
-                    ActiveScan.indexToFeeds(acquired, UIO.longBytes(UIO.bytesLong(keys.get(_i)) + 1, new byte[8], 0), keys.get(_i + 3),
-                    rawhide, null));
-                try {
 
-                    BolBuffer rawEntry = new BolBuffer();
-                    while ((rawEntry =rangeScan.next(rawEntry,null)) != null) {
-                        if (TestUtils.value(rawEntry.copy()) > -1) {
-                            streamed[0]++;
+                    //System.out.println("Asked index:" + _i + " key:" + UIO.bytesLong(keys.get(_i)) + " to:" + UIO.bytesLong(keys.get(_i + 3)));
+                    Scanner rangeScan = new InterleaveStream(rawhide,
+                        ActiveScan.indexToFeeds(acquired, false,false, keys.get(_i), keys.get(_i + 3), rawhide, null));
+                    try {
+                        BolBuffer rawEntry = new BolBuffer();
+                        while ((rawEntry = rangeScan.next(rawEntry, null)) != null) {
+                            if (TestUtils.value(rawEntry.copy()) > -1) {
+                                //System.out.println("Streamed:" + TestUtils.toString(rawEntry));
+                                streamed[0]++;
+                            }
                         }
+                    } finally {
+                        rangeScan.close();
                     }
-                } finally {
-                    rangeScan.close();
-                }
-                Assert.assertEquals(2, streamed[0]);
+                    Assert.assertEquals(3, streamed[0]);
 
-            }
-            //System.out.println("rangeScan2 PASSED");
-            return true;
-        }, true);
+                }
+                //System.out.println("rangeScan PASSED");
+                return true;
+            }, true);
+
+        indexs.tx(-1, false, null, null,
+            (index1, pointFrom1, fromKey, toKey, acquired, hydrateValues) -> {
+                for (int i = 0; i < keys.size() - 3; i++) {
+                    int _i = i;
+                    int[] streamed = new int[1];
+
+                    Scanner rangeScan = new InterleaveStream(rawhide,
+                        ActiveScan.indexToFeeds(acquired, false,false, UIO.longBytes(UIO.bytesLong(keys.get(_i)) + 1, new byte[8], 0), keys.get(_i + 3),
+                            rawhide, null));
+                    try {
+
+                        BolBuffer rawEntry = new BolBuffer();
+                        while ((rawEntry = rangeScan.next(rawEntry, null)) != null) {
+                            if (TestUtils.value(rawEntry.copy()) > -1) {
+                                streamed[0]++;
+                            }
+                        }
+                    } finally {
+                        rangeScan.close();
+                    }
+                    Assert.assertEquals(2, streamed[0]);
+
+                }
+                //System.out.println("rangeScan2 PASSED");
+                return true;
+            }, true);
     }
 
 }

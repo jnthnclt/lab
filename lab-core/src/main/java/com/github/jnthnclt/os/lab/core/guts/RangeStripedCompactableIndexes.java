@@ -229,7 +229,7 @@ public class RangeStripedCompactableIndexes {
                             throw new IllegalStateException("Bueller");
                         }
                         if (labFiles != null) {
-                            labFiles.add(labId,-1, file);
+                            labFiles.add(labId, -1, file);
                         }
                     } else {
                         indexFile.close();
@@ -353,7 +353,7 @@ public class RangeStripedCompactableIndexes {
                 appendableIndex.append((stream) -> {
                     ReadIndex reader = memoryIndex.acquireReader();
                     try {
-                        Scanner scanner = reader.rangeScan(minKey, maxKey, entryBuffer, entryKeyBuffer);
+                        Scanner scanner = reader.rangeScan(false,false, minKey, maxKey, entryBuffer, entryKeyBuffer);
                         if (scanner != null) {
                             try {
                                 BolBuffer rawEntry = new BolBuffer();
@@ -408,8 +408,8 @@ public class RangeStripedCompactableIndexes {
             return reopenedIndex;
         }
 
-        boolean tx(int index, byte[] fromKey, byte[] toKey, ReaderTx tx, boolean hydrateValues) throws Exception {
-            return compactableIndexes.tx(index, fromKey, toKey, tx, hydrateValues);
+        boolean tx(int index, boolean pointFrom, byte[] fromKey, byte[] toKey, ReaderTx tx, boolean hydrateValues) throws Exception {
+            return compactableIndexes.tx(index, pointFrom, fromKey, toKey, tx, hydrateValues);
         }
 
         long count() throws Exception {
@@ -456,7 +456,7 @@ public class RangeStripedCompactableIndexes {
                 appendSemaphore.acquire(Short.MAX_VALUE);
                 try {
 
-                    Callable<Void> call = callback.call(( id,  worstCaseCount) -> {
+                    Callable<Void> call = callback.call((id, worstCaseCount) -> {
                         int maxLeaps = calculateIdealMaxLeaps(worstCaseCount, entriesBetweenLeaps);
                         File splitIntoDir = new File(splittingRoot, String.valueOf(nextStripeIdLeft));
                         FileUtils.deleteQuietly(splitIntoDir);
@@ -473,7 +473,7 @@ public class RangeStripedCompactableIndexes {
                             hashIndexType,
                             hashIndexLoadFactor,
                             deleteTombstonedVersionsAfterMillis);
-                    }, ( id,  worstCaseCount) -> {
+                    }, (id, worstCaseCount) -> {
                         int maxLeaps = calculateIdealMaxLeaps(worstCaseCount, entriesBetweenLeaps);
                         File splitIntoDir = new File(splittingRoot, String.valueOf(nextStripeIdRight));
                         FileUtils.deleteQuietly(splitIntoDir);
@@ -514,7 +514,8 @@ public class RangeStripedCompactableIndexes {
                                     rawhide.getKeyComparator());
                                 copyOfIndexes.putAll(indexes);
 
-                                for (Iterator<Map.Entry<byte[], FileBackMergableIndexes>> iterator = copyOfIndexes.entrySet().iterator(); iterator.hasNext(); ) {
+                                for (Iterator<Map.Entry<byte[], FileBackMergableIndexes>> iterator = copyOfIndexes.entrySet().iterator(); iterator.hasNext();
+                                    ) {
                                     Map.Entry<byte[], FileBackMergableIndexes> next = iterator.next();
                                     if (next.getValue() == self) {
                                         iterator.remove();
@@ -718,7 +719,7 @@ public class RangeStripedCompactableIndexes {
         BolBuffer streamValueBuffer,
         ValueStream valueStream) throws Exception {
 
-        ReaderTx tx = (index, fromKey, toKey, acquired, hydrateValues1) -> {
+        ReaderTx tx = (index, pointFrom, fromKey, toKey, acquired, hydrateValues1) -> {
             int active = (reader == null) ? 0 : 1;
             int flushing = (flushingReader == null) ? 0 : 1;
             ReadIndex[] indexes = new ReadIndex[acquired.length + active + flushing];
@@ -736,7 +737,7 @@ public class RangeStripedCompactableIndexes {
         };
 
         return keys.keys((index, key, offset, length) -> {
-            rangeTx(index, key, key, newerThanTimestamp, newerThanTimestampVersion, tx, hydrateValues);
+            rangeTx(index, true, key, key, newerThanTimestamp, newerThanTimestampVersion, tx, hydrateValues);
             return true;
         });
     }
@@ -744,6 +745,7 @@ public class RangeStripedCompactableIndexes {
     private static final ReadIndex[] EMPTY = new ReadIndex[0];
 
     public boolean rangeTx(int index,
+        boolean pointFrom,
         byte[] from,
         byte[] to,
         long newerThanTimestamp,
@@ -758,7 +760,7 @@ public class RangeStripedCompactableIndexes {
 
             Entry<byte[], FileBackMergableIndexes>[] entries = indexesArray;
             if (entries == null || entries.length == 0) {
-                return tx.tx(index, from, to, EMPTY, hydrateValues);
+                return tx.tx(index, pointFrom, from, to, EMPTY, hydrateValues);
             }
 
             int fi = 0;
@@ -781,7 +783,7 @@ public class RangeStripedCompactableIndexes {
                 } else {
                     int insertion = (-i) - 1;
                     if (insertion == 0) {
-                        return tx.tx(index, from, to, EMPTY, hydrateValues);
+                        return tx.tx(index, pointFrom, from, to, EMPTY, hydrateValues);
                     }
                     ti = insertion - 1;
                 }
@@ -800,7 +802,7 @@ public class RangeStripedCompactableIndexes {
                         newerThanTimestamp,
                         newerThanTimestampVersion)) {
                         streamed = true;
-                        if (!mergableIndex.tx(index, start, end, tx, hydrateValues)) {
+                        if (!mergableIndex.tx(index, pointFrom, start, end, tx, hydrateValues)) {
                             return false;
                         }
                     }
@@ -810,7 +812,7 @@ public class RangeStripedCompactableIndexes {
                 }
             }
             if (!streamed) {
-                return tx.tx(index, from, to, EMPTY, hydrateValues);
+                return tx.tx(index, pointFrom, from, to, EMPTY, hydrateValues);
             }
             return true;
         }

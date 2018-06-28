@@ -39,6 +39,10 @@ public class LHashNGTest {
 
         LHash<String> map = new LHash<>(new LHMapState<String>(10, -1, -2));
         internalTestPuts(map);
+
+        Assert.assertEquals(map.size(), 64);
+        map.clear();
+        Assert.assertEquals(map.size(), 0);
     }
 
     private void internalTestPuts(LHash<String> map) throws Exception {
@@ -87,6 +91,8 @@ public class LHashNGTest {
             map.put(i, String.valueOf(i));
             validation.put(i , String.valueOf(i));
         }
+
+        Assert.assertEquals(count, map.size());
 
         if (assertOrder) {
             assertOrder("1 ", validation, map);

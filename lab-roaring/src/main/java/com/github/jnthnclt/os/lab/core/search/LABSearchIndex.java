@@ -178,6 +178,21 @@ public class LABSearchIndex {
         return got == null ? null : got.txIndex(bitmap -> bitmap);
     }
 
+    public boolean contains(int fieldOrdinal, String key) throws Exception {
+        return contains(fieldOrdinal, key.getBytes(StandardCharsets.UTF_8));
+    }
+
+    public boolean contains(int fieldOrdinal, int key) throws Exception {
+        return contains(fieldOrdinal, UIO.intBytes(key, new byte[4], 0));
+    }
+
+    public boolean contains(int fieldOrdinal, long key) throws Exception {
+        return contains(fieldOrdinal, UIO.longBytes(key, new byte[8], 0));
+    }
+
+    public boolean contains(int fieldOrdinal, byte[] key) throws Exception {
+        return fieldIndex.contains(fieldOrdinal, key);
+    }
 
     public interface StreamValues {
         boolean value(int index, BolBuffer value) throws Exception;

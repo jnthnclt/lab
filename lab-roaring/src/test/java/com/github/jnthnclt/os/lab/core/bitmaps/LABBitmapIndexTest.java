@@ -283,6 +283,7 @@ public class LABBitmapIndexTest {
 
     @DataProvider(name = "labInvertedIndexDataProviderWithData")
     public Object[][] labInvertedIndexDataProviderWithData() throws Exception {
+
         LABBitmaps<RoaringBitmap, RoaringBitmap> bitmaps = new RoaringLABBitmaps();
 
         LABBitmapIndex<RoaringBitmap, RoaringBitmap> atomizedIndex = buildInvertedIndex(bitmaps);

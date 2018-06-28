@@ -8,6 +8,6 @@ import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
  */
 public interface ReaderTx {
 
-    boolean tx(int index, byte[] fromKey, byte[] toKey, ReadIndex[] readIndexs, boolean hydrateValues) throws Exception;
+    boolean tx(int index, boolean pointFrom, byte[] fromKey, byte[] toKey, ReadIndex[] readIndexs, boolean hydrateValues) throws Exception;
 
 }

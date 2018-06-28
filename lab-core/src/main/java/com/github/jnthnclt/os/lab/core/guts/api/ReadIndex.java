@@ -10,7 +10,7 @@ public interface ReadIndex {
 
     void release();
 
-    Scanner rangeScan(byte[] from, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception;
+    Scanner rangeScan(boolean hashIndexEnabled, boolean pointFrom, byte[] from, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception;
 
     Scanner rowScan(BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception;
 

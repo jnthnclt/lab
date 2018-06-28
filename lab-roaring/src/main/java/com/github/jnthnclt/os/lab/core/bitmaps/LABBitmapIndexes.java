@@ -1,6 +1,5 @@
 package com.github.jnthnclt.os.lab.core.bitmaps;
 
-import com.github.jnthnclt.os.lab.core.LABUtils;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.api.UIO;
@@ -11,7 +10,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Future;
-import org.roaringbitmap.LABBitmapAndLastId;
 
 public class LABBitmapIndexes<BM extends IBM, IBM> {
 
@@ -119,7 +117,6 @@ public class LABBitmapIndexes<BM extends IBM, IBM> {
     }
 
     public long getApproximateCount(int fieldId) throws Exception {
-        byte[] fieldIdBytes = intBytes(fieldId);
         return getTermIndex(fieldId).count();
     }
 
@@ -211,112 +208,123 @@ public class LABBitmapIndexes<BM extends IBM, IBM> {
         );
     }
 
-    public void multiGet(String name, int fieldId, LABIndexKey[] indexKeys, LABBitmapAndLastId<BM>[] results) throws Exception {
-        byte[] fieldIdBytes = intBytes(fieldId);
-        ValueIndex<byte[]> bitmapIndex = getBitmapIndex(fieldId);
-        LABReusableByteBufferDataInput in = new LABReusableByteBufferDataInput();
-        for (int i = 0; i < indexKeys.length; i++) {
-            if (indexKeys[i] != null) {
-                byte[] termBytes = indexKeys[i].getBytes();
-                LABBitmapAndLastId<BM> bitmapAndLastId = new LABBitmapAndLastId<>();
-                bitmaps.deserializeAtomized(
-                    bitmapAndLastId,
-                    atomStream -> {
-                        byte[] from = bitmapIndexKey(fieldIdBytes, termBytes);
-                        byte[] to = LABUtils.prefixUpperExclusive(from);
-                        return bitmapIndex.rangeScan(from, to,
-                            (index1, key, timestamp, tombstoned, version, payload) -> {
-                                if (payload != null) {
-                                    int labKey = LABBitmapIndex.deatomize(key.asByteBuffer());
-                                    in.setBuffer(payload.asByteBuffer());
-                                    return atomStream.stream(labKey, in);
-                                }
-                                return true;
-                            },
-                            true);
-                    });
-                results[i] = bitmapAndLastId.isSet() ? bitmapAndLastId : null;
-            }
-        }
+    public boolean contains(int fieldId, byte[] key) throws Exception {
+        boolean[] exists = { false };
+        byte[] termKeyBytes = termIndexKey(intBytes(fieldId), key);
+        getTermIndex(fieldId).get(keyStream -> keyStream.key(-1, termKeyBytes, 0, termKeyBytes.length),
+            (index1, key1, timestamp1, tombstoned, version1, payload) -> {
+                exists[0] = timestamp1 > 0 && !tombstoned;
+                return true;
+            }, false);
+        return exists[0];
     }
 
-    public void multiGetLastIds(String name, int fieldId, LABIndexKey[] indexKeys, int[] results) throws Exception {
-        byte[] fieldIdBytes = intBytes(fieldId);
-        ValueIndex<byte[]> bitmapIndex = getBitmapIndex(fieldId);
-        LABReusableByteBufferDataInput in = new LABReusableByteBufferDataInput();
-        int[] lastId = new int[1];
-        for (int i = 0; i < indexKeys.length; i++) {
-            if (indexKeys[i] != null) {
-                lastId[0] = -1;
-                byte[] from = bitmapIndexKey(fieldIdBytes, indexKeys[i].getBytes());
-                byte[] to = LABUtils.prefixUpperExclusive(from);
-                bitmapIndex.rangeScan(from, to,
-                    (index, key, timestamp, tombstoned, version, payload) -> {
-                        if (payload != null) {
-                            if (lastId[0] == -1) {
-                                int labKey = LABBitmapIndex.deatomize(key.asByteBuffer());
-                                lastId[0] = LABBitmapIndex.deserLastId(bitmaps, labKey, in, payload.asByteBuffer());
-                                if (lastId[0] != -1) {
-                                    return false;
-                                }
-                            } else {
-                                LOG.warn("Atomized multiGetLastIds failed to halt a range scan");
-                            }
-                        }
-                        return true;
-                    },
-                    true);
-                results[i] = lastId[0];
-            }
-        }
-    }
-
-    public void multiTxIndex(String name,
-        int fieldId,
-        LABIndexKey[] indexKeys,
-        int considerIfLastIdGreaterThanN,
-        LABMultiBitmapIndexTx<IBM> indexTx) throws Exception {
-
-        byte[] fieldIdBytes = intBytes(fieldId);
-        ValueIndex<byte[]> bitmapIndex = getBitmapIndex(fieldId);
-        int[] lastId = new int[1];
-        LABBitmapAndLastId<BM> container = new LABBitmapAndLastId<>();
-        LABReusableByteBufferDataInput in = new LABReusableByteBufferDataInput();
-        for (int i = 0; i < indexKeys.length; i++) {
-            if (indexKeys[i] != null) {
-                container.clear();
-                lastId[0] = -1;
-                byte[] termBytes = indexKeys[i].getBytes();
-                byte[] from = bitmapIndexKey(fieldIdBytes, termBytes);
-                byte[] to = LABUtils.prefixUpperExclusive(from);
-
-                bitmaps.deserializeAtomized(
-                    container,
-                    atomStream -> {
-                        return bitmapIndex.rangeScan(from, to,
-                            (index, key, timestamp, tombstoned, version, payload) -> {
-                                if (payload != null) {
-                                    int labKey = LABBitmapIndex.deatomize(key.asByteBuffer());
-                                    if (lastId[0] == -1) {
-                                        lastId[0] = LABBitmapIndex.deserLastId(bitmaps, labKey, in, payload.asByteBuffer());
-                                        if (lastId[0] != -1 && lastId[0] < considerIfLastIdGreaterThanN) {
-                                            return false;
-                                        }
-                                    }
-                                    in.setBuffer(payload.asByteBuffer());
-                                    return atomStream.stream(labKey, in);
-                                }
-                                return true;
-                            },
-                            true);
-                    });
-
-                if (container.isSet() && (considerIfLastIdGreaterThanN < 0 || lastId[0] > considerIfLastIdGreaterThanN)) {
-                    indexTx.tx(i, container.getLastId(), container.getBitmap(), null, -1);
-                }
-            }
-        }
-    }
+//    public void multiGet(String name, int fieldId, LABIndexKey[] indexKeys, LABBitmapAndLastId<BM>[] results) throws Exception {
+//        byte[] fieldIdBytes = intBytes(fieldId);
+//        ValueIndex<byte[]> bitmapIndex = getBitmapIndex(fieldId);
+//        LABReusableByteBufferDataInput in = new LABReusableByteBufferDataInput();
+//        for (int i = 0; i < indexKeys.length; i++) {
+//            if (indexKeys[i] != null) {
+//                byte[] termBytes = indexKeys[i].getBytes();
+//                LABBitmapAndLastId<BM> bitmapAndLastId = new LABBitmapAndLastId<>();
+//                bitmaps.deserializeAtomized(
+//                    bitmapAndLastId,
+//                    atomStream -> {
+//                        byte[] from = bitmapIndexKey(fieldIdBytes, termBytes);
+//                        byte[] to = LABUtils.prefixUpperExclusive(from);
+//                        return bitmapIndex.rangeScan(from, to,
+//                            (index1, key, timestamp, tombstoned, version, payload) -> {
+//                                if (payload != null) {
+//                                    int labKey = LABBitmapIndex.deatomize(key.asByteBuffer());
+//                                    in.setBuffer(payload.asByteBuffer());
+//                                    return atomStream.stream(labKey, in);
+//                                }
+//                                return true;
+//                            },
+//                            true);
+//                    });
+//                results[i] = bitmapAndLastId.isSet() ? bitmapAndLastId : null;
+//            }
+//        }
+//    }
+//
+//    public void multiGetLastIds(String name, int fieldId, LABIndexKey[] indexKeys, int[] results) throws Exception {
+//        byte[] fieldIdBytes = intBytes(fieldId);
+//        ValueIndex<byte[]> bitmapIndex = getBitmapIndex(fieldId);
+//        LABReusableByteBufferDataInput in = new LABReusableByteBufferDataInput();
+//        int[] lastId = new int[1];
+//        for (int i = 0; i < indexKeys.length; i++) {
+//            if (indexKeys[i] != null) {
+//                lastId[0] = -1;
+//                byte[] from = bitmapIndexKey(fieldIdBytes, indexKeys[i].getBytes());
+//                byte[] to = LABUtils.prefixUpperExclusive(from);
+//                bitmapIndex.rangeScan(from, to,
+//                    (index, key, timestamp, tombstoned, version, payload) -> {
+//                        if (payload != null) {
+//                            if (lastId[0] == -1) {
+//                                int labKey = LABBitmapIndex.deatomize(key.asByteBuffer());
+//                                lastId[0] = LABBitmapIndex.deserLastId(bitmaps, labKey, in, payload.asByteBuffer());
+//                                if (lastId[0] != -1) {
+//                                    return false;
+//                                }
+//                            } else {
+//                                LOG.warn("Atomized multiGetLastIds failed to halt a range scan");
+//                            }
+//                        }
+//                        return true;
+//                    },
+//                    true);
+//                results[i] = lastId[0];
+//            }
+//        }
+//    }
+//
+//    public void multiTxIndex(String name,
+//        int fieldId,
+//        LABIndexKey[] indexKeys,
+//        int considerIfLastIdGreaterThanN,
+//        LABMultiBitmapIndexTx<IBM> indexTx) throws Exception {
+//
+//        byte[] fieldIdBytes = intBytes(fieldId);
+//        ValueIndex<byte[]> bitmapIndex = getBitmapIndex(fieldId);
+//        int[] lastId = new int[1];
+//        LABBitmapAndLastId<BM> container = new LABBitmapAndLastId<>();
+//        LABReusableByteBufferDataInput in = new LABReusableByteBufferDataInput();
+//        for (int i = 0; i < indexKeys.length; i++) {
+//            if (indexKeys[i] != null) {
+//                container.clear();
+//                lastId[0] = -1;
+//                byte[] termBytes = indexKeys[i].getBytes();
+//                byte[] from = bitmapIndexKey(fieldIdBytes, termBytes);
+//                byte[] to = LABUtils.prefixUpperExclusive(from);
+//
+//                bitmaps.deserializeAtomized(
+//                    container,
+//                    atomStream -> {
+//                        return bitmapIndex.rangeScan(from, to,
+//                            (index, key, timestamp, tombstoned, version, payload) -> {
+//                                if (payload != null) {
+//                                    int labKey = LABBitmapIndex.deatomize(key.asByteBuffer());
+//                                    if (lastId[0] == -1) {
+//                                        lastId[0] = LABBitmapIndex.deserLastId(bitmaps, labKey, in, payload.asByteBuffer());
+//                                        if (lastId[0] != -1 && lastId[0] < considerIfLastIdGreaterThanN) {
+//                                            return false;
+//                                        }
+//                                    }
+//                                    in.setBuffer(payload.asByteBuffer());
+//                                    return atomStream.stream(labKey, in);
+//                                }
+//                                return true;
+//                            },
+//                            true);
+//                    });
+//
+//                if (container.isSet() && (considerIfLastIdGreaterThanN < 0 || lastId[0] > considerIfLastIdGreaterThanN)) {
+//                    indexTx.tx(i, container.getLastId(), container.getBitmap(), null, -1);
+//                }
+//            }
+//        }
+//    }
 
     public long getCardinality(int fieldId, boolean cardinality, LABIndexKey indexKey, int id) throws Exception {
         if (cardinality) {

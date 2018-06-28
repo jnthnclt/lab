@@ -10,6 +10,7 @@ public class LHMapState<V> {
 
     public static final byte[] NIL = new byte[0];
 
+    private final int power;
     private final long capacity;
     private final long nilKey;
     private final long skipKey;
@@ -19,6 +20,11 @@ public class LHMapState<V> {
 
     public LHMapState(long capacity, long nilKey, long skipKey) {
         this.count = 0;
+
+        int power = chunkPower(capacity, 1);
+        capacity = 1L << power;
+        this.power = 63 - power;
+
         this.capacity = capacity;
         this.nilKey = nilKey;
         this.skipKey = skipKey;
@@ -26,6 +32,28 @@ public class LHMapState<V> {
         this.keys = new long[(int) capacity];
         Arrays.fill(keys, nilKey);
         this.values = new Object[(int) capacity];
+    }
+
+    public long indexForHash(long hash) {
+        // fibonacciIndexForHash
+//        hash ^= hash >> power;
+//        long index = (7540113804746346429L * hash) >> power;
+//        return index < 0 ? -index : index;
+
+
+        hash += hash >> 8;
+        if (hash < 0) {
+            hash = -hash;
+        }
+        return hash % capacity;
+    }
+
+    private static int chunkPower(long length, int _minPower) {
+        if (length == 0) {
+            return 0;
+        }
+        int numberOfTrailingZeros = Long.numberOfLeadingZeros(length - 1);
+        return Math.max(_minPower, 64 - numberOfTrailingZeros);
     }
 
     public LHMapState<V> allocate(long capacity) {

@@ -30,7 +30,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.io.FileUtils;
 import com.github.jnthnclt.os.lab.core.api.RawEntryFormat;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
-import com.github.jnthnclt.os.lab.core.guts.LABCSLMIndex;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABIndexableMemory;
 import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 
@@ -273,16 +272,12 @@ public class LABEnvironment {
         }
 
         LABIndexProvider<BolBuffer, BolBuffer> indexProvider = (rawhide1, poweredUpToHint) -> {
-            if (useIndexableMemory && config.entryLengthPower > 0) {
-                LABAppendOnlyAllocator allocator = new LABAppendOnlyAllocator(config.primaryName,
-                    Math.max(config.entryLengthPower, (poweredUpToHint - config.entryLengthPower) / 2)
-                );
-                LABIndexableMemory memory = new LABIndexableMemory(allocator);
-                LABConcurrentSkipListMemory skipListMemory = new LABConcurrentSkipListMemory(rawhide1, memory);
-                return new LABConcurrentSkipListMap(stats, skipListMemory, stripingBolBufferLocks);
-            } else {
-                return new LABCSLMIndex(rawhide1, stripingBolBufferLocks);
-            }
+            LABAppendOnlyAllocator allocator = new LABAppendOnlyAllocator(config.primaryName,
+                Math.max(config.entryLengthPower, (poweredUpToHint - config.entryLengthPower) / 2)
+            );
+            LABIndexableMemory memory = new LABIndexableMemory(allocator);
+            LABConcurrentSkipListMemory skipListMemory = new LABConcurrentSkipListMemory(rawhide1, memory);
+            return new LABConcurrentSkipListMap(stats, skipListMemory, stripingBolBufferLocks);
         };
 
         return new LAB(stats,

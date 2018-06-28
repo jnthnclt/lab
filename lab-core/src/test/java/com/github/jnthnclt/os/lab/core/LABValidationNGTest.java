@@ -3,7 +3,6 @@ package com.github.jnthnclt.os.lab.core;
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABClosedException;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
-import com.github.jnthnclt.os.lab.core.guts.LABCSLMIndex;
 import com.github.jnthnclt.os.lab.core.guts.LABIndexProvider;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
@@ -67,14 +66,10 @@ public class LABValidationNGTest {
         LABWAL wal = new LABWAL(labStats, walRoot, 1024 * 1024 * 10, 1000, 1024 * 1024 * 10, 1024 * 1024 * 10);
 
         LABIndexProvider indexProvider = (rawhide1, poweredUpTo) -> {
-            if (true) {
-                LABAppendOnlyAllocator allocator = new LABAppendOnlyAllocator("test", Math.max(3, poweredUpTo));
-                LABIndexableMemory memory = new LABIndexableMemory( allocator);
-                LABConcurrentSkipListMemory skipList = new LABConcurrentSkipListMemory(rawhide1, memory);
-                return new LABConcurrentSkipListMap(labStats, skipList, stripingBolBufferLocks);
-            } else {
-                return new LABCSLMIndex(rawhide1, stripingBolBufferLocks);
-            }
+            LABAppendOnlyAllocator allocator = new LABAppendOnlyAllocator("test", Math.max(3, poweredUpTo));
+            LABIndexableMemory memory = new LABIndexableMemory(allocator);
+            LABConcurrentSkipListMemory skipList = new LABConcurrentSkipListMemory(rawhide1, memory);
+            return new LABConcurrentSkipListMap(labStats, skipList, stripingBolBufferLocks);
         };
 
         LAB lab = new LAB(labStats,
@@ -214,14 +209,10 @@ public class LABValidationNGTest {
         LABRawhide rawhide = LABRawhide.SINGLETON;
 
         LABIndexProvider indexProvider = (rawhide1, poweredUpTo) -> {
-            if (true) {
-                LABAppendOnlyAllocator allocator = new LABAppendOnlyAllocator("test", Math.max(3, poweredUpTo));
-                LABIndexableMemory memory = new LABIndexableMemory(allocator);
-                LABConcurrentSkipListMemory skipList = new LABConcurrentSkipListMemory(rawhide1, memory);
-                return new LABConcurrentSkipListMap(labStats, skipList, stripingBolBufferLocks);
-            } else {
-                return new LABCSLMIndex(rawhide1, stripingBolBufferLocks);
-            }
+            LABAppendOnlyAllocator allocator = new LABAppendOnlyAllocator("test", Math.max(3, poweredUpTo));
+            LABIndexableMemory memory = new LABIndexableMemory(allocator);
+            LABConcurrentSkipListMemory skipList = new LABConcurrentSkipListMemory(rawhide1, memory);
+            return new LABConcurrentSkipListMap(labStats, skipList, stripingBolBufferLocks);
         };
 
         LAB lab = new LAB(
