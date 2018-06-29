@@ -57,6 +57,10 @@ public class UIO {
         _filer.append(array, _start, len);
     }
 
+    public static byte[] intBytes(int v) {
+        return intBytes(v, new byte[4],0);
+    }
+
     public static byte[] intBytes(int v, byte[] _bytes, int _offset) {
         _bytes[_offset] = (byte) (v >>> 24);
         _bytes[_offset + 1] = (byte) (v >>> 16);

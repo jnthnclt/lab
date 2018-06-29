@@ -35,6 +35,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -737,6 +738,18 @@ public class LAB implements ValueIndex<byte[]> {
         }
         heapPressure.commitIfNecessary(this, overrideMaxHeapPressureInBytes >= 0 ? overrideMaxHeapPressureInBytes : maxHeapPressureInBytes, fsyncOnFlush);
         return appended[0] ? appendedVersion : -1;
+    }
+
+    @Override
+    public void commitAndWait(long timeoutMillis, boolean fsync) throws Exception {
+        List<Future<Object>> awaitable = commit(fsync, true);
+        for (Future<Object> future : awaitable) {
+            if (timeoutMillis > 0) {
+                future.get(timeoutMillis, TimeUnit.MILLISECONDS);
+            } else {
+                future.get();
+            }
+        }
     }
 
     @Override

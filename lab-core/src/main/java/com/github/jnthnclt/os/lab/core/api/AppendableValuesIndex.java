@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.concurrent.Future;
 
 /**
- *
  * @author jonathan.colt
  */
 public interface AppendableValuesIndex<P> {
@@ -21,4 +20,5 @@ public interface AppendableValuesIndex<P> {
 
     void close(boolean flushUncommited, boolean fsync) throws Exception;
 
+    void commitAndWait(long timeoutMillis, boolean fsync) throws Exception;
 }
