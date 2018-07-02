@@ -6,6 +6,8 @@ import com.github.jnthnclt.os.lab.core.api.Keys;
 import com.github.jnthnclt.os.lab.core.api.ValueStream;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABConcurrentSplitException;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
+import com.github.jnthnclt.os.lab.core.guts.api.CommitIndex;
+import com.github.jnthnclt.os.lab.core.guts.api.IndexFactory;
 import com.github.jnthnclt.os.lab.core.guts.api.KeyToString;
 import com.github.jnthnclt.os.lab.core.guts.api.MergerBuilder;
 import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
@@ -456,7 +458,7 @@ public class RangeStripedCompactableIndexes {
                 appendSemaphore.acquire(Short.MAX_VALUE);
                 try {
 
-                    Callable<Void> call = callback.call((id, worstCaseCount) -> {
+                    IndexFactory leftHalfIndexFactory = (id, worstCaseCount) -> {
                         int maxLeaps = calculateIdealMaxLeaps(worstCaseCount, entriesBetweenLeaps);
                         File splitIntoDir = new File(splittingRoot, String.valueOf(nextStripeIdLeft));
                         FileUtils.deleteQuietly(splitIntoDir);
@@ -473,7 +475,9 @@ public class RangeStripedCompactableIndexes {
                             hashIndexType,
                             hashIndexLoadFactor,
                             deleteTombstonedVersionsAfterMillis);
-                    }, (id, worstCaseCount) -> {
+                    };
+
+                    IndexFactory rightHalfIndexFactory = (id, worstCaseCount) -> {
                         int maxLeaps = calculateIdealMaxLeaps(worstCaseCount, entriesBetweenLeaps);
                         File splitIntoDir = new File(splittingRoot, String.valueOf(nextStripeIdRight));
                         FileUtils.deleteQuietly(splitIntoDir);
@@ -490,7 +494,9 @@ public class RangeStripedCompactableIndexes {
                             hashIndexType,
                             hashIndexLoadFactor,
                             deleteTombstonedVersionsAfterMillis);
-                    }, (ids) -> {
+                    };
+
+                    CommitIndex commitIndex = (ids) -> {
                         File left = new File(indexRoot, String.valueOf(nextStripeIdLeft));
                         File leftActive = new File(left, "active");
                         FileUtils.forceMkdir(leftActive.getParentFile());
@@ -514,9 +520,9 @@ public class RangeStripedCompactableIndexes {
                                     rawhide.getKeyComparator());
                                 copyOfIndexes.putAll(indexes);
 
-                                for (Iterator<Map.Entry<byte[], FileBackMergableIndexes>> iterator = copyOfIndexes.entrySet().iterator(); iterator.hasNext();
+                                for (Iterator<Entry<byte[], FileBackMergableIndexes>> iterator = copyOfIndexes.entrySet().iterator(); iterator.hasNext();
                                     ) {
-                                    Map.Entry<byte[], FileBackMergableIndexes> next = iterator.next();
+                                    Entry<byte[], FileBackMergableIndexes> next = iterator.next();
                                     if (next.getValue() == self) {
                                         iterator.remove();
                                         break;
@@ -549,8 +555,9 @@ public class RangeStripedCompactableIndexes {
                             LOG.error("Failed to split:{} became left:{} right:{}", new Object[] { stripeRoot, left, right }, x);
                             throw x;
                         }
-                    }, fsync);
+                    };
 
+                    Callable<Void> call = callback.call(leftHalfIndexFactory, rightHalfIndexFactory, commitIndex, fsync);
                     return call.call();
 
                 } finally {
@@ -568,9 +575,7 @@ public class RangeStripedCompactableIndexes {
             File mergingRoot = new File(stripeRoot, "merging");
             FileUtils.forceMkdir(mergingRoot);
 
-
-            LOG.inc("merge");
-            return callback.call(minimumRun, fsync, (id, count) -> {
+            IndexFactory indexFactory = (id, count) -> {
                 int maxLeaps = calculateIdealMaxLeaps(count, entriesBetweenLeaps);
                 File mergingIndexFile = id.toFile(mergingRoot);
                 FileUtils.deleteQuietly(mergingIndexFile);
@@ -584,12 +589,15 @@ public class RangeStripedCompactableIndexes {
                     hashIndexType,
                     hashIndexLoadFactor,
                     deleteTombstonedVersionsAfterMillis);
-            }, (ids) -> {
+            };
+            CommitIndex commitIndex = (ids) -> {
                 File mergedIndexFile = ids.get(0).toFile(mergingRoot);
                 File file = ids.get(0).toFile(activeRoot);
                 FileUtils.deleteQuietly(file);
                 return moveIntoPlace(rawhideName, mergedIndexFile, file, ids.get(0), fsync);
-            });
+            };
+
+            return callback.call(minimumRun, fsync, indexFactory, commitIndex);
         }
 
         private void auditRanges(String prefix, KeyToString keyToString) {

@@ -144,55 +144,63 @@ public class CompactableIndexes {
         long splittableIfValuesLargerThanBytes,
         long splittableIfLargerThanBytes,
         SplitterBuilder splitterBuilder,
-        int minimumRun,
+        int minMergeDebt,
         boolean fsync,
         MergerBuilder mergerBuilder
     ) throws Exception {
-
-        long start = compactorCheckVersion.incrementAndGet();
-        if (disposed || !compacting.compareAndSet(false, true)) {
+        if (disposed) {
+            return null;
+        }
+        if (!splittable(splittableIfKeysLargerThanBytes, splittableIfValuesLargerThanBytes, splittableIfLargerThanBytes) && debt() == 0) {
             return null;
         }
 
-        while (true) {
-            if (splittable(splittableIfKeysLargerThanBytes, splittableIfValuesLargerThanBytes, splittableIfLargerThanBytes)) {
-                Callable<Void> splitter = splitterBuilder.buildSplitter(rawhideName, fsync, this::buildSplitter);
-                if (splitter != null) {
-                    return () -> {
-                        stats.spliting.incrementAndGet();
-                        try {
-                            Void result = splitter.call();
-                            return result;
-                        } finally {
-                            stats.spliting.decrementAndGet();
-                            compacting.set(false);
-                        }
-                    };
-                }
-            } else if (debt() > 0) {
-                Callable<Void> merger = mergerBuilder.build(rawhideName, minimumRun, fsync, this::buildMerger);
-                if (merger != null) {
-                    return () -> {
-                        stats.merging.incrementAndGet();
-                        try {
-                            Void result = merger.call();
-                            return result;
-                        } finally {
-                            stats.merging.decrementAndGet();
-                            compacting.set(false);
-                        }
-                    };
-                }
-            }
-
-            if (start < compactorCheckVersion.get()) {
-                start = compactorCheckVersion.get();
-            } else {
-                compacting.set(false);
-                return null;
-            }
+        long[] start = new long[] { compactorCheckVersion.incrementAndGet() };
+        if (!compacting.compareAndSet(false, true)) {
+            return null;
         }
 
+        return () -> {
+            try {
+                ///while (true) {
+//                    if (disposed) {
+//                        break;
+//                    }
+                if (splittable(splittableIfKeysLargerThanBytes, splittableIfValuesLargerThanBytes, splittableIfLargerThanBytes)) {
+                    Callable<Void> splitter = splitterBuilder.buildSplitter(rawhideName, fsync, this::buildSplitter);
+                    if (splitter != null) {
+                        stats.spliting.incrementAndGet();
+                        try {
+                            splitter.call();
+                        } finally {
+                            stats.spliting.decrementAndGet();
+                        }
+                    }
+                }
+
+                if (debt() > 0) {
+                    Callable<Void> merger = mergerBuilder.build(rawhideName, minMergeDebt, fsync, this::buildMerger);
+                    if (merger != null) {
+                        stats.merging.incrementAndGet();
+                        try {
+                            merger.call();
+                        } finally {
+                            stats.merging.decrementAndGet();
+                        }
+                    }
+                }
+
+//                    if (start[0] < compactorCheckVersion.get()) {
+//                        start[0] = compactorCheckVersion.get();
+//                    } else {
+//                       break;
+//                    }
+//                }
+                return null;
+            } finally {
+                compacting.set(false);
+            }
+        };
     }
 
     private boolean splittable(
@@ -341,7 +349,7 @@ public class CompactableIndexes {
                             rightAppendableIndex = rightHalfIndexFactory.createIndex(join, worstCaseCount - 1);
                             LABAppendableIndex effectiveFinalRightAppenableIndex = rightAppendableIndex;
                             InterleaveStream feedInterleaver = new InterleaveStream(rawhide,
-                                ActiveScan.indexToFeeds(readers, false,false, null, null, rawhide, null));
+                                ActiveScan.indexToFeeds(readers, false, false, null, null, rawhide, null));
                             try {
                                 LOG.debug("Splitting with a middle of:{}", Arrays.toString(middle));
 
@@ -445,7 +453,7 @@ public class CompactableIndexes {
                                     ReadIndex catchupReader = catchup.acquireReader();
                                     try {
                                         InterleaveStream catchupFeedInterleaver = new InterleaveStream(rawhide,
-                                            ActiveScan.indexToFeeds(new ReadIndex[] { catchup }, false,false,null, null, rawhide, null));
+                                            ActiveScan.indexToFeeds(new ReadIndex[] { catchup }, false, false, null, null, rawhide, null));
                                         try {
                                             LOG.debug("Doing a catchup split for a middle of:{}", Arrays.toString(middle));
                                             catchupLeftAppendableIndex.append((leftStream) -> {
@@ -632,7 +640,7 @@ public class CompactableIndexes {
                 try {
                     appendableIndex = indexFactory.createIndex(mergeRangeId, worstCaseCount);
                     InterleaveStream feedInterleaver = new InterleaveStream(rawhide,
-                        ActiveScan.indexToFeeds(readers, false,false, null, null, rawhide, null));
+                        ActiveScan.indexToFeeds(readers, false, false, null, null, rawhide, null));
                     try {
                         appendableIndex.append((stream) -> {
 

@@ -757,7 +757,6 @@ public class LAB implements ValueIndex<byte[]> {
         if (memoryIndex.isEmpty()) {
             return Collections.emptyList();
         }
-
         if (corrupt) {
             throw new LABCorruptedException();
         }
@@ -828,59 +827,69 @@ public class LAB implements ValueIndex<byte[]> {
         if (debt == 0 || debt < minDebt) {
             return Collections.emptyList();
         }
+        if (ongoingCompactions.incrementAndGet() != 1) {
+            System.out.println("ongoingCompactions:"+ongoingCompactions.decrementAndGet());
+            return Collections.emptyList();
+        }
+        try {
+            //LOG.info("Compaction {} {} {} {}", new Object[] { fsync, minDebt, maxDebt, waitIfToFarBehind });
 
-        List<Future<Object>> awaitable = null;
-        while (!closeRequested.get()) {
-            if (corrupt) {
-                throw new LABCorruptedException();
-            }
-            List<Callable<Void>> compactors = rangeStripedCompactableIndexes.buildCompactors(rawhideName, fsync, minDebt);
-            if (compactors != null && !compactors.isEmpty()) {
-                if (awaitable == null) {
-                    awaitable = new ArrayList<>(compactors.size());
+            List<Future<Object>> awaitable = null;
+            while (!closeRequested.get()) {
+                if (corrupt) {
+                    throw new LABCorruptedException();
                 }
-                for (Callable<Void> compactor : compactors) {
-                    LOG.debug("Scheduling async compaction:{} for index:{} debt:{}", compactors, rangeStripedCompactableIndexes, debt);
-                    synchronized (compactLock) {
-                        if (closeRequested.get()) {
-                            break;
-                        } else {
-                            ongoingCompactions.incrementAndGet();
-                        }
+                List<Callable<Void>> compactors = rangeStripedCompactableIndexes.buildCompactors(rawhideName, fsync, minDebt);
+                if (compactors != null && !compactors.isEmpty()) {
+                    if (awaitable == null) {
+                        awaitable = new ArrayList<>(compactors.size());
                     }
-                    Future<Object> future = compact.submit(() -> {
-                        try {
-                            compactor.call();
-                        } catch (Exception x) {
-                            LOG.error("Failed to compact " + rangeStripedCompactableIndexes, x);
-                            corrupt = true;
-                        } finally {
-                            synchronized (compactLock) {
-                                ongoingCompactions.decrementAndGet();
-                                compactLock.notifyAll();
+                    for (Callable<Void> compactor : compactors) {
+                        LOG.debug("Scheduling async name:{} debt:{}", name(), debt);
+
+                        synchronized (compactLock) {
+                            if (closeRequested.get()) {
+                                break;
+                            } else {
+                                ongoingCompactions.incrementAndGet();
                             }
                         }
-                        return null;
-                    });
-                    awaitable.add(future);
-                }
-            }
-
-            if (waitIfToFarBehind && debt >= maxDebt) {
-                synchronized (compactLock) {
-                    if (!closeRequested.get() && ongoingCompactions.get() > 0) {
-                        LOG.debug("Waiting because debt is too high for index:{} debt:{}", rangeStripedCompactableIndexes, debt);
-                        compactLock.wait();
-                    } else {
-                        break;
+                        Future<Object> future = compact.submit(() -> {
+                            try {
+                                compactor.call();
+                            } catch (Exception x) {
+                                LOG.error("Failed to compact " + rangeStripedCompactableIndexes, x);
+                                corrupt = true;
+                            } finally {
+                                synchronized (compactLock) {
+                                    ongoingCompactions.decrementAndGet();
+                                    compactLock.notifyAll();
+                                }
+                            }
+                            return null;
+                        });
+                        awaitable.add(future);
                     }
                 }
-                debt = rangeStripedCompactableIndexes.debt();
-            } else {
-                break;
+
+                if (waitIfToFarBehind && debt >= maxDebt) {
+                    synchronized (compactLock) {
+                        if (!closeRequested.get() && ongoingCompactions.get() > 0) {
+                            LOG.debug("Waiting because debt is too high for index:{} debt:{}", rangeStripedCompactableIndexes, debt);
+                            compactLock.wait();
+                        } else {
+                            break;
+                        }
+                    }
+                    debt = rangeStripedCompactableIndexes.debt();
+                } else {
+                    break;
+                }
             }
+            return awaitable;
+        } finally {
+            ongoingCompactions.decrementAndGet();
         }
-        return awaitable;
     }
 
     @Override

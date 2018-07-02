@@ -95,9 +95,9 @@ public class LABStress {
         System.out.println("Write Stress:");
         printLabels();
 
-        totalCardinality = 10_000_000L;
+        totalCardinality = 1_000_000_000L;
 
-        int threadCount = 8; //Runtime.getRuntime().availableProcessors();
+        int threadCount = 1; //Runtime.getRuntime().availableProcessors();
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
 
         futures = new ArrayList<>();
@@ -117,7 +117,7 @@ public class LABStress {
                     (totalCardinality1 / threadCount) * efi,
                     totalCardinality1 / threadCount,
                     100_000, // writesPerSecond
-                    (2_000_000), //writeCount
+                    (1_000_000_000), //writeCount
                     1, //readForNSeconds
                     1, // readCount
                     false,
@@ -200,8 +200,8 @@ public class LABStress {
         LABHeapPressure labHeapPressure = new LABHeapPressure(stats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
-            1024 * 1024 * 100,
-            1024 * 1024 * 200,
+            1024 * 1024 * 256,
+            1024 * 1024 * 512,
             globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
 
@@ -216,7 +216,7 @@ public class LABStress {
             4, // minMergeDebt
             8, // maxMergeDebt
             leapsCache,
-            new StripingBolBufferLocks(1024),
+            new StripingBolBufferLocks(2048),
             true,
             false);
 
@@ -224,8 +224,8 @@ public class LABStress {
 
         System.out.println("Created env");
         ValueIndex index = env.open(new ValueIndexConfig("foo",
-            1024 * 4, // entriesBetweenLeaps
-            1024 * 1024 * 100, // maxHeapPressureInBytes
+            1024 * 8, // entriesBetweenLeaps
+            1024 * 1024 * 512, // maxHeapPressureInBytes
             -1, // splitWhenKeysTotalExceedsNBytes
             -1, // splitWhenValuesTotalExceedsNBytes
             1024 * 1024 * 64, // splitWhenValuesAndKeysTotalExceedsNBytes
