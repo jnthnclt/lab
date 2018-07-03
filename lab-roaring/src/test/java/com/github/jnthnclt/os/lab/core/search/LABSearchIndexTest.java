@@ -134,7 +134,6 @@ public class LABSearchIndexTest {
         }
     }
 
-    @Test
     public void millionsTest() throws Exception {
 
         LABSearchIndex index = buildTmpIndex();

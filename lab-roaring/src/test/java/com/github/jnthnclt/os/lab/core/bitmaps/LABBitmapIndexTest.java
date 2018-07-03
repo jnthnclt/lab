@@ -2,6 +2,7 @@ package com.github.jnthnclt.os.lab.core.bitmaps;
 
 import com.github.jnthnclt.os.lab.core.LABEnvironment;
 import com.github.jnthnclt.os.lab.core.LABHeapPressure;
+import com.github.jnthnclt.os.lab.core.LABHeapPressure.FreeHeapStrategy;
 import com.github.jnthnclt.os.lab.core.LABStats;
 import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
@@ -12,8 +13,6 @@ import com.github.jnthnclt.os.lab.core.guts.LABHashIndexType;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
@@ -409,10 +408,17 @@ public class LABBitmapIndexTest {
 
     public static ValueIndex<byte[]> buildValueIndex(String name) throws Exception {
         File root = Files.createTempDir();
-        ListeningExecutorService executorService = MoreExecutors.newDirectExecutorService();
         AtomicLong globalHeapCostInBytes = new AtomicLong();
         LABStats stats = new LABStats(globalHeapCostInBytes);
         LABFiles labFiles = new LABFiles();
+        LABHeapPressure heapPressure = new LABHeapPressure(stats,
+            LABEnvironment.buildLABSchedulerThreadPool(1),
+            name,
+            1024 * 1024,
+            2 * 1024 * 1024,
+            globalHeapCostInBytes,
+            FreeHeapStrategy.mostBytesFirst
+        );
         LABEnvironment environment = new LABEnvironment(stats,
             labFiles,
             LABEnvironment.buildLABSchedulerThreadPool(1),
@@ -420,14 +426,7 @@ public class LABBitmapIndexTest {
             LABEnvironment.buildLABDestroyThreadPool(1),
             null,
             root,
-            new LABHeapPressure(stats,
-                executorService,
-                name,
-                1024 * 1024,
-                2 * 1024 * 1024,
-                globalHeapCostInBytes,
-                LABHeapPressure.FreeHeapStrategy.mostBytesFirst
-            ),
+            heapPressure,
             4,
             16,
             LABEnvironment.buildLeapsCache(1_000, 4),

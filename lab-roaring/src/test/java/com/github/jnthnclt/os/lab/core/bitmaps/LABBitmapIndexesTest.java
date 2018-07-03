@@ -10,6 +10,9 @@ public class LABBitmapIndexesTest {
 
     @Test
     public void testAppend() throws Exception {
+
+        Thread.currentThread().setName("TEST");
+
         LABBitmaps<RoaringBitmap, RoaringBitmap> bitmaps = new RoaringLABBitmaps();
 
         ValueIndex<byte[]> bitmapIndex = LABBitmapIndexTest.buildValueIndex("bitmaps");
@@ -21,11 +24,11 @@ public class LABBitmapIndexesTest {
             () -> version.getAndIncrement(),
             bitmaps,
             new byte[] { 0 },
-            (ValueIndex<byte[]>[]) new ValueIndex[] { bitmapIndex },
+            new ValueIndex[] { bitmapIndex },
             new byte[] { 1 },
-            (ValueIndex<byte[]>[]) new ValueIndex[] { termIndex },
+            new ValueIndex[] { termIndex },
             new byte[] { 2 },
-            (ValueIndex<byte[]>[]) new ValueIndex[] { cardinalitiesIndex },
+            new ValueIndex[] { cardinalitiesIndex },
             new LABStripingLocksProvider(64),
             new LABIndexKeyInterner(true));
 
