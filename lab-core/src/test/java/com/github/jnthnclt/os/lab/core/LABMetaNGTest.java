@@ -1,11 +1,11 @@
 package com.github.jnthnclt.os.lab.core;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
+import com.github.jnthnclt.os.lab.base.UIO;
 import com.google.common.io.Files;
 import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 

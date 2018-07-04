@@ -1,7 +1,7 @@
 package com.github.jnthnclt.os.lab.core;
 
-import com.github.jnthnclt.os.lab.core.util.LABLogger;
-import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
+import com.github.jnthnclt.os.lab.log.LABLogger;
+import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
 import java.lang.management.ManagementFactory;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;

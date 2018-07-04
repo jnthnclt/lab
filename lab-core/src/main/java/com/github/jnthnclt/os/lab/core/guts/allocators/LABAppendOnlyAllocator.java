@@ -1,10 +1,10 @@
 package com.github.jnthnclt.os.lab.core.guts.allocators;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
+import com.github.jnthnclt.os.lab.base.UIO;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
-import com.github.jnthnclt.os.lab.core.util.LABLogger;
-import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
+import com.github.jnthnclt.os.lab.log.LABLogger;
+import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
 
 /**
  *

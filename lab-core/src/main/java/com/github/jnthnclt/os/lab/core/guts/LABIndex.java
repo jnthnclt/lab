@@ -1,8 +1,8 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
-import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
+import com.github.jnthnclt.os.lab.base.BolBuffer;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABCostChangeInBytes;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
+import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 
 /**
  *

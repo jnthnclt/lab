@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.jnthnclt</groupId>
     <artifactId>os.lab</artifactId>
-    <version>1.1</version>
+    <version>1.2-SNAPSHOT</version>
 
     <packaging>pom</packaging>
 
@@ -14,6 +14,7 @@
 
 
     <modules>
+        <module>lab-base</module>
         <module>lab-core</module>
         <module>lab-collections</module>
         <module>lab-roaring</module>

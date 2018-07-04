@@ -1,10 +1,10 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
+import com.github.jnthnclt.os.lab.base.UIO;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
+import com.github.jnthnclt.os.lab.io.IAppendOnly;
 import java.io.IOException;
 import java.util.Arrays;
-import com.github.jnthnclt.os.lab.core.io.api.IAppendOnly;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 
 /**
  *

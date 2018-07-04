@@ -1,11 +1,11 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABCorruptedException;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
 import java.io.File;
 import java.io.IOException;

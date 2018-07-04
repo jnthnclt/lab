@@ -1,6 +1,6 @@
 package com.github.jnthnclt.os.lab.core.search;
 
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
+import com.github.jnthnclt.os.lab.base.UIO;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.roaringbitmap.FastAggregation;

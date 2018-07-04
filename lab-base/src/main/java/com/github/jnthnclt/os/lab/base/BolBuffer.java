@@ -1,8 +1,7 @@
-package com.github.jnthnclt.os.lab.core.io;
+package com.github.jnthnclt.os.lab.base;
 
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
-import com.github.jnthnclt.os.lab.core.util.LABLogger;
-import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
+import com.github.jnthnclt.os.lab.log.LABLogger;
+import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
 import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
 

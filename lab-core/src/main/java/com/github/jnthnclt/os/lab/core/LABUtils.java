@@ -1,6 +1,6 @@
 package com.github.jnthnclt.os.lab.core;
 
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
+import com.github.jnthnclt.os.lab.base.UIO;
 
 /**
  *

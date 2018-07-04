@@ -1,5 +1,6 @@
 package com.github.jnthnclt.os.lab.core.guts.allocators;
 
+import com.github.jnthnclt.os.lab.base.UIO;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Bytes;
@@ -8,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Callable;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 

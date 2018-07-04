@@ -1,10 +1,10 @@
 package com.github.jnthnclt.os.lab.core.search;
 
+import com.github.jnthnclt.os.lab.base.UIO;
 import com.github.jnthnclt.os.lab.collections.bah.BAHEqualer;
 import com.github.jnthnclt.os.lab.collections.bah.BAHMapState;
 import com.github.jnthnclt.os.lab.collections.bah.BAHash;
 import com.github.jnthnclt.os.lab.collections.bah.BAHasher;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;

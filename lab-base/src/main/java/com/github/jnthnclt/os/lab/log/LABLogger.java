@@ -1,4 +1,4 @@
-package com.github.jnthnclt.os.lab.core.util;
+package com.github.jnthnclt.os.lab.log;
 
 public interface LABLogger {
 

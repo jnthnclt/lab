@@ -1,5 +1,6 @@
 package com.github.jnthnclt.os.lab.core.io;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
 import java.io.DataInput;
 import java.io.IOException;
 

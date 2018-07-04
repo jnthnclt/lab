@@ -1,6 +1,7 @@
 package com.github.jnthnclt.os.lab.core.io;
 
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
+import com.github.jnthnclt.os.lab.base.BolBuffer;
+import com.github.jnthnclt.os.lab.base.UIO;
 import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;

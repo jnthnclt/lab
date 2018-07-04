@@ -1,5 +1,7 @@
 package com.github.jnthnclt.os.lab.core;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
+import com.github.jnthnclt.os.lab.base.UIO;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
 import com.github.jnthnclt.os.lab.core.guts.ActiveScan;
 import com.github.jnthnclt.os.lab.core.guts.CompactableIndexes;
@@ -8,8 +10,6 @@ import com.github.jnthnclt.os.lab.core.guts.LABHashIndexType;
 import com.github.jnthnclt.os.lab.core.guts.PointInterleave;
 import com.github.jnthnclt.os.lab.core.guts.api.RawAppendableIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;

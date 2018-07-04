@@ -1,6 +1,8 @@
 package com.github.jnthnclt.os.lab.consistency;
 
+import com.github.jnthnclt.os.lab.base.IndexUtil;
 import java.util.Arrays;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -8,59 +10,81 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class Node {
 
-    private final int id;
+    private final int replicaId;
 
     private final AtomicLong nodeTx = new AtomicLong();
 
-    private final long[] offeredTimestamps;
-    private final long[] offeredValues;
-
-    private final long[] commitedTimestamps;
-    private final long[] commitedValues;
 
     private final int replication;
 
-    public Node(int id, int replication) {
+    public static class Consistent {
+        public final long[] offeredTimestamps;
+        public final long[] offeredValues;
 
-        this.id = id;
-        this.offeredTimestamps = new long[replication];
-        Arrays.fill(this.offeredTimestamps, -1);
-        this.offeredValues = new long[replication];
-        Arrays.fill(this.offeredValues, -1);
+        public final long[] commitedTimestamps;
+        public final long[] commitedValues;
 
-        this.commitedTimestamps = new long[replication];
-        Arrays.fill(this.commitedTimestamps, -1);
-        this.commitedValues = new long[replication];
-        Arrays.fill(this.commitedValues, -1);
+        Consistent(int replication) {
+            this.offeredTimestamps = new long[replication];
+            Arrays.fill(this.offeredTimestamps, -1);
+            this.offeredValues = new long[replication];
+            Arrays.fill(this.offeredValues, -1);
+
+            this.commitedTimestamps = new long[replication];
+            Arrays.fill(this.commitedTimestamps, -1);
+            this.commitedValues = new long[replication];
+            Arrays.fill(this.commitedValues, -1);
+        }
+
+        @Override
+        public String toString() {
+            return "offers:" + Arrays.toString(offeredTimestamps) + "=" + Arrays.toString(offeredValues)
+                + " quorums:" + Arrays.toString(commitedTimestamps) + "=" + Arrays.toString(commitedValues);
+        }
+    }
+
+    private final ConcurrentSkipListMap<byte[], Consistent> map;
+
+    public Node(int replicaId, int replication) {
+
+        this.replicaId = replicaId;
         this.replication = replication;
-
+        this.map = new ConcurrentSkipListMap<>((o1, o2) -> IndexUtil.compare(o1, 0, o1.length, o2, 0, o2.length));
     }
 
     public String toString() {
-        return id + " offers:" + Arrays.toString(offeredTimestamps) + "=" + Arrays.toString(offeredValues)
-                + " quorums:" + Arrays.toString(commitedTimestamps) + "=" + Arrays.toString(commitedValues);
+        return replicaId + " " + map.toString();
     }
 
-    public boolean set(KT expected, KT desired) {
-        return set(id, expected, desired);
+    public boolean set(byte[] key, KT expected, KT desired) {
+        return set(replicaId, key, expected, desired);
     }
 
-    private boolean set(int id, KT expected, KT desired) {
+    private boolean set(int id, byte[] key, KT expected, KT desired) {
+
+        Consistent consistent = map.computeIfAbsent(key, bytes -> new Consistent(replication));
+
         synchronized (nodeTx) {
+
+            long[] offeredTimestamps = consistent.offeredTimestamps;
+            long[] offeredValues = consistent.offeredValues;
+
             if (expected != null) {
+                long[] commitedTimestamps = consistent.commitedTimestamps;
+                long[] commitedValues = consistent.commitedValues;
                 int[] qi = QuorumIndex.qi(commitedTimestamps);
                 if (qi != null && commitedTimestamps[qi[0]] == expected.timestamp && commitedValues[qi[0]] == expected.value) {
                     if (desired.timestamp > offeredTimestamps[id]) {
                         offeredValues[id] = desired.value;
                         offeredTimestamps[id] = desired.timestamp;
-                        return evalOffered();
+                        return evalOffered(id, consistent);
                     }
                 }
             } else {
                 if (desired.timestamp > offeredTimestamps[id]) {
                     offeredValues[id] = desired.value;
                     offeredTimestamps[id] = desired.timestamp;
-                    return evalOffered();
+                    return evalOffered(id, consistent);
                 }
             }
         }
@@ -68,7 +92,13 @@ public class Node {
     }
 
     // expected that nodeTx lock is being held
-    private boolean evalOffered() {
+    private static boolean evalOffered(int id, Consistent consistent) {
+        long[] offeredTimestamps = consistent.offeredTimestamps;
+        long[] offeredValues = consistent.offeredValues;
+
+        long[] commitedTimestamps = consistent.commitedTimestamps;
+        long[] commitedValues = consistent.commitedValues;
+
         int[] qi = QuorumIndex.qi(offeredTimestamps);
         if (qi != null) {
             for (int i = 0; i < qi.length; i++) {
@@ -88,46 +118,50 @@ public class Node {
         return qi != null;
     }
 
-    public KT get(long highwaterTimestamp, Node[] nodes, int depth) {
+    public KT get(byte[] key, long highwaterTimestamp, Node[] nodes, int depth) {
 
+        Consistent consistent = map.computeIfAbsent(key, bytes -> new Consistent(replication));
 
         boolean repaired = false;
         for (int nodeId = 0; nodeId < nodes.length; nodeId++) {
 
-            if (nodeId == id) {
-                KT got = get(highwaterTimestamp);
+            if (nodeId == replicaId) {
+                KT got = get(consistent, highwaterTimestamp);
                 if (got == null) {
                     if (depth == 0) {
                         int neighborNodeId = nodeId + 1;
                         if (neighborNodeId >= nodes.length) {
                             neighborNodeId = 0;
                         }
-                        nodes[neighborNodeId].get(highwaterTimestamp, nodes, 1);
+                        nodes[neighborNodeId].get(key, highwaterTimestamp, nodes, 1);
                     }
                 }
             } else {
-                nodes[nodeId].get(highwaterTimestamp);
+                nodes[nodeId].get(consistent, highwaterTimestamp);
             }
 
-            if (nodeId != id) {
+            if (nodeId != replicaId) {
                 repaired = true;
-                Update[] updates = nodes[nodeId].takeUpdates(id);
+                Update[] updates = nodes[nodeId].takeUpdates(replicaId, key);
                 for (int i = 0; i < updates.length; i++) {
                     if (updates[i] != null) {
-                        set(updates[i].id, null, updates[i]);
+                        set(updates[i].id, key, null, updates[i]);
                     }
                 }
             }
         }
         if (repaired) {
-            return get(highwaterTimestamp);
+            return get(consistent, highwaterTimestamp);
         } else {
             return null;
         }
     }
 
-    private KT get(long highwaterTimestamp) {
+    private KT get(Consistent consistent, long highwaterTimestamp) {
         synchronized (nodeTx) {
+            long[] commitedTimestamps = consistent.commitedTimestamps;
+            long[] commitedValues = consistent.commitedValues;
+
             int[] qi = QuorumIndex.qi(commitedTimestamps);
             if (qi != null && commitedTimestamps[qi[0]] >= highwaterTimestamp) {
                 return new KT(commitedValues[qi[0]], commitedTimestamps[qi[0]]);
@@ -137,9 +171,17 @@ public class Node {
     }
 
 
-    public Update[] takeUpdates(int takerId) {
+    public Update[] takeUpdates(int takerId, byte[] key) {
+        Consistent consistent = map.computeIfAbsent(key, bytes -> new Consistent(replication));
+
         Update[] updates = new Update[replication];
         synchronized (nodeTx) {
+
+            long[] commitedTimestamps = consistent.commitedTimestamps;
+            long[] commitedValues = consistent.commitedValues;
+
+            long[] offeredTimestamps = consistent.offeredTimestamps;
+            long[] offeredValues = consistent.offeredValues;
 
             int offeredIndex = -1;
             int committedIndex = -1;

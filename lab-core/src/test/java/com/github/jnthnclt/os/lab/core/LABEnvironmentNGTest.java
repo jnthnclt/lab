@@ -1,21 +1,21 @@
 package com.github.jnthnclt.os.lab.core;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
+import com.github.jnthnclt.os.lab.base.IndexUtil;
+import com.github.jnthnclt.os.lab.base.UIO;
+import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
+import com.github.jnthnclt.os.lab.core.api.ValueIndex;
+import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
-import com.github.jnthnclt.os.lab.core.guts.IndexUtil;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
 import com.google.common.io.Files;
-import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
-import com.github.jnthnclt.os.lab.core.api.ValueIndex;
-import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import org.testng.collections.Lists;

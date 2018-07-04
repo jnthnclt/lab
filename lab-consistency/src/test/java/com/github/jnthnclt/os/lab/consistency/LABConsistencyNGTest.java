@@ -28,6 +28,7 @@ public class LABConsistencyNGTest {
         AtomicReference<KT> max = new AtomicReference<KT>();
 
         Map<Long, Integer> added = new ConcurrentHashMap<Long, Integer>();
+        byte[] key = new byte[]{1};
 
         CountDownLatch countDownLatch = new CountDownLatch(10);
         for (int t = 0; t < 10; t++) {
@@ -39,7 +40,7 @@ public class LABConsistencyNGTest {
                     for (int i = 1; i < 100_000; i++) {
 
                         int id = rand.nextInt(replication);
-                        KT g = nodes[id].get(e.timestamp, nodes, 0);
+                        KT g = nodes[id].get(key, e.timestamp, nodes, 0);
                         if (g != null) {
                             if (g.value < e.value && g.timestamp < e.timestamp) {
                                 System.out.println(
@@ -74,7 +75,7 @@ public class LABConsistencyNGTest {
                             //System.out.println(Thread.currentThread() + " " + m);
                             id = rand.nextInt(replication);
 
-                            nodes[id].set(g, e);
+                            nodes[id].set(key, g, e);
 
                             Thread.yield();
                         }

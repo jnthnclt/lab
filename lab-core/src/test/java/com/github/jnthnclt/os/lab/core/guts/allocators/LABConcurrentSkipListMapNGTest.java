@@ -1,11 +1,11 @@
 package com.github.jnthnclt.os.lab.core.guts.allocators;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
+import com.github.jnthnclt.os.lab.base.UIO;
 import com.github.jnthnclt.os.lab.core.LABStats;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABFixedWidthKeyFixedWidthValueRawhide;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import java.util.concurrent.atomic.AtomicLong;
 import org.testng.annotations.Test;
 

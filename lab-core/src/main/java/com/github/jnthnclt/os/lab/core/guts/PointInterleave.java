@@ -1,8 +1,8 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 
 public class PointInterleave {
 

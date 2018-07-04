@@ -1,7 +1,7 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
 import java.nio.LongBuffer;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 
 /**
  * @author jonathan.colt

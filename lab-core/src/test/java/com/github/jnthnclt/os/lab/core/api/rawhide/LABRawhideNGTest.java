@@ -1,9 +1,9 @@
 package com.github.jnthnclt.os.lab.core.api.rawhide;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
+import com.github.jnthnclt.os.lab.base.UIO;
 import java.io.IOException;
 import java.util.Arrays;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 

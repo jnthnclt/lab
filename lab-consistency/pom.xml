@@ -5,10 +5,15 @@
     <parent>
         <groupId>com.github.jnthnclt</groupId>
         <artifactId>os.lab</artifactId>
-        <version>1.1</version>
+        <version>1.2-SNAPSHOT</version>
     </parent>
     <groupId>com.github.jnthnclt</groupId>
     <artifactId>os.lab.consistency</artifactId>
     <dependencies>
+        <dependency>
+            <groupId>com.github.jnthnclt</groupId>
+            <artifactId>os.lab.base</artifactId>
+            <version>1.2-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 </project>

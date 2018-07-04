@@ -1,5 +1,7 @@
 package com.github.jnthnclt.os.lab.core.stress;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
+import com.github.jnthnclt.os.lab.base.UIO;
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.LABEnvironment;
 import com.github.jnthnclt.os.lab.core.LABHeapPressure;
@@ -12,8 +14,6 @@ import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
 import com.github.jnthnclt.os.lab.core.guts.LABHashIndexType;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import java.io.File;

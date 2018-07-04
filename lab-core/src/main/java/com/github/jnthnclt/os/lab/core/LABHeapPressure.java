@@ -2,8 +2,8 @@ package com.github.jnthnclt.os.lab.core;
 
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABClosedException;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABCorruptedException;
-import com.github.jnthnclt.os.lab.core.util.LABLogger;
-import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
+import com.github.jnthnclt.os.lab.log.LABLogger;
+import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;

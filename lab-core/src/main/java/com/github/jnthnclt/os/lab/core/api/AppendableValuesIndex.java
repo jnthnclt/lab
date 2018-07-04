@@ -1,7 +1,7 @@
 package com.github.jnthnclt.os.lab.core.api;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
 import com.github.jnthnclt.os.lab.core.AppendedVersion;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import java.util.List;
 import java.util.concurrent.Future;
 

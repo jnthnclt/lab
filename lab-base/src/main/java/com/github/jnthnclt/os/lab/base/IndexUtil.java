@@ -1,4 +1,4 @@
-package com.github.jnthnclt.os.lab.core.guts;
+package com.github.jnthnclt.os.lab.base;
 
 import com.google.common.primitives.UnsignedBytes;
 import com.google.common.primitives.UnsignedLongs;
@@ -8,12 +8,9 @@ import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import sun.misc.Unsafe;
 
-/**
- * @author jonathan.colt
- */
+
 public class IndexUtil {
 
     public static String toString(BolBuffer bb) {

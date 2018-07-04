@@ -1,7 +1,7 @@
 package com.github.jnthnclt.os.lab.core.guts.allocators;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 
 /**
  *

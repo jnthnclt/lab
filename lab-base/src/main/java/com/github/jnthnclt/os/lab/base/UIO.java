@@ -17,10 +17,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.jnthnclt.os.lab.core.io.api;
+package com.github.jnthnclt.os.lab.base;
 
-import com.github.jnthnclt.os.lab.core.util.LABLogger;
-import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
+import com.github.jnthnclt.os.lab.io.IAppendOnly;
+import com.github.jnthnclt.os.lab.log.LABLogger;
+import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Comparator;

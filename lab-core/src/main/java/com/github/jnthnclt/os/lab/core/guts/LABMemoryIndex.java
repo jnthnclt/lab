@@ -1,5 +1,6 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
 import com.github.jnthnclt.os.lab.core.LABHeapPressure;
 import com.github.jnthnclt.os.lab.core.LABStats;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
@@ -10,9 +11,8 @@ import com.github.jnthnclt.os.lab.core.guts.api.AppendEntryStream;
 import com.github.jnthnclt.os.lab.core.guts.api.RawAppendableIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.util.LABLogger;
-import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
+import com.github.jnthnclt.os.lab.log.LABLogger;
+import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;

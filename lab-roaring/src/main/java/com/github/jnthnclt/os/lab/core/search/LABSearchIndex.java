@@ -1,5 +1,7 @@
 package com.github.jnthnclt.os.lab.core.search;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
+import com.github.jnthnclt.os.lab.base.UIO;
 import com.github.jnthnclt.os.lab.collections.bah.BAHash;
 import com.github.jnthnclt.os.lab.core.LABIndexProvider;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
@@ -10,10 +12,8 @@ import com.github.jnthnclt.os.lab.core.bitmaps.LABIndexKeyInterner;
 import com.github.jnthnclt.os.lab.core.bitmaps.LABIndexKeyRange;
 import com.github.jnthnclt.os.lab.core.bitmaps.LABStripingLocksProvider;
 import com.github.jnthnclt.os.lab.core.bitmaps.RoaringLABBitmaps;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
-import com.github.jnthnclt.os.lab.core.util.LABLogger;
-import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
+import com.github.jnthnclt.os.lab.log.LABLogger;
+import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;

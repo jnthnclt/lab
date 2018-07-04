@@ -1,11 +1,11 @@
 package com.github.jnthnclt.os.lab.core.bitmaps;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
+import com.github.jnthnclt.os.lab.base.IndexUtil;
 import com.github.jnthnclt.os.lab.core.LABUtils;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
-import com.github.jnthnclt.os.lab.core.guts.IndexUtil;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.util.LABLogger;
-import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
+import com.github.jnthnclt.os.lab.log.LABLogger;
+import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;

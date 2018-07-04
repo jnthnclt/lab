@@ -1,15 +1,15 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
+import com.github.jnthnclt.os.lab.base.UIO;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.api.AppendEntries;
 import com.github.jnthnclt.os.lab.core.guts.api.RawAppendableIndex;
 import com.github.jnthnclt.os.lab.core.io.AppendableHeap;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
-import com.github.jnthnclt.os.lab.core.io.api.IAppendOnly;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
-import com.github.jnthnclt.os.lab.core.util.LABLogger;
-import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
+import com.github.jnthnclt.os.lab.io.IAppendOnly;
+import com.github.jnthnclt.os.lab.log.LABLogger;
+import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Arrays;

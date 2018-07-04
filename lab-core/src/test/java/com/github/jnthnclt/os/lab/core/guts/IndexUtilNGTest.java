@@ -15,10 +15,11 @@
  */
 package com.github.jnthnclt.os.lab.core.guts;
 
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
+import com.github.jnthnclt.os.lab.base.BolBuffer;
+import com.github.jnthnclt.os.lab.base.IndexUtil;
+import com.github.jnthnclt.os.lab.base.UIO;
 import java.util.Arrays;
 import java.util.Comparator;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 

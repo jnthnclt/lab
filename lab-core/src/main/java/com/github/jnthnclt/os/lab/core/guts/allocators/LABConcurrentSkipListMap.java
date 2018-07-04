@@ -1,10 +1,10 @@
 package com.github.jnthnclt.os.lab.core.guts.allocators;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
 import com.github.jnthnclt.os.lab.core.LABStats;
 import com.github.jnthnclt.os.lab.core.guts.LABIndex;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.concurrent.Semaphore;

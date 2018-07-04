@@ -1,5 +1,7 @@
 package com.github.jnthnclt.os.lab.core.stress;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
+import com.github.jnthnclt.os.lab.base.UIO;
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.LABEnvironment;
 import com.github.jnthnclt.os.lab.core.LABStats;
@@ -15,8 +17,6 @@ import com.github.jnthnclt.os.lab.core.guts.PointInterleave;
 import com.github.jnthnclt.os.lab.core.guts.RangeStripedCompactableIndexes;
 import com.github.jnthnclt.os.lab.core.guts.ReadOnlyFile;
 import com.github.jnthnclt.os.lab.core.guts.ReadOnlyIndex;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import com.google.common.io.Files;
 import java.io.File;
 import java.text.NumberFormat;

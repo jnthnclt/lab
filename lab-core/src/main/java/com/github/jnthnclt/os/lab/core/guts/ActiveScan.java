@@ -1,14 +1,14 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
+import com.github.jnthnclt.os.lab.base.UIO;
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
-import com.github.jnthnclt.os.lab.core.util.LABLogger;
-import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
+import com.github.jnthnclt.os.lab.log.LABLogger;
+import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
 import java.nio.LongBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -95,7 +95,7 @@ public class ActiveScan {
             }
             if (hashIndexType == LABHashIndexType.fibCuckoo) {
 
-                int twoPower = 63-UIO.chunkPower(hashIndexMaxCapacity,1);
+                int twoPower = 63- UIO.chunkPower(hashIndexMaxCapacity,1);
 
                 long exactRowIndex = getFibCuckoo(readable,
                     hashIndexHashFunctionCount,

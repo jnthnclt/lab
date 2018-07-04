@@ -1,11 +1,12 @@
 package com.github.jnthnclt.os.lab.core.io;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
+import com.github.jnthnclt.os.lab.base.UIO;
 import com.github.jnthnclt.os.lab.core.guts.AppendOnlyFile;
 import com.github.jnthnclt.os.lab.core.guts.ReadOnlyFile;
+import com.github.jnthnclt.os.lab.io.IAppendOnly;
 import com.google.common.io.Files;
 import java.io.File;
-import com.github.jnthnclt.os.lab.core.io.api.IAppendOnly;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 

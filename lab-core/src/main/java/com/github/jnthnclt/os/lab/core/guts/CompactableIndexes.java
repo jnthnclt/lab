@@ -1,15 +1,19 @@
 package com.github.jnthnclt.os.lab.core.guts;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
+import com.github.jnthnclt.os.lab.base.UIO;
 import com.github.jnthnclt.os.lab.core.LABStats;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABClosedException;
+import com.github.jnthnclt.os.lab.core.api.exceptions.LABConcurrentSplitException;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.api.CommitIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.IndexFactory;
 import com.github.jnthnclt.os.lab.core.guts.api.KeyToString;
 import com.github.jnthnclt.os.lab.core.guts.api.MergerBuilder;
+import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.SplitterBuilder;
-import com.github.jnthnclt.os.lab.core.util.LABLogger;
-import com.github.jnthnclt.os.lab.core.util.LABLoggerFactory;
+import com.github.jnthnclt.os.lab.log.LABLogger;
+import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,10 +23,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import com.github.jnthnclt.os.lab.core.api.exceptions.LABConcurrentSplitException;
-import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
-import com.github.jnthnclt.os.lab.core.io.api.UIO;
 
 /**
  * @author jonathan.colt

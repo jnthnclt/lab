@@ -1,7 +1,7 @@
-package com.github.jnthnclt.os.lab.core.io.api;
+package com.github.jnthnclt.os.lab.io;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
 import java.io.IOException;
-import com.github.jnthnclt.os.lab.core.io.BolBuffer;
 
 /**
  *

@@ -15,9 +15,10 @@
  */
 package com.github.jnthnclt.os.lab.core.io;
 
+import com.github.jnthnclt.os.lab.base.BolBuffer;
+import com.github.jnthnclt.os.lab.io.IAppendOnly;
 import com.google.common.math.IntMath;
 import java.io.IOException;
-import com.github.jnthnclt.os.lab.core.io.api.IAppendOnly;
 
 /**
  *
