@@ -5,7 +5,7 @@ import com.github.jnthnclt.os.lab.base.UIO;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.api.AppendEntries;
 import com.github.jnthnclt.os.lab.core.guts.api.RawAppendableIndex;
-import com.github.jnthnclt.os.lab.core.io.AppendableHeap;
+import com.github.jnthnclt.os.lab.io.AppendableHeap;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
 import com.github.jnthnclt.os.lab.io.IAppendOnly;
 import com.github.jnthnclt.os.lab.log.LABLogger;

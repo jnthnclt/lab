@@ -15,37 +15,39 @@ public class LABConsistencyNGTest {
     @Test
     public void test() throws Exception {
 
+        ValuesEqual<Long> valuesEqual = (a, b) -> a == b;
 
         int replication = 3;
-        Node[] nodes = new Node[replication];
+        Node<Long>[] nodes = new Node[replication];
         for (int i = 0; i < nodes.length; i++) {
-            nodes[i] = new Node(i, replication);
+            nodes[i] = new Node<>(i, replication, valuesEqual);
         }
+        Transport transport = new Transport(nodes);
 
         Random rand = new Random(1234);
         AtomicLong time = new AtomicLong();
 
-        AtomicReference<KT> max = new AtomicReference<KT>();
+        AtomicReference<ValueTimestamp> max = new AtomicReference<ValueTimestamp>();
 
         Map<Long, Integer> added = new ConcurrentHashMap<Long, Integer>();
-        byte[] key = new byte[]{1};
+        byte[] key = new byte[] { 1 };
 
         CountDownLatch countDownLatch = new CountDownLatch(10);
         for (int t = 0; t < 10; t++) {
 
             new Thread(() -> {
 
-                KT e = new KT(0, 0);
+                ValueTimestamp<Long> e = new ValueTimestamp<>(0L, 0);
                 try {
                     for (int i = 1; i < 100_000; i++) {
 
                         int id = rand.nextInt(replication);
-                        KT g = nodes[id].get(key, e.timestamp, nodes, 0);
+                        ValueTimestamp<Long> g = nodes[id].get(key, e.timestamp, transport);
                         if (g != null) {
                             if (g.value < e.value && g.timestamp < e.timestamp) {
                                 System.out.println(
-                                        Thread.currentThread() + " :( expected:{" + e + "} got:{" + g + "} vd:" + (e.value - g.value) + " td:" + (e.timestamp - g
-                                                .timestamp));
+                                    Thread.currentThread() + " :( expected:{" + e + "} got:{" + g + "} vd:" + (e.value - g.value) + " td:" + (e.timestamp - g
+                                        .timestamp));
                             }
 
                             if (g.timestamp >= e.timestamp) {
@@ -58,16 +60,16 @@ public class LABConsistencyNGTest {
                                 });
                             }
 
-                            e = new KT(g.value + 1, time.incrementAndGet());
+                            e = new ValueTimestamp<>(g.value + 1, time.incrementAndGet());
 
 
-                            KT m = max.updateAndGet(kt -> {
-                                if (kt == null) {
+                            ValueTimestamp m = max.updateAndGet(valueTimestamp -> {
+                                if (valueTimestamp == null) {
                                     return g;
                                 }
 
-                                if (kt.timestamp > g.timestamp) {
-                                    return kt;
+                                if (valueTimestamp.timestamp > g.timestamp) {
+                                    return valueTimestamp;
                                 } else {
                                     return g;
                                 }
@@ -75,7 +77,7 @@ public class LABConsistencyNGTest {
                             //System.out.println(Thread.currentThread() + " " + m);
                             id = rand.nextInt(replication);
 
-                            nodes[id].set(key, g, e);
+                            nodes[id].set(key, g, e, transport);
 
                             Thread.yield();
                         }

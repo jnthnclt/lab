@@ -16,7 +16,7 @@ import com.github.jnthnclt.os.lab.core.api.exceptions.LABFailedToInitializeWALEx
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.AppendOnlyFile;
 import com.github.jnthnclt.os.lab.core.guts.ReadOnlyFile;
-import com.github.jnthnclt.os.lab.core.io.AppendableHeap;
+import com.github.jnthnclt.os.lab.io.AppendableHeap;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
 import com.github.jnthnclt.os.lab.io.IAppendOnly;
 import com.github.jnthnclt.os.lab.log.LABLogger;

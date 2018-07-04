@@ -13,17 +13,13 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package com.github.jnthnclt.os.lab.core.io;
+package com.github.jnthnclt.os.lab.io;
 
 import com.github.jnthnclt.os.lab.base.BolBuffer;
-import com.github.jnthnclt.os.lab.io.IAppendOnly;
-import com.google.common.math.IntMath;
 import java.io.IOException;
 
 /**
- *
  * All of the methods are intentionally left unsynchronized. Up to caller to do the right thing using the Object returned by lock()
- *
  */
 public class AppendableHeap implements IAppendOnly {
 
@@ -162,12 +158,24 @@ public class AppendableHeap implements IAppendOnly {
             return new byte[amount];
         }
         try {
-            byte[] newSrc = new byte[IntMath.checkedAdd(src.length, amount)];
+            byte[] newSrc = new byte[checkedAdd(src.length, amount)];
             System.arraycopy(src, 0, newSrc, 0, src.length);
             return newSrc;
         } catch (ArithmeticException x) {
             System.out.println(src.length + " + " + amount + " overflows an int!");
             throw x;
+        }
+    }
+
+    static private int checkedAdd(int a, int b) {
+        long result = (long) a + (long) b;
+        checkNoOverflow(result == (long) ((int) result));
+        return (int) result;
+    }
+
+    static private void checkNoOverflow(boolean condition) {
+        if (!condition) {
+            throw new ArithmeticException("overflow");
         }
     }
 
