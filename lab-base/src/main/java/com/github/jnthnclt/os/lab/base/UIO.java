@@ -84,17 +84,6 @@ public class UIO {
         return bytesShort(_bytes, 0);
     }
 
-    public static int[] bytesInts(byte[] _bytes) {
-        if (_bytes == null || _bytes.length == 0) {
-            return null;
-        }
-        int intsCount = _bytes.length / 4;
-        int[] ints = new int[intsCount];
-        for (int i = 0; i < intsCount; i++) {
-            ints[i] = bytesInt(_bytes, i * 4);
-        }
-        return ints;
-    }
 
     public static int bytesInt(byte[] bytes, int offset) {
         int v = 0;
@@ -132,14 +121,6 @@ public class UIO {
         return v;
     }
 
-    public static byte[] longsBytes(long[] _longs) {
-        int len = _longs.length;
-        byte[] bytes = new byte[len * 8];
-        for (int i = 0; i < len; i++) {
-            longBytes(_longs[i], bytes, i * 8);
-        }
-        return bytes;
-    }
 
     public static byte[] longBytes(long _v) {
         return longBytes(_v, new byte[8], 0);
@@ -159,6 +140,16 @@ public class UIO {
 
     public static long bytesLong(byte[] _bytes) {
         return bytesLong(_bytes, 0);
+    }
+
+
+    public static byte[] longsBytes(long[] _longs) {
+        int len = _longs.length;
+        byte[] bytes = new byte[len * 8];
+        for (int i = 0; i < len; i++) {
+            longBytes(_longs[i], bytes, i * 8);
+        }
+        return bytes;
     }
 
     public static long[] bytesLongs(byte[] _bytes) {
