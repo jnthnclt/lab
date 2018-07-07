@@ -76,6 +76,14 @@ public class LABSearch {
             this.value = value;
         }
 
+        public String asString() {
+            return new String(value, StandardCharsets.UTF_8);
+        }
+
+        public long asLong() {
+            return UIO.bytesLong(value);
+        }
+
         @Override
         public String toString() {
             return fieldName + ":" + (value == null ? value : new String(value, StandardCharsets.UTF_8));

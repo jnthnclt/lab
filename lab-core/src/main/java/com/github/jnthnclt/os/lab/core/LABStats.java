@@ -30,6 +30,7 @@ public class LABStats {
 
     public final LongAdder gets = new LongAdder();
     public final LongAdder rangeScan = new LongAdder();
+    public final LongAdder pointRangeScan = new LongAdder();
     public final LongAdder multiRangeScan = new LongAdder();
     public final LongAdder rowScan = new LongAdder();
 
@@ -69,6 +70,7 @@ public class LABStats {
 
         register("read>gets", new LongAdderCounter(gets));
         register("read>rangeScan", new LongAdderCounter(rangeScan));
+        register("read>pointRangeScan", new LongAdderCounter(pointRangeScan));
         register("read>multiRangeScan", new LongAdderCounter(multiRangeScan));
         register("read>rowScan", new LongAdderCounter(rowScan));
 

@@ -224,7 +224,7 @@ public class LAB implements ValueIndex<byte[]> {
             readerTx,
             hydrateValues
         );
-        stats.rangeScan.increment();
+        stats.pointRangeScan.increment();
         return r;
     }
 

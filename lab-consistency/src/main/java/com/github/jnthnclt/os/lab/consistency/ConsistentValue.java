@@ -23,52 +23,64 @@ public class ConsistentValue<V> {
         Arrays.fill(this.commitedValues, null);
     }
 
-    synchronized public boolean set(int replicaId,
+    public boolean set(int replicaId,
         @Nullable ValueTimestamp<V> expected,
         @Nonnull ValueTimestamp<V> desired,
         @Nonnull ValuesEqual<V> valuesEqual) {
 
-        if (expected != null) {
-            int[] qi = quorumIndexSet(commitedTimestamps);
-            if (qi != null
-                && commitedTimestamps[qi[0]] == expected.timestamp
-                && valuesEqual.equal((V)commitedValues[qi[0]], expected.value)) {
+        ValueTimestamp<V>[] accepted = null;
+        synchronized (this) {
+            if (expected != null) {
+                int[] qi = quorumIndexSet(commitedTimestamps);
+                if (qi != null
+                    && commitedTimestamps[qi[0]] == expected.timestamp
+                    && valuesEqual.equal((V) commitedValues[qi[0]], expected.value)) {
 
+                    if (desired.timestamp > offeredTimestamps[replicaId]) {
+                        offeredValues[replicaId] = desired.value;
+                        offeredTimestamps[replicaId] = desired.timestamp;
+                        accepted = evalOffered(replicaId);
+                    }
+                }
+            } else {
                 if (desired.timestamp > offeredTimestamps[replicaId]) {
                     offeredValues[replicaId] = desired.value;
                     offeredTimestamps[replicaId] = desired.timestamp;
-                    return evalOffered(replicaId);
+                    accepted = evalOffered(replicaId);
                 }
             }
-        } else {
-            if (desired.timestamp > offeredTimestamps[replicaId]) {
-                offeredValues[replicaId] = desired.value;
-                offeredTimestamps[replicaId] = desired.timestamp;
-                return evalOffered(replicaId);
-            }
         }
-        return false;
+        return accepted != null;
     }
 
     // expected that instance's lock is being held
-    private boolean evalOffered(int replicaId) {
+    private ValueTimestamp<V>[] evalOffered(int replicaId) {
         int[] qi = quorumIndexSet(offeredTimestamps);
+        ValueTimestamp<V>[] accepted = null;
         if (qi != null) {
+            accepted = new ValueTimestamp[qi.length];
             for (int i = 0; i < qi.length; i++) {
                 if (commitedTimestamps[qi[i]] < offeredTimestamps[qi[i]]) {
                     commitedTimestamps[qi[i]] = offeredTimestamps[qi[i]];
                     commitedValues[qi[i]] = offeredValues[qi[i]];
+                    accepted[i] = new ValueTimestamp<>( (V)commitedValues[qi[i]], commitedTimestamps[qi[i]]);
                 }
             }
             // This is the cleanup hook which a node can use to ensure all values are fully replicated
             if (qi.length == offeredTimestamps.length) {
+                long offeredTimestamp = offeredTimestamps[0];
                 System.out.println("-- Cleanup offeredTimestamps on nodeId:" + replicaId + " --");
                 for (int i = 0; i < qi.length; i++) {
-                    offeredTimestamps[qi[i]] = -1;
+                    offeredTimestamps[i] = -1;
+                    offeredValues[i] = null;
+                    if (commitedTimestamps[i] < offeredTimestamp) {
+                        commitedTimestamps[i] = -1;
+                        commitedValues[i] = null;
+                    }
                 }
             }
         }
-        return qi != null;
+        return accepted;
     }
 
     synchronized public ValueTimestamp get(long highwaterTimestamp) {

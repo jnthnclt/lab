@@ -35,7 +35,7 @@ public class LABIndexProvider<T> {
             heapScheduler,
             "default",
             1024 * 1024 * 512,
-            1024 * 1024 * 512,
+            1024 * 1024 * 768,
             globalHeapCostInBytes,
             FreeHeapStrategy.mostBytesFirst
         );
@@ -72,7 +72,7 @@ public class LABIndexProvider<T> {
             "deprecated",
             LABRawhide.NAME,
             MemoryRawEntryFormat.NAME,
-            27,
+            28,
             LABHashIndexType.cuckoo,
             2d,
             true,

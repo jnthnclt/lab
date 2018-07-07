@@ -12,21 +12,25 @@ import com.github.jnthnclt.os.lab.core.bitmaps.LABIndexKeyInterner;
 import com.github.jnthnclt.os.lab.core.bitmaps.LABIndexKeyRange;
 import com.github.jnthnclt.os.lab.core.bitmaps.LABStripingLocksProvider;
 import com.github.jnthnclt.os.lab.core.bitmaps.RoaringLABBitmaps;
+import com.github.jnthnclt.os.lab.core.search.LABSearch.CachedFieldValue;
 import com.github.jnthnclt.os.lab.log.LABLogger;
 import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -124,7 +128,8 @@ public class LABSearchIndex {
         }
         return got;
     }
-    public void fieldIntegerValues(int fieldOrdinal, List<LABIndexKeyRange> ranges,Function<Integer, Boolean> fieldValues) throws Exception {
+
+    public void fieldIntegerValues(int fieldOrdinal, List<LABIndexKeyRange> ranges, Function<Integer, Boolean> fieldValues) throws Exception {
         fieldIndex.streamTermIdsForField(fieldOrdinal, ranges, labIndexKey -> {
             if (labIndexKey != null && labIndexKey.length() == 4) {
                 if (!fieldValues.apply(UIO.bytesInt(labIndexKey.getBytes()))) {
@@ -146,7 +151,7 @@ public class LABSearchIndex {
         });
     }
 
-    public void fieldStringValues(int fieldOrdinal, List<LABIndexKeyRange> ranges,Function<String, Boolean> fieldValues) throws Exception {
+    public void fieldStringValues(int fieldOrdinal, List<LABIndexKeyRange> ranges, Function<String, Boolean> fieldValues) throws Exception {
         fieldIndex.streamTermIdsForField(fieldOrdinal, ranges, labIndexKey -> {
             if (labIndexKey != null && labIndexKey.length() > 0) {
                 String s = new String(labIndexKey.getBytes(), StandardCharsets.UTF_8);
@@ -158,6 +163,15 @@ public class LABSearchIndex {
             }
             return true;
         });
+    }
+
+    public List<String> fieldStringValues(int fieldOrdinal, int max) throws Exception {
+        ArrayList<String> list = Lists.newArrayList();
+        fieldStringValues(fieldOrdinal, null, s -> {
+            list.add(s);
+            return list.size() < max;
+        });
+        return list;
     }
 
 
@@ -261,6 +275,257 @@ public class LABSearchIndex {
         }, true);
     }
 
+    public interface StreamFieldValues {
+        boolean value(int index, String[] value) throws Exception;
+    }
+
+    public void values(RoaringBitmap all, int[] fieldOrdinals, StreamFieldValues streamValues) throws Exception {
+        if (all != null) {
+            String[] values = new String[fieldOrdinals.length];
+            int[] indexes = new int[fieldOrdinals.length];
+
+            AtomicBoolean canceled = new AtomicBoolean(false);
+            ExecutorService gets = Executors.newFixedThreadPool(fieldOrdinals.length); // lame
+            Object rendezvous = new Object();
+            try {
+                List<Future<Void>> futures = Lists.newArrayList();
+                for (int i = 0; i < fieldOrdinals.length; i++) {
+
+                    ValueIndex<byte[]> fieldNameBlob = getOrCreateFieldNameBlob("fieldName_" + fieldOrdinals[i]); // lame
+                    int ef_id = i;
+                    futures.add(gets.submit(() -> {
+                        fieldNameBlob.get(keyStream -> {
+                            for (Integer idx : all) {
+                                keyStream.key(idx, UIO.longBytes(idx, new byte[8], 0), 0, 4);
+                                if (canceled.get()) {
+                                    return false;
+                                }
+                            }
+                            return true;
+                        }, (index, key, timestamp, tombstoned, version, payload) -> {
+
+                            indexes[ef_id] = index;
+                            values[ef_id] = null;
+
+                            if (!tombstoned && payload != null) {
+                                try {
+                                    values[ef_id] = new String(payload.copy(), StandardCharsets.UTF_8);
+                                } catch (CancellationException ce) {
+                                    canceled.set(true);
+                                    return false;
+                                } catch (Exception x) {
+                                    LOG.error("values callback failed.", x);
+                                    return false;
+                                }
+                            }
+
+                            synchronized (rendezvous) {
+                                int expected = indexes[0];
+                                for (int j = 1; j < indexes.length; j++) {
+                                    if (indexes[0] != expected) {
+                                        rendezvous.wait();
+                                        return true;
+                                    }
+                                }
+
+                                try {
+                                    if (!streamValues.value(index, Arrays.copyOf(values, values.length))) {
+                                        canceled.set(true);
+                                        return false;
+                                    }
+                                } finally {
+                                    rendezvous.notifyAll();
+                                }
+                            }
+
+                            return true;
+                        }, true);
+
+                        return null;
+                    }));
+                }
+
+                for (Future<Void> future : futures) {
+                    try {
+                        future.get();
+                    } catch (Exception x) {
+                        LOG.error("Oops", x);
+                        canceled.set(true);
+                    }
+                }
+
+            } finally {
+                gets.shutdownNow();
+            }
+        }
+    }
+
+    public TimeSeries timeSeriesStream(String fieldName,
+        List<String> keys,
+        List<CachedFieldValue> andMustBe,
+        List<CachedFieldValue> andMustNotBe,
+        boolean accumulative,
+        String sumField,
+        String distinctField) throws Exception {
+
+        double[] series = new double[keys.size()];
+
+        RoaringBitmap andMustBeFilter = null;
+        if (andMustBe != null && andMustBe.size() > 0) {
+            for (CachedFieldValue fieldValue : andMustBe) {
+                int fieldOrdinal = lut(fieldNameToFieldId, fieldValue.fieldName.getBytes(StandardCharsets.UTF_8));
+                RoaringBitmap bitmap = bitmap(fieldOrdinal, fieldValue.value);
+                if (andMustBeFilter == null && bitmap != null && bitmap.getLongCardinality() > 0) {
+                    andMustBeFilter = bitmap;
+                } else {
+                    if (bitmap != null && bitmap.getLongCardinality() > 0) {
+                        andMustBeFilter.and(bitmap);
+                    } else {
+                        return new TimeSeries(bitmap, 0, 0, series, 0, 0);
+                    }
+                }
+            }
+        }
+
+        RoaringBitmap andMustNotBeFilter = null;
+        if (andMustNotBe != null && andMustNotBe.size() > 0) {
+            for (CachedFieldValue fieldValue : andMustNotBe) {
+                int fieldOrdinal = lut(fieldNameToFieldId, fieldValue.fieldName.getBytes(StandardCharsets.UTF_8));
+                RoaringBitmap bitmap = bitmap(fieldOrdinal, fieldValue.value);
+                if (andMustNotBeFilter == null && bitmap != null && bitmap.getLongCardinality() > 0) {
+                    andMustNotBeFilter = bitmap;
+                } else {
+                    if (bitmap != null && bitmap.getLongCardinality() > 0) {
+                        andMustNotBeFilter.and(bitmap);
+                    }
+                }
+            }
+        }
+
+
+        if (andMustBe != null && andMustBe.size() > 0 && andMustBe == null) {
+            return new TimeSeries(null, 0, 0, series, 0, 0);
+        }
+        if (andMustBeFilter != null && andMustBeFilter.getLongCardinality() == 0) {
+            return new TimeSeries(null, 0, 0, series, 0, 0);
+        }
+
+
+        int fieldOrdinal = lut(fieldNameToFieldId, fieldName.getBytes(StandardCharsets.UTF_8));
+
+        RoaringBitmap all = new RoaringBitmap();
+
+        int i = 0;
+        double seriesTotal = 0;
+        double seriesMax = 0;
+        for (String key : keys) {
+
+            RoaringBitmap bitmap = bitmap(fieldOrdinal, key);
+            if (bitmap != null) {
+                if (andMustBeFilter != null) {
+                    bitmap.and(andMustBeFilter);
+                }
+                if (andMustNotBeFilter != null) {
+                    bitmap.andNot(andMustNotBeFilter);
+                }
+
+                double c;
+                if (distinctField != null && distinctField.length() > 0) {
+                    c = distincts(distinctField, bitmap);
+                } else {
+                    c = bitmap.getLongCardinality();
+                }
+                seriesTotal += c;
+                all.or(bitmap);
+                seriesMax = Math.max(seriesMax, c);
+                if (accumulative) {
+                    series[i] = all.getLongCardinality();
+                } else {
+                    series[i] += c;
+                }
+            }
+            i++;
+        }
+
+        return new TimeSeries(all, sum(sumField, all), distincts(distinctField, all), series, seriesTotal, seriesMax);
+    }
+
+    public static class TimeSeries {
+        public final RoaringBitmap bitmap;
+        public final double cents;
+        public final double distincts;
+        public final double[] series;
+        public final double seriesTotal;
+        public final double seriesMax;
+
+        public TimeSeries(RoaringBitmap bitmap, double cents, double distincts, double[] series, double seriesTotal, double seriesMax) {
+            this.bitmap = bitmap;
+            this.cents = cents;
+            this.distincts = distincts;
+            this.series = series;
+            this.seriesTotal = seriesTotal;
+            this.seriesMax = seriesMax;
+        }
+    }
+
+    public double sum(String sumField, RoaringBitmap all) throws Exception {
+        double[] value = { 0 };
+        if (sumField != null && all != null) {
+            value[0] = 0;
+
+            int fieldOrdinal = fieldOrdinal(sumField);
+            ValueIndex<byte[]> fieldNameBlob = getOrCreateFieldNameBlob("fieldName_" + fieldOrdinal);
+            if (fieldNameBlob != null) {
+                fieldNameBlob.get(keyStream -> {
+                    for (Integer idx : all) {
+                        keyStream.key(idx, UIO.longBytes(idx), 0, 8);
+                    }
+                    return true;
+                }, (index, key, timestamp, tombstoned, version, payload) -> {
+                    if (payload != null) {
+                        try {
+                            String v = new String(payload.copy(), StandardCharsets.UTF_8);
+                            if (v != null && v.trim().length() > 0) {
+                                value[0] += Double.parseDouble(v.trim());
+                            }
+                        } catch (Exception x) {
+                            LOG.warn("Invalid value in sumField:" + sumField, x);
+                        }
+                    }
+                    return true;
+                }, true);
+            }
+        }
+        return value[0];
+    }
+
+
+    public double distincts(String distinctField, RoaringBitmap all) throws Exception {
+        if (distinctField != null && all != null) {
+            Set<String> set = Sets.newHashSet();
+            //AtomicLong count = new AtomicLong();
+            int fieldOrdinal = fieldOrdinal(distinctField);
+            ValueIndex<byte[]> fieldNameBlob = getOrCreateFieldNameBlob("fieldName_" + fieldOrdinal);
+            if (fieldNameBlob != null) {
+                fieldNameBlob.get(keyStream -> {
+                    for (Integer idx : all) {
+                        keyStream.key(idx, UIO.longBytes(idx), 0, 8);
+                    }
+                    return true;
+                }, (index, key, timestamp, tombstoned, version, payload) -> {
+                    //count.incrementAndGet();
+                    if (payload != null) {
+                        set.add(new String(payload.copy(), StandardCharsets.UTF_8));
+                    }
+                    return true;
+                }, true);
+            }
+            //System.out.println(" distinctField:" + distinctField + " " + set.size() + " " + count.get());
+            return set.size();
+        }
+        return 0;
+    }
+
 
     private ValueIndex<byte[]> getOrCreateFieldNameBlob(String name) throws Exception {
         ValueIndex<byte[]> got = fieldNameBlob.get(name);
@@ -288,7 +553,9 @@ public class LABSearchIndex {
 
 
         List<Future> futures = Lists.newArrayList();
-        futures.add(indexerThreads.submit(() -> indexStoredFieldValues(updates, guidToInternalId)));
+        for (Entry<Integer, BAHash<byte[]>> storedFieldUpdate : updates.fieldNameGuidStoredFieldValue.entrySet()) {
+            futures.add(indexerThreads.submit(() -> indexStoredFieldValues(updates, storedFieldUpdate, guidToInternalId)));
+        }
 
         long maxTimestamp = 0;
         for (Long timestamp : updates.updateTimestampMillis.values()) {
@@ -298,7 +565,7 @@ public class LABSearchIndex {
         long ef_maxTimestamp = maxTimestamp;
         for (Entry<Integer, BAHash<List<Long>>> entry : updates.fieldNameFieldValueGuids.entrySet()) {
             int fieldOrdinal = entry.getKey();
-            entry.getValue().stream(new Semaphore(1),(key, value) -> {
+            entry.getValue().stream(new Semaphore(1), (key, value) -> {
                 if (value != null) {
                     futures.add(indexerThreads.submit(() -> indexBits(guidToInternalId, fieldOrdinal, key, value, ef_maxTimestamp, delete)));
                 }
@@ -331,26 +598,28 @@ public class LABSearchIndex {
         return true;
     }
 
-    private Boolean indexStoredFieldValues(LABSearchIndexUpdates update, Map<Long, Integer> guidToInternalId) throws Exception {
-        for (Entry<Integer, BAHash<byte[]>> entry : update.fieldNameGuidStoredFieldValue.entrySet()) {
-            int fieldNameOrdinal = entry.getKey();
-            ValueIndex<byte[]> stored = getOrCreateFieldNameBlob("fieldName_" + fieldNameOrdinal);
-            stored.append(appendValueStream -> {
-                entry.getValue().stream(new Semaphore(1), (key, value) -> {
+    private Boolean indexStoredFieldValues(LABSearchIndexUpdates updates,
+        Entry<Integer, BAHash<byte[]>> storedFieldUpdate,
+        Map<Long, Integer> guidToInternalId) throws Exception {
 
-                    long timestamp = update.updateTimestampMillis.getOrDefault(UIO.bytesLong(key), System.currentTimeMillis());
-                    Integer id = guidToInternalId.get(UIO.bytesLong(key));
-                    appendValueStream.stream(0, UIO.longBytes(id),
-                        timestamp,
-                        value == null,
-                        timestamp,
-                        value);
+        int fieldNameOrdinal = storedFieldUpdate.getKey();
+        ValueIndex<byte[]> stored = getOrCreateFieldNameBlob("fieldName_" + fieldNameOrdinal);
+        stored.append(appendValueStream -> {
+            storedFieldUpdate.getValue().stream(new Semaphore(1), (key, value) -> {
 
-                    return true;
-                });
+                long timestamp = updates.updateTimestampMillis.getOrDefault(UIO.bytesLong(key), System.currentTimeMillis());
+                Integer id = guidToInternalId.get(UIO.bytesLong(key));
+                appendValueStream.stream(0, UIO.longBytes(id),
+                    timestamp,
+                    value == null,
+                    timestamp,
+                    value);
+
                 return true;
-            }, false, new BolBuffer(), new BolBuffer());
-        }
+            });
+            return true;
+        }, false, new BolBuffer(), new BolBuffer());
+
         return true;
     }
 
