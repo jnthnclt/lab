@@ -8,6 +8,7 @@ import com.github.jnthnclt.os.lab.core.LABHeapPressure;
 import com.github.jnthnclt.os.lab.core.LABStats;
 import com.github.jnthnclt.os.lab.core.TestUtils;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
+import com.github.jnthnclt.os.lab.core.guts.LABHashIndexType;
 import com.github.jnthnclt.os.lab.core.guts.LABMemoryIndex;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
 import com.github.jnthnclt.os.lab.core.guts.PointInterleave;
@@ -30,6 +31,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 /**
@@ -41,8 +43,14 @@ public class RangeStripedCompactableIndexesStressNGTest {
 
     NumberFormat format = NumberFormat.getInstance();
 
-    @Test(enabled = false)
-    public void stress() throws Exception {
+    @DataProvider(name = "indexTypes")
+    public static Object[][] indexTypes() {
+        return new Object[][] { { LABHashIndexType.cuckoo }, { LABHashIndexType.fibCuckoo },{ LABHashIndexType.linearProbe }};
+
+    }
+
+    @Test(dataProvider = "indexTypes", enabled = false)
+    public void stress(LABHashIndexType hashIndexType) throws Exception {
         ExecutorService destroy = Executors.newSingleThreadExecutor();
 
         Random rand = new Random(12345);
@@ -70,7 +78,7 @@ public class RangeStripedCompactableIndexesStressNGTest {
             LABRawhide.SINGLETON,
             leapsCache,
             false,
-            TestUtils.indexType,
+            hashIndexType,
             0.75d,
             Long.MAX_VALUE);
 

@@ -71,23 +71,7 @@ public class LABFiles {
     }
 
     public boolean isEmpty() {
-        return appendedFiles.get().isEmpty() || removedFiles.get().isEmpty();
+        return appendedFiles.get().isEmpty() && removedFiles.get().isEmpty();
     }
 
-    public static void main(String[] args) throws Exception {
-
-
-        LABFiles labFiles = new LABFiles();
-        labFiles.take((appendedFiles1, removedFiles1) -> {
-            for (AppendedFile appendedFile : appendedFiles1) {
-                System.out.println(appendedFile.file);
-            }
-
-            for (File removed : removedFiles1) {
-                System.out.println(removed);
-            }
-
-            return true;
-        });
-    }
 }

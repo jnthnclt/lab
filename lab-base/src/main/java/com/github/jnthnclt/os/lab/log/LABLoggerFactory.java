@@ -75,6 +75,7 @@ public class LABLoggerFactory {
         public void debug(String messagePattern, Object[] argArray, Throwable t) {
             if (level.ordinal() >= SysoutLABLoggerLevel.DEBUG.ordinal()) {
                 System.out.println("DEBUG: " + Thread.currentThread().getName() + " " + name + " " + MessageFormatter.format(messagePattern, argArray));
+                t.printStackTrace();
             }
         }
 
@@ -89,6 +90,7 @@ public class LABLoggerFactory {
         public void debug(String msg, Throwable t) {
             if (level.ordinal() >= SysoutLABLoggerLevel.DEBUG.ordinal()) {
                 System.out.println("DEBUG: " + Thread.currentThread().getName() + " " + name + " " + MessageFormatter.format(msg));
+                t.printStackTrace();
             }
         }
 
@@ -117,6 +119,7 @@ public class LABLoggerFactory {
         public void warn(String messagePattern, Object[] argArray, Throwable t) {
             if (level.ordinal() >= SysoutLABLoggerLevel.WARN.ordinal()) {
                 System.out.println("WARN: " + Thread.currentThread().getName() + " " + name + " " + MessageFormatter.format(messagePattern, argArray));
+                t.printStackTrace();
             }
         }
 
@@ -131,6 +134,7 @@ public class LABLoggerFactory {
         public void warn(String msg, Throwable t) {
             if (level.ordinal() >= SysoutLABLoggerLevel.WARN.ordinal()) {
                 System.out.println("WARN: " + Thread.currentThread().getName() + " " + name + " " + msg);
+                t.printStackTrace();
             }
         }
 
@@ -159,6 +163,7 @@ public class LABLoggerFactory {
         public void info(String messagePattern, Object[] argArray, Throwable t) {
             if (level.ordinal() >= SysoutLABLoggerLevel.INFO.ordinal()) {
                 System.out.println("INFO: " + Thread.currentThread().getName() + " " + name + " " + MessageFormatter.format(messagePattern, argArray));
+                t.printStackTrace();
             }
         }
 
@@ -173,6 +178,7 @@ public class LABLoggerFactory {
         public void info(String messagePattern, Throwable t) {
             if (level.ordinal() >= SysoutLABLoggerLevel.INFO.ordinal()) {
                 System.out.println("INFO: " + Thread.currentThread().getName() + " " + name + " " + messagePattern);
+                t.printStackTrace();
             }
         }
 
@@ -201,6 +207,7 @@ public class LABLoggerFactory {
         public void error(String messagePattern, Object[] argArray, Throwable t) {
             if (level.ordinal() >= SysoutLABLoggerLevel.ERROR.ordinal()) {
                 System.out.println("ERROR: " + Thread.currentThread().getName() + " " + name + " " + MessageFormatter.format(messagePattern, argArray));
+                t.printStackTrace();
             }
         }
 
@@ -215,6 +222,7 @@ public class LABLoggerFactory {
         public void error(String messagePattern, Throwable t) {
             if (level.ordinal() >= SysoutLABLoggerLevel.ERROR.ordinal()) {
                 System.out.println("ERROR: " + Thread.currentThread().getName() + " " + name + " " + messagePattern);
+                t.printStackTrace();
             }
         }
 

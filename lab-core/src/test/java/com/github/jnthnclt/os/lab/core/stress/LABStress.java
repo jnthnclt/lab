@@ -42,14 +42,24 @@ public class LABStress {
     @Test(enabled = false)
     public void stressWritesTest() throws Exception {
 
-        LABHashIndexType indexType = LABHashIndexType.cuckoo;
+        boolean enableHashIndex = true;
+        //LABHashIndexType indexType = LABHashIndexType.cuckoo;
+        //LABHashIndexType indexType = LABHashIndexType.fibCuckoo;
+        LABHashIndexType indexType = LABHashIndexType.linearProbe;
+
+
         double hashIndexLoadFactor = 2d;
         File root = Files.createTempDir();
         System.out.println(root.getAbsolutePath());
         AtomicLong globalHeapCostInBytes = new AtomicLong();
         LABStats stats = new LABStats(globalHeapCostInBytes);
         LABFiles labFiles = new LABFiles();
-        ValueIndex index = createIndex(root, indexType, hashIndexLoadFactor, stats, null, globalHeapCostInBytes);
+        ValueIndex index = createIndex(root, enableHashIndex,
+            indexType,
+            hashIndexLoadFactor,
+            stats,
+            null,
+            globalHeapCostInBytes);
 
         long totalCardinality = 100_000_000;
 
@@ -89,7 +99,7 @@ public class LABStress {
         globalHeapCostInBytes = new AtomicLong();
         stats = new LABStats(globalHeapCostInBytes);
         root = Files.createTempDir();
-        index = createIndex(root, indexType, hashIndexLoadFactor, stats, labFiles, globalHeapCostInBytes);
+        index = createIndex(root, enableHashIndex, indexType, hashIndexLoadFactor, stats, labFiles, globalHeapCostInBytes);
 
         // ---
         System.out.println("Write Stress:");
@@ -117,7 +127,7 @@ public class LABStress {
                     (totalCardinality1 / threadCount) * efi,
                     totalCardinality1 / threadCount,
                     100_000, // writesPerSecond
-                    (1_000_000_000), //writeCount
+                    (10_000_000), //writeCount
                     1, //readForNSeconds
                     1, // readCount
                     false,
@@ -189,6 +199,7 @@ public class LABStress {
     }
 
     private ValueIndex createIndex(File root,
+        boolean enableHashIndex,
         LABHashIndexType indexType,
         double hashIndexLoadFactor,
         LABStats stats,
@@ -235,7 +246,7 @@ public class LABStress {
             27,
             indexType,
             hashIndexLoadFactor,
-            true,
+            enableHashIndex,
             Long.MAX_VALUE));
         return index;
     }

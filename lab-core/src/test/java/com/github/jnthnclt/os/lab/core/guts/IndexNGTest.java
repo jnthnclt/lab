@@ -24,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import org.testng.Assert;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 /**
@@ -33,8 +34,17 @@ public class IndexNGTest {
 
     private final Rawhide rawhide = LABRawhide.SINGLETON;
 
-    @Test(enabled = false)
-    public void testLeapDisk() throws Exception {
+    @DataProvider(name = "indexTypes")
+    public static Object[][] indexTypes() {
+        return new Object[][] {
+            { LABHashIndexType.cuckoo },
+            { LABHashIndexType.fibCuckoo },
+            { LABHashIndexType.linearProbe }
+        };
+    }
+
+    @Test(dataProvider = "indexTypes")
+    public void testLeapDisk(LABHashIndexType hashIndexType) throws Exception {
 
         ExecutorService destroy = Executors.newSingleThreadExecutor();
         File indexFiler = File.createTempFile("l-index", ".tmp");
@@ -52,7 +62,7 @@ public class IndexNGTest {
             64,
             10,
             rawhide,
-            TestUtils.indexType,
+            hashIndexType,
             0.75d,
             Long.MAX_VALUE
         );
@@ -72,7 +82,7 @@ public class IndexNGTest {
         assertions(leapsAndBoundsIndex, count, step, desired);
     }
 
-    @Test(enabled = true)
+    @Test()
     public void testMemory() throws Exception {
 
         ConcurrentSkipListMap<byte[], byte[]> desired = new ConcurrentSkipListMap<>(rawhide.getKeyComparator());
@@ -90,6 +100,7 @@ public class IndexNGTest {
             -1,
             globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
+
         LABMemoryIndex walIndex = new LABMemoryIndex(destroy,
             labHeapPressure,
             labStats,
@@ -100,13 +111,14 @@ public class IndexNGTest {
                 ),
                 new StripingBolBufferLocks(1024)
             ));
+
         BolBuffer keyBuffer = new BolBuffer();
         TestUtils.append(new Random(), walIndex, 0, step, count, desired, keyBuffer);
         assertions(walIndex, count, step, desired);
     }
 
-    @Test(enabled = false)
-    public void testMemoryToDisk() throws Exception {
+    @Test(dataProvider = "indexTypes")
+    public void testMemoryToDisk(LABHashIndexType hashIndexType) throws Exception {
 
         ExecutorService destroy = Executors.newSingleThreadExecutor();
         ConcurrentSkipListMap<byte[], byte[]> desired = new ConcurrentSkipListMap<>(rawhide.getKeyComparator());
@@ -138,16 +150,17 @@ public class IndexNGTest {
 
         File indexFiler = File.createTempFile("c-index", ".tmp");
         IndexRangeId indexRangeId = new IndexRangeId(1, 1, 0);
-        LABAppendableIndex disIndex = new LABAppendableIndex(new LongAdder(),
+        LABAppendableIndex diskIndex = new LABAppendableIndex(new LongAdder(),
             indexRangeId,
             new AppendOnlyFile(indexFiler),
             64,
             10,
             rawhide,
-            TestUtils.indexType,
+            hashIndexType,
             0.75d,
             Long.MAX_VALUE);
-        disIndex.append((stream) -> {
+
+        diskIndex.append((stream) -> {
             ReadIndex reader = memoryIndex.acquireReader();
             try {
                 Scanner rowScan = reader.rowScan(new BolBuffer(), new BolBuffer());
@@ -155,15 +168,14 @@ public class IndexNGTest {
                 BolBuffer rawEntry = new BolBuffer();
                 while ((rawEntry = rowScan.next(rawEntry, null)) != null) {
                     byte[] bytes = rawEntry.copy();
-                    return stream.stream(new BolBuffer(bytes));
+                    stream.stream(new BolBuffer(bytes));
                 }
             } finally {
                 reader.release();
-                reader = null;
             }
             return true;
         }, keyBuffer);
-        disIndex.closeAppendable(false);
+        diskIndex.closeAppendable(false);
 
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
         assertions(new ReadOnlyIndex(null, destroy, indexRangeId, new ReadOnlyFile(indexFiler), rawhide,

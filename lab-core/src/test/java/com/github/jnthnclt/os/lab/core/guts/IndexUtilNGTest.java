@@ -19,7 +19,6 @@ import com.github.jnthnclt.os.lab.base.BolBuffer;
 import com.github.jnthnclt.os.lab.base.IndexUtil;
 import com.github.jnthnclt.os.lab.base.UIO;
 import java.util.Arrays;
-import java.util.Comparator;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -32,12 +31,7 @@ public class IndexUtilNGTest {
     @Test
     public void testCompare_6args() {
         Long[] sort = new Long[]{new Long(9), new Long(5), new Long(6), new Long(3), new Long(4), new Long(5), new Long(1), new Long(2), new Long(9)};
-        Arrays.sort(sort, new Comparator<Long>() {
-            @Override
-            public int compare(Long o1, Long o2) {
-                return IndexUtil.compare(UIO.longBytes(o1), 0, 8, UIO.longBytes(o2), 0, 8);
-            }
-        });
+        Arrays.sort(sort, (o1, o2) -> IndexUtil.compare(UIO.longBytes(o1), 0, 8, UIO.longBytes(o2), 0, 8));
 
         long[] sorted = new long[]{1, 2, 3, 4, 5, 5, 6, 9, 9};
         for (int i = 0; i < sorted.length; i++) {
@@ -49,12 +43,7 @@ public class IndexUtilNGTest {
     @Test
     public void testCompare_ByteBuffer_ByteBuffer() {
         Long[] sort = new Long[]{new Long(9), new Long(5), new Long(6), new Long(3), new Long(4), new Long(5), new Long(1), new Long(2), new Long(9)};
-        Arrays.sort(sort, new Comparator<Long>() {
-            @Override
-            public int compare(Long o1, Long o2) {
-                return IndexUtil.compare(new BolBuffer(UIO.longBytes(o1)), new BolBuffer(UIO.longBytes(o2)));
-            }
-        });
+        Arrays.sort(sort, (o1, o2) -> IndexUtil.compare(new BolBuffer(UIO.longBytes(o1)), new BolBuffer(UIO.longBytes(o2))));
 
         long[] sorted = new long[]{1, 2, 3, 4, 5, 5, 6, 9, 9};
         for (int i = 0; i < sorted.length; i++) {

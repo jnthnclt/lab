@@ -874,7 +874,7 @@ public class LAB implements ValueIndex<byte[]> {
 
                 if (waitIfToFarBehind && debt >= maxDebt) {
                     synchronized (compactLock) {
-                        if (!closeRequested.get() && ongoingCompactions.get() > 0) {
+                        if (!closeRequested.get() && ongoingCompactions.get() > 1) {
                             LOG.debug("Waiting because debt is too high for index:{} debt:{}", rangeStripedCompactableIndexes, debt);
                             compactLock.wait();
                         } else {

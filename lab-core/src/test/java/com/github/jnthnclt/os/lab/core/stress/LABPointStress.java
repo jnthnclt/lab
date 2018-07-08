@@ -12,6 +12,8 @@ import com.github.jnthnclt.os.lab.core.api.ScanKeys;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABFixedWidthKeyFixedWidthValueRawhide;
+import com.github.jnthnclt.os.lab.core.api.rawhide.LABFixedWidthKeyRawhide;
+import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
 import com.github.jnthnclt.os.lab.core.guts.LABHashIndexType;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
@@ -23,6 +25,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 /**
@@ -30,19 +33,33 @@ import org.testng.annotations.Test;
  */
 public class LABPointStress {
 
-    @Test(enabled = true)
-    public void stressWritesTest() throws Exception {
+    @DataProvider(name = "rawHideTypes")
+    public static Object[][] indexTypes() {
+        return new Object[][] {
+            { "8x8fixedWidthRawhide" },
+            { "8fixedWidthRawhide" },
+            { LABRawhide.NAME}
+        };
+    }
 
-        LABHashIndexType indexType = LABHashIndexType.fibCuckoo;
+    @Test(dataProvider = "rawHideTypes")
+    public void stressWritesTest(String rawhideName) throws Exception {
+
+        LABHashIndexType indexType = LABHashIndexType.linearProbe;
         double hashIndexLoadFactor = 2d;
         File root = Files.createTempDir();
         System.out.println(root.getAbsolutePath());
         AtomicLong globalHeapCostInBytes = new AtomicLong();
         LABStats stats = new LABStats(globalHeapCostInBytes);
-        ValueIndex index = createIndex(root, indexType, hashIndexLoadFactor, stats, globalHeapCostInBytes);
+        ValueIndex index = createIndex(root,
+            indexType,
+            hashIndexLoadFactor,
+            stats,
+            globalHeapCostInBytes,
+            rawhideName);
 
         long totalCardinality = 1_000_000;
-        int writeCount = 1_000_000;
+        int writeCount = 100_000;
 
         write(index, 0, totalCardinality, writeCount); // removes
 
@@ -265,15 +282,16 @@ public class LABPointStress {
         LABHashIndexType indexType,
         double hashIndexLoadFactor,
         LABStats stats,
-        AtomicLong globalHeapCostInBytes) throws Exception {
+        AtomicLong globalHeapCostInBytes,
+        String rawhideName) throws Exception {
 
         System.out.println("Created root " + root);
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100_000, 8);
         LABHeapPressure labHeapPressure = new LABHeapPressure(stats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
-            1024 * 1024 * 100,
-            1024 * 1024 * 200,
+            1024 * 1024 * 10,
+            1024 * 1024 * 20,
             globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
 
@@ -293,6 +311,7 @@ public class LABPointStress {
             false);
 
         env.register("8x8fixedWidthRawhide", new LABFixedWidthKeyFixedWidthValueRawhide(8, 8));
+        env.register("8fixedWidthRawhide", new LABFixedWidthKeyRawhide(8));
 
         System.out.println("Created env");
         ValueIndex index = env.open(new ValueIndexConfig("foo",
@@ -302,7 +321,7 @@ public class LABPointStress {
             -1, // splitWhenValuesTotalExceedsNBytes
             1024 * 1024 * 64, // splitWhenValuesAndKeysTotalExceedsNBytes
             "deprecated",
-            "8x8fixedWidthRawhide", //new LABRawhide(),
+            rawhideName, //new LABRawhide(),
             MemoryRawEntryFormat.NAME,
             27,
             indexType,

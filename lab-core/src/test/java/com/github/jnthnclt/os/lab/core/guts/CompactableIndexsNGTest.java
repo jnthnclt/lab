@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import org.testng.Assert;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 /**
@@ -30,8 +31,18 @@ public class CompactableIndexsNGTest {
 
     private final Rawhide rawhide = LABRawhide.SINGLETON;
 
-    @Test(enabled = true)
-    public void testPointGets() throws Exception {
+    @DataProvider(name = "indexTypes")
+    public static Object[][] indexTypes() {
+        return new Object[][] {
+            //{ LABHashIndexType.cuckoo },
+            { LABHashIndexType.fibCuckoo }
+            //, { LABHashIndexType.linearProbe }
+        };
+
+    }
+
+    @Test(dataProvider = "indexTypes", enabled = true)
+    public void testPointGets(LABHashIndexType hashIndexType) throws Exception {
 
         ExecutorService destroy = Executors.newSingleThreadExecutor();
         CompactableIndexes indexs = new CompactableIndexes(new LABStats(new AtomicLong()), rawhide);
@@ -54,7 +65,7 @@ public class CompactableIndexsNGTest {
                 maxLeaps,
                 entriesBetweenLeaps,
                 rawhide,
-                TestUtils.indexType,
+                hashIndexType,
                 0.75d,
                 Long.MAX_VALUE);
 
@@ -79,13 +90,13 @@ public class CompactableIndexsNGTest {
             long g = i;
             byte[] k = UIO.longBytes(i, new byte[8], 0);
             boolean[] passed = { false };
-            //System.out.println("Get:" + i);
+            System.out.println(hashIndexType + " Get:" + i);
             indexs.tx(-1, false, null, null,
                 (index, pointFrom, fromKey, toKey, readIndexs, hydrateValues) -> {
 
-
                     BolBuffer got = PointInterleave.get(readIndexs, k, rawhide, true);
                     if (got != null) {
+                        System.out.println(UIO.bytesLong(got.copy(), 4) + " " + g);
                         if (UIO.bytesLong(got.copy(), 4) == g) {
                             passed[0] = true;
                         }
@@ -100,8 +111,8 @@ public class CompactableIndexsNGTest {
 
     }
 
-    @Test(enabled = false)
-    public void testConcurrentMerges() throws Exception {
+    @Test(dataProvider = "indexTypes", enabled = false)
+    public void testConcurrentMerges(LABHashIndexType hashIndexType) throws Exception {
 
         ExecutorService destroy = Executors.newSingleThreadExecutor();
         ConcurrentSkipListMap<byte[], byte[]> desired = new ConcurrentSkipListMap<>(rawhide.getKeyComparator());
@@ -130,7 +141,7 @@ public class CompactableIndexsNGTest {
                     64,
                     2,
                     rawhide,
-                    TestUtils.indexType,
+                    hashIndexType,
                     0.75d,
                     Long.MAX_VALUE);
                 TestUtils.append(rand, write, 0, step, count, desired, keyBuffer);
@@ -177,8 +188,8 @@ public class CompactableIndexsNGTest {
         assertions(indexs, count, step, desired);
     }
 
-    @Test(enabled = true)
-    public void testTx() throws Exception {
+    @Test(dataProvider = "indexTypes", enabled = true)
+    public void testTx(LABHashIndexType hashIndexType) throws Exception {
 
         ExecutorService destroy = Executors.newSingleThreadExecutor();
         ConcurrentSkipListMap<byte[], byte[]> desired = new ConcurrentSkipListMap<>(rawhide.getKeyComparator());
@@ -208,7 +219,7 @@ public class CompactableIndexsNGTest {
                 64,
                 2,
                 rawhide,
-                TestUtils.indexType,
+                hashIndexType,
                 0.75d,
                 Long.MAX_VALUE);
             TestUtils.append(rand, write, 0, step, count, desired, keyBuffer);
@@ -308,7 +319,7 @@ public class CompactableIndexsNGTest {
 
                 AtomicBoolean failed = new AtomicBoolean();
                 Scanner rowScan = new InterleaveStream(rawhide,
-                    ActiveScan.indexToFeeds(acquired, false,false, null, null, rawhide, null));
+                    ActiveScan.indexToFeeds(acquired, false, false, null, null, rawhide, null));
                 try {
                     BolBuffer rawEntry = new BolBuffer();
                     while ((rawEntry = rowScan.next(rawEntry, null)) != null) {
@@ -368,7 +379,7 @@ public class CompactableIndexsNGTest {
 
                     //System.out.println("Asked index:" + _i + " key:" + UIO.bytesLong(keys.get(_i)) + " to:" + UIO.bytesLong(keys.get(_i + 3)));
                     Scanner rangeScan = new InterleaveStream(rawhide,
-                        ActiveScan.indexToFeeds(acquired, false,false, keys.get(_i), keys.get(_i + 3), rawhide, null));
+                        ActiveScan.indexToFeeds(acquired, false, false, keys.get(_i), keys.get(_i + 3), rawhide, null));
                     try {
                         BolBuffer rawEntry = new BolBuffer();
                         while ((rawEntry = rangeScan.next(rawEntry, null)) != null) {
@@ -394,7 +405,7 @@ public class CompactableIndexsNGTest {
                     int[] streamed = new int[1];
 
                     Scanner rangeScan = new InterleaveStream(rawhide,
-                        ActiveScan.indexToFeeds(acquired, false,false, UIO.longBytes(UIO.bytesLong(keys.get(_i)) + 1, new byte[8], 0), keys.get(_i + 3),
+                        ActiveScan.indexToFeeds(acquired, false, false, UIO.longBytes(UIO.bytesLong(keys.get(_i)) + 1, new byte[8], 0), keys.get(_i + 3),
                             rawhide, null));
                     try {
 

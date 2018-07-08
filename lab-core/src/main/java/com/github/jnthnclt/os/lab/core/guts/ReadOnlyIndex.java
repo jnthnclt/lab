@@ -71,7 +71,19 @@ public class ReadOnlyIndex implements ReadIndex {
         seekToBoundsCheck(seekTo, indexLength);
         int footerLength = readable.readInt(seekTo);
         long hashIndexSizeInBytes;
-        if (footerLength == -2) { // cuckoo hash index tacked onto the end.
+        if (footerLength == -1) { // linearProbe  hash index tacked onto the end.
+            seekTo = indexLength - (1 + 8 + 4);
+            seekToBoundsCheck(seekTo, indexLength);
+            hashIndexLongPrecision = (byte) readable.read(seekTo);
+            hashIndexMaxCapacity = readable.readLong(seekTo + 1);
+            hashIndexSizeInBytes = (hashIndexMaxCapacity * hashIndexLongPrecision) + 1 + 8 + 4;
+            hashIndexHeadOffset = indexLength - hashIndexSizeInBytes;
+            seekTo = indexLength - (hashIndexSizeInBytes + 4);
+            seekToBoundsCheck(seekTo, indexLength);
+            footerLength = readable.readInt(seekTo);
+            seekTo = indexLength - (hashIndexSizeInBytes + 1 + footerLength);
+            hashIndexType = LABHashIndexType.linearProbe;
+        } else if (footerLength == -2) { // cuckoo hash index tacked onto the end.
             seekTo = indexLength - (1 + 1 + 8 + 4);
             seekToBoundsCheck(seekTo, indexLength);
             hashIndexHashFunctionCount = (byte) readable.read(seekTo);
@@ -84,6 +96,19 @@ public class ReadOnlyIndex implements ReadIndex {
             footerLength = readable.readInt(seekTo);
             seekTo = indexLength - (hashIndexSizeInBytes + 1 + footerLength);
             hashIndexType = LABHashIndexType.cuckoo;
+        } else if (footerLength == -3) { // fib cuckoo hash index tacked onto the end.
+            seekTo = indexLength - (1 + 1 + 8 + 4);
+            seekToBoundsCheck(seekTo, indexLength);
+            hashIndexHashFunctionCount = (byte) readable.read(seekTo);
+            hashIndexLongPrecision = (byte) readable.read(seekTo + 1);
+            hashIndexMaxCapacity = readable.readLong(seekTo + 1 + 1);
+            hashIndexSizeInBytes = (hashIndexMaxCapacity * hashIndexLongPrecision) + 1 + 1 + 8 + 4;
+            hashIndexHeadOffset = indexLength - hashIndexSizeInBytes;
+            seekTo = indexLength - (hashIndexSizeInBytes + 4);
+            seekToBoundsCheck(seekTo, indexLength);
+            footerLength = readable.readInt(seekTo);
+            seekTo = indexLength - (hashIndexSizeInBytes + 1 + footerLength);
+            hashIndexType = LABHashIndexType.fibCuckoo;
         } else {
             seekTo = indexLength - (1 + footerLength);
         }
@@ -93,9 +118,10 @@ public class ReadOnlyIndex implements ReadIndex {
         seekTo++;
         if (type != LABAppendableIndex.FOOTER) {
             throw new LABCorruptedException(
-                "Footer Corruption! Found " + type + " expected " + LABAppendableIndex.FOOTER + " within file:" + readOnlyFile.getFileName() + " length:" +
-                    readOnlyFile
-                        .length());
+                "Footer Corruption! Found " + type
+                    + " expected " + LABAppendableIndex.FOOTER
+                    + " within file:" + readOnlyFile.getFileName()
+                    + " length:" + readOnlyFile.length());
         }
         return Footer.read(readable, seekTo);
     }
@@ -103,7 +129,9 @@ public class ReadOnlyIndex implements ReadIndex {
     private void seekToBoundsCheck(long seekTo, long indexLength) throws LABCorruptedException {
         if (seekTo < 0 || seekTo > indexLength) {
             throw new LABCorruptedException(
-                "Corruption! trying to seek to: " + seekTo + " within file:" + readOnlyFile.getFileName() + " length:" + readOnlyFile.length());
+                "Corruption! trying to seek to: " + seekTo
+                    + " within file:" + readOnlyFile.getFileName()
+                    + " length:" + readOnlyFile.length());
         }
     }
 
@@ -133,7 +161,19 @@ public class ReadOnlyIndex implements ReadIndex {
                 seekToBoundsCheck(seekTo, indexLength);
                 int footerLength = readableIndex.readInt(seekTo);
                 long hashIndexSizeInBytes = 0;
-                if (footerLength == -2) { // cuckoo hash index tacked onto the end.
+
+                if (footerLength == -1) { // linearProbe hash index tacked onto the end.
+                    seekTo = indexLength - (1 + 8 + 4);
+                    seekToBoundsCheck(seekTo, indexLength);
+                    byte hashIndexLongPrecision = (byte) readableIndex.read(seekTo);
+                    long hashIndexMaxCapacity = readableIndex.readLong(seekTo + 1);
+                    hashIndexSizeInBytes = (hashIndexMaxCapacity * hashIndexLongPrecision) + 1 + 8 + 4;
+                    seekTo = indexLength - (hashIndexSizeInBytes + 4);
+                    seekToBoundsCheck(seekTo, indexLength);
+                    footerLength = readableIndex.readInt(seekTo);
+                    seekTo = indexLength - (hashIndexSizeInBytes + footerLength + 1 + 4);
+                    hashIndexType = LABHashIndexType.linearProbe;
+                } else if (footerLength == -2) { // cuckoo hash index tacked onto the end.
                     seekTo = indexLength - (1 + 1 + 8 + 4);
                     seekToBoundsCheck(seekTo, indexLength);
                     //byte hashIndexHashFunctionCount = (byte) readableIndex.read(seekTo);
@@ -144,6 +184,19 @@ public class ReadOnlyIndex implements ReadIndex {
                     seekToBoundsCheck(seekTo, indexLength);
                     footerLength = readableIndex.readInt(seekTo);
                     seekTo = indexLength - (hashIndexSizeInBytes + footerLength + 1 + 4);
+                    hashIndexType = LABHashIndexType.cuckoo;
+                } else if (footerLength == -3) { // fib cuckoo hash index tacked onto the end.
+                    seekTo = indexLength - (1 + 1 + 8 + 4);
+                    seekToBoundsCheck(seekTo, indexLength);
+                    //byte hashIndexHashFunctionCount = (byte) readableIndex.read(seekTo);
+                    byte hashIndexLongPrecision = (byte) readableIndex.read(seekTo + 1);
+                    long hashIndexMaxCapacity = readableIndex.readLong(seekTo + 1 + 1);
+                    hashIndexSizeInBytes = (hashIndexMaxCapacity * hashIndexLongPrecision) + 1 + 1 + 8 + 4;
+                    seekTo = indexLength - (hashIndexSizeInBytes + 4);
+                    seekToBoundsCheck(seekTo, indexLength);
+                    footerLength = readableIndex.readInt(seekTo);
+                    seekTo = indexLength - (hashIndexSizeInBytes + footerLength + 1 + 4);
+                    hashIndexType = LABHashIndexType.fibCuckoo;
                 } else {
                     seekTo = indexLength - (footerLength + 1 + 4);
                 }
@@ -158,14 +211,14 @@ public class ReadOnlyIndex implements ReadIndex {
                 seekTo++;
                 if (type != LABAppendableIndex.LEAP) {
                     throw new LABCorruptedException(
-                        "4. Leaps Corruption! " + type + " expected " + LABAppendableIndex.LEAP + " file:" + readOnlyFile.getFileName() + " length:" +
-                            readOnlyFile.length()
+                        "4. Leaps Corruption! " + type
+                            + " expected " + LABAppendableIndex.LEAP
+                            + " file:" + readOnlyFile.getFileName()
+                            + " length:" + readOnlyFile.length()
                     );
                 }
                 leaps = Leaps.read(readableIndex, seekTo);
             }
-
-
             return this;
         } catch (IOException | RuntimeException x) {
             hideABone.release();
@@ -250,7 +303,12 @@ public class ReadOnlyIndex implements ReadIndex {
     }
 
     @Override
-    public Scanner rangeScan(boolean hashIndexEnabled, boolean pointFrom, byte[] from, byte[] to, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+    public Scanner rangeScan(boolean hashIndexEnabled,
+        boolean pointFrom,
+        byte[] from,
+        byte[] to,
+        BolBuffer entryBuffer,
+        BolBuffer entryKeyBuffer) throws Exception {
 
         BolBuffer bbFrom = from == null ? null : new BolBuffer(from);
         BolBuffer bbTo = to == null ? null : new BolBuffer(to);
