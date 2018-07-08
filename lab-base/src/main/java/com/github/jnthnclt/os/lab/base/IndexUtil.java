@@ -99,7 +99,7 @@ public class IndexUtil {
         return leftLength - rightLength;
     }
 
-    private static int comparePure(byte[] left, int leftOffset, int leftLength, byte[] right, int rightOffset, int rightLength) {
+    public static int comparePure(byte[] left, int leftOffset, int leftLength, byte[] right, int rightOffset, int rightLength) {
         int minLength = Math.min(leftLength, rightLength);
         for (int i = 0; i < minLength; i++) {
             int result = (left[leftOffset + i] & 0xFF) - (right[rightOffset + i] & 0xFF);
@@ -110,37 +110,11 @@ public class IndexUtil {
         return leftLength - rightLength;
     }
 
-    //    public static int compare(IReadable left, int leftLength, BolBuffer right) throws IOException {
-////        if (left.canSlice(leftLength)) {
-////            return compare(left.slice(leftLength), right);
-////        } else {
-////            byte[] rawEntry = new byte[leftLength];
-////            left.read(rawEntry);
-////            return compare(ByteBuffer.wrap(rawEntry), right);
-////        }
-//
-//        int rightLength = right.length;
-//        int minLength = Math.min(leftLength, rightLength);
-//        for (int i = 0; i < minLength; i++) {
-//            int result = (left.read() & 0xFF) - (right.get(i) & 0xFF);
-//            if (result != 0) {
-//                return result;
-//            }
-//        }
-//        return leftLength - rightLength;
-//    }
+
     public static int compare(BolBuffer left, BolBuffer right) {
         int leftLength = left.length;
         int rightLength = right.length;
 
-//        int minLength = Math.min(leftLength, rightLength);
-//        for (int i = 0; i < minLength; i++) {
-//            int result = (left.get(i) & 0xFF) - (right.get(i) & 0xFF);
-//            if (result != 0) {
-//                return result;
-//            }
-//        }
-//        return leftLength - rightLength;
         int minLength = Math.min(leftLength, rightLength);
         int minWords = minLength / 8;
 
