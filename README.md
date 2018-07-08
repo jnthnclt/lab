@@ -1,11 +1,12 @@
 ![L.A.B](https://github.com/jnthnclt/lab/wiki/images/lab-logo.png)
 =========
 
-[![Build Status](https://travis-ci.org/jnthnclt/lab.png)](https://travis-ci.org/jnthnclt/lab)
-[![][license img]][license]
-[![Coverage Status](https://coveralls.io/repos/github/jnthnclt/lab/badge.svg?branch=master)](https://coveralls.io/github/jnthnclt/lab?branch=master)
 [![][maven img]][maven]
+[![Build Status](https://travis-ci.org/jnthnclt/lab.png)](https://travis-ci.org/jnthnclt/lab)
+[![Coverage Status](https://coveralls.io/repos/github/jnthnclt/lab/badge.svg?branch=master)](https://coveralls.io/github/jnthnclt/lab?branch=master)
 [![docs-badge][]][docs]
+[![][license img]][license]
+
 
 # What It Is
 Swiss army knife LSM implementation.
