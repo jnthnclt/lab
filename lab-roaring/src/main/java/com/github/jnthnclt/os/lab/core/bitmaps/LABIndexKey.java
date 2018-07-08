@@ -30,10 +30,6 @@ public class LABIndexKey implements Comparable<LABIndexKey>, Serializable {
 
     // this should return a copy to make IBA truly Immutable
     // I have deliberate choosen not to for performance reasons.
-    public byte[] immutableBytes() {
-        return bytes;
-    }
-
     public byte[] getBytes() {
         return bytes;
     }

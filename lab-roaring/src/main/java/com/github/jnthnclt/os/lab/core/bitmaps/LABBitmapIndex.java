@@ -1,7 +1,6 @@
 package com.github.jnthnclt.os.lab.core.bitmaps;
 
 import com.github.jnthnclt.os.lab.base.BolBuffer;
-import com.github.jnthnclt.os.lab.base.IndexUtil;
 import com.github.jnthnclt.os.lab.core.LABUtils;
 import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.log.LABLogger;
@@ -190,25 +189,25 @@ public class LABBitmapIndex<BM extends IBM, IBM> {
         return (0xFFFF - v);
     }
 
-    public static void main(String[] args) {
-
-        //for (int i = 0; i <= Short.MAX_VALUE; i+=1024) {
-            byte[] atomize = atomize(new byte[] { 0 }, Short.MAX_VALUE);
-            //byte[] upperExclusive = atomize(LABUtils.prefixUpperExclusive(new byte[] { 0 }),Short.MAX_VALUE);
-            byte[] upperExclusive = atomize(new byte[] { 1 }, Short.MAX_VALUE);
-
-        System.out.println(Arrays.toString(atomize));
-        System.out.println(Arrays.toString(upperExclusive));
-
-//            System.out.println(i+" "+Arrays.toString(atomize));
-//            System.out.println(i+" "+Arrays.toString(upperExclusive));
-
-            System.out.println(IndexUtil.compare(
-                atomize,0,3,
-                upperExclusive, 0, 3
-                ));
-        //}
-    }
+//    public static void main(String[] args) {
+//
+//        //for (int i = 0; i <= Short.MAX_VALUE; i+=1024) {
+//            byte[] atomize = atomize(new byte[] { 0 }, Short.MAX_VALUE);
+//            //byte[] upperExclusive = atomize(LABUtils.prefixUpperExclusive(new byte[] { 0 }),Short.MAX_VALUE);
+//            byte[] upperExclusive = atomize(new byte[] { 1 }, Short.MAX_VALUE);
+//
+//        System.out.println(Arrays.toString(atomize));
+//        System.out.println(Arrays.toString(upperExclusive));
+//
+////            System.out.println(i+" "+Arrays.toString(atomize));
+////            System.out.println(i+" "+Arrays.toString(upperExclusive));
+//
+//            System.out.println(IndexUtil.compare(
+//                atomize,0,3,
+//                upperExclusive, 0, 3
+//                ));
+//        //}
+//    }
 
     private BM getOrCreateIndex(int[] keys) throws Exception {
         LABBitmapAndLastId<BM> index = new LABBitmapAndLastId<>();

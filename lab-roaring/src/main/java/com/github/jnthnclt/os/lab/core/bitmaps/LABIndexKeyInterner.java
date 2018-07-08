@@ -29,14 +29,6 @@ public class LABIndexKeyInterner {
         return new LABIndexKey(bytes);
     }
 
-    public LABIndexKey intern(byte[] bytes) {
-        if (!enabled) {
-            return create(bytes);
-        } else {
-            return doIntern(bytes, 0, bytes.length);
-        }
-    }
-
     public LABIndexKey intern(byte[] bytes, int offset, int length) {
         if (!enabled) {
             byte[] exactBytes = new byte[length];
