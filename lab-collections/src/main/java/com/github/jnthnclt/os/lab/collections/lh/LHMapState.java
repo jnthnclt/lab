@@ -8,21 +8,21 @@ import java.util.Arrays;
  */
 public class LHMapState<V> {
 
-    public static final byte[] NIL = new byte[0];
+    private static final int MIN_POWER = 1;
 
     private final int power;
-    private final long capacity;
+    private final int capacity;
     private final long nilKey;
     private final long skipKey;
     private final long[] keys;
     private final Object[] values;
     private int count;
 
-    public LHMapState(long capacity, long nilKey, long skipKey) {
+    public LHMapState(int capacity, long nilKey, long skipKey) {
         this.count = 0;
 
-        int power = chunkPower(capacity, 1);
-        capacity = 1L << power;
+        int power = chunkPower(capacity);
+        capacity = 1 << power;
         this.power = 63 - power;
 
         this.capacity = capacity;
@@ -34,12 +34,11 @@ public class LHMapState<V> {
         this.values = new Object[(int) capacity];
     }
 
-    public long indexForHash(long hash) {
+    public int indexForHash(int hash) {
         // fibonacciIndexForHash
-//        hash ^= hash >> power;
-//        long index = (7540113804746346429L * hash) >> power;
-//        return index < 0 ? -index : index;
-
+        // hash ^= hash >> power;
+        // long index = (7540113804746346429L * hash) >> power;
+        // return index < 0 ? -index : index;
 
         hash += hash >> 8;
         if (hash < 0) {
@@ -48,15 +47,15 @@ public class LHMapState<V> {
         return hash % capacity;
     }
 
-    private static int chunkPower(long length, int _minPower) {
+    private static int chunkPower(int length) {
         if (length == 0) {
             return 0;
         }
-        int numberOfTrailingZeros = Long.numberOfLeadingZeros(length - 1);
-        return Math.max(_minPower, 64 - numberOfTrailingZeros);
+        int numberOfTrailingZeros = 64 - Long.numberOfLeadingZeros(length - 1);
+        return Math.max(MIN_POWER, numberOfTrailingZeros);
     }
 
-    public LHMapState<V> allocate(long capacity) {
+    public LHMapState<V> allocate(int capacity) {
         return new LHMapState<>(capacity, nilKey, skipKey);
     }
 
@@ -68,50 +67,50 @@ public class LHMapState<V> {
         return nilKey;
     }
 
-    public long first() {
+    public int first() {
         return 0;
     }
 
-    public long size() {
+    public int size() {
         return count;
     }
 
-    public void update(long i, long key, V value) {
-        keys[(int) i] = key;
-        values[(int) i] = value;
+    public void update(int i, long key, V value) {
+        keys[i] = key;
+        values[i] = value;
     }
 
-    public void link(long i, long key, V value) {
-        keys[(int) i] = key;
-        values[(int) i] = value;
+    public void link(int i, long key, V value) {
+        keys[i] = key;
+        values[i] = value;
         count++;
     }
 
-    public void clear(long i) {
-        keys[(int) i] = nilKey;
-        values[(int) i] = null;
+    public void clear(int i) {
+        keys[i] = nilKey;
+        values[i] = null;
     }
 
-    public void remove(long i, long key, V value) {
-        keys[(int) i] = key;
-        values[(int) i] = value;
+    public void remove(int i, long key, V value) {
+        keys[i] = key;
+        values[i] = value;
         count--;
     }
 
-    public long next(long i) {
+    public int next(int i) {
         return (i >= capacity - 1) ? -1 : i + 1;
     }
 
-    public long capacity() {
+    public int capacity() {
         return capacity;
     }
 
-    public long key(long i) {
-        return keys[(int) i];
+    public long key(int i) {
+        return keys[i];
     }
 
-    public V value(long i) {
-        return (V) values[(int) i];
+    @SuppressWarnings("unchecked")
+    public V value(int i) {
+        return (V) values[i];
     }
-
 }

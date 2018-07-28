@@ -7,14 +7,14 @@ import java.util.concurrent.Semaphore;
  */
 public class ConcurrentLHash<V> {
 
-    private final long capacity;
+    private final int capacity;
     private final long nilKey;
     private final long skipKey;
     private final Semaphore[] hmapsSemaphore;
     private final LHash<V>[] hmaps;
 
     @SuppressWarnings("unchecked")
-    public ConcurrentLHash(long capacity, long nilKey, long skipKey, int concurrency) {
+    public ConcurrentLHash(int capacity, long nilKey, long skipKey, int concurrency) {
         this.capacity = capacity;
         this.nilKey = nilKey;
         this.skipKey = skipKey;
