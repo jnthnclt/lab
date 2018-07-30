@@ -43,7 +43,7 @@ public class LABEnvironmentNGTest {
             LABHeapPressure LABHeapPressure1 = new LABHeapPressure(labStats,
                 LABEnvironment.buildLABHeapSchedulerThreadPool(1),
                 "default",
-                1024 * 1024 * 10,
+                1024 * 1024 * 5,
                 1024 * 1024 * 10,
                 globalHeapCostInBytes,
                 LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
@@ -87,7 +87,7 @@ public class LABEnvironmentNGTest {
             LABHeapPressure LABHeapPressure2 = new LABHeapPressure(labStats,
                 LABEnvironment.buildLABHeapSchedulerThreadPool(1),
                 "default",
-                1024 * 1024 * 10,
+                1024 * 1024 * 5,
                 1024 * 1024 * 10,
                 new AtomicLong(),
                 LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
@@ -117,7 +117,7 @@ public class LABEnvironmentNGTest {
             LABHeapPressure LABHeapPressure3 = new LABHeapPressure(labStats,
                 LABEnvironment.buildLABHeapSchedulerThreadPool(1),
                 "default",
-                1024 * 1024 * 10,
+                1024 * 1024 * 5,
                 1024 * 1024 * 10,
                 new AtomicLong(),
                 LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
@@ -167,7 +167,7 @@ public class LABEnvironmentNGTest {
             LABHeapPressure LABHeapPressure4 = new LABHeapPressure(labStats,
                 LABEnvironment.buildLABHeapSchedulerThreadPool(1),
                 "default",
-                1024 * 1024 * 10,
+                1024 * 1024 * 5,
                 1024 * 1024 * 10,
                 new AtomicLong(),
                 LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
@@ -251,7 +251,7 @@ public class LABEnvironmentNGTest {
         LABHeapPressure labHeapPressure = new LABHeapPressure(stats1,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
-            1024 * 1024 * 10,
+            1024 * 1024 * 5,
             1024 * 1024 * 10,
             globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
@@ -299,7 +299,7 @@ public class LABEnvironmentNGTest {
         LABHeapPressure LABHeapPressure2 = new LABHeapPressure(stats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
-            1024 * 1024 * 10,
+            1024 * 1024 * 5,
             1024 * 1024 * 10,
             globalHeapCostInBytes1,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
@@ -341,7 +341,7 @@ public class LABEnvironmentNGTest {
         LABHeapPressure LABHeapPressure1 = new LABHeapPressure(stats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
-            1024 * 1024 * 10,
+            1024 * 1024 * 5,
             1024 * 1024 * 10,
             globalHeapCostInBytes1,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
@@ -393,7 +393,7 @@ public class LABEnvironmentNGTest {
         LABHeapPressure LABHeapPressure2 = new LABHeapPressure(stats1,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
-            1024 * 1024 * 10,
+            1024 * 1024 * 5,
             1024 * 1024 * 10,
             globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
@@ -434,7 +434,7 @@ public class LABEnvironmentNGTest {
         LABHeapPressure LABHeapPressure3 = new LABHeapPressure(stats2,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
-            1024 * 1024 * 10,
+            1024 * 1024 * 5,
             1024 * 1024 * 10,
             globalHeapCostInBytes2,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);

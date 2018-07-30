@@ -119,7 +119,7 @@ public class HelloLAB {
 
 
         String name = "default";
-        int maxHeapPressureInBytes = 1024 * 1024 * 10;
+        int maxHeapPressureInBytes = 1024 * 1024 * 5;
         int blockOnHeapPressureInBytes = 1024 * 1024 * 10;
         FreeHeapStrategy freeHeapStrategy = FreeHeapStrategy.mostBytesFirst;
 

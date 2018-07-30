@@ -96,8 +96,8 @@ public class IndexNGTest {
         LABHeapPressure labHeapPressure = new LABHeapPressure(labStats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
-            -1,
-            -1,
+            512,
+            1024,
             globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
 
@@ -130,8 +130,8 @@ public class IndexNGTest {
         LABHeapPressure labHeapPressure = new LABHeapPressure(labStats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
-            -1,
-            -1,
+            512,
+            1024,
             globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
 

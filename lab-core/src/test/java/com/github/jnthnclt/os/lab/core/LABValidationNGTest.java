@@ -56,7 +56,7 @@ public class LABValidationNGTest {
         LABHeapPressure labHeapPressure = new LABHeapPressure(labStats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
-            1024 * 1024 * 10,
+            1024 * 1024 * 5,
             1024 * 1024 * 10,
             globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
@@ -197,7 +197,7 @@ public class LABValidationNGTest {
         LABHeapPressure labHeapPressure = new LABHeapPressure(labStats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
-            1024 * 1024 * 10,
+            1024 * 1024 * 5,
             1024 * 1024 * 10,
             globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);

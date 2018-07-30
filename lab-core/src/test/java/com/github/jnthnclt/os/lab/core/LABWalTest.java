@@ -44,7 +44,7 @@ public class LABWalTest {
         LABHeapPressure LABHeapPressure1 = new LABHeapPressure(labStats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
-            1024 * 10,
+            1024 * 5,
             1024 * 10,
             globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
@@ -255,7 +255,7 @@ public class LABWalTest {
         LABHeapPressure LABHeapPressure1 = new LABHeapPressure(stats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
-            1024,
+            1024 * 1024 * 5,
             1024 * 1024 * 10,
             globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);

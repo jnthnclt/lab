@@ -415,7 +415,7 @@ public class LABBitmapIndexTest {
             LABEnvironment.buildLABSchedulerThreadPool(1),
             name,
             1024 * 1024,
-            2 * 1024 * 1024,
+            1024 * 1024 * 2,
             globalHeapCostInBytes,
             FreeHeapStrategy.mostBytesFirst
         );

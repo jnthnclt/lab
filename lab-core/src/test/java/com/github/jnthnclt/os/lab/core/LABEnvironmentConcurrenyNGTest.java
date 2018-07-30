@@ -37,7 +37,7 @@ public class LABEnvironmentConcurrenyNGTest {
         LABHeapPressure labHeapPressure = new LABHeapPressure(stats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
-            1024 * 1024 * 10,
+            1024 * 1024 * 5,
             1024 * 1024 * 10,
             globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
@@ -69,7 +69,7 @@ public class LABEnvironmentConcurrenyNGTest {
         LABHeapPressure labHeapPressure = new LABHeapPressure(stats,
             LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "default",
-            1024 * 1024 * 10,
+            1024 * 1024 * 5,
             1024 * 1024 * 10,
             globalHeapCostInBytes,
             LABHeapPressure.FreeHeapStrategy.mostBytesFirst);

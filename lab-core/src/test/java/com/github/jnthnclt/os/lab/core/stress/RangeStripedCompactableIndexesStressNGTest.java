@@ -183,8 +183,8 @@ public class RangeStripedCompactableIndexesStressNGTest {
             LABHeapPressure labHeapPressure = new LABHeapPressure(labStats,
                 LABEnvironment.buildLABHeapSchedulerThreadPool(1),
                 "default",
-                -1,
-                -1,
+                512,
+                1024,
                 new AtomicLong(),
                 LABHeapPressure.FreeHeapStrategy.mostBytesFirst);
 
