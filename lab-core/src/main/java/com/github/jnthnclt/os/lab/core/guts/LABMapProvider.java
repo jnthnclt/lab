@@ -5,7 +5,7 @@ import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 /**
  * @author jonathan.colt
  */
-public interface LABIndexProvider<E, B> {
+public interface LABMapProvider<E, B> {
 
-    LABIndex<E, B> create(Rawhide rawhide, int poweredUpToHint) throws Exception;
+    LABMap<E, B> create(Rawhide rawhide, int poweredUpToHint) throws Exception;
 }

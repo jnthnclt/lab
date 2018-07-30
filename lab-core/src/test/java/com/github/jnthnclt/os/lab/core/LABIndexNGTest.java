@@ -3,7 +3,7 @@ package com.github.jnthnclt.os.lab.core;
 import com.github.jnthnclt.os.lab.base.BolBuffer;
 import com.github.jnthnclt.os.lab.base.UIO;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
-import com.github.jnthnclt.os.lab.core.guts.LABIndex;
+import com.github.jnthnclt.os.lab.core.guts.LABMap;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABAppendOnlyAllocator;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABConcurrentSkipListMap;
@@ -21,7 +21,7 @@ public class LABIndexNGTest {
 
     @Test
     public void testGet() throws Exception {
-        LABIndex<BolBuffer, BolBuffer> map = new LABConcurrentSkipListMap(new LABStats(new AtomicLong()),
+        LABMap<BolBuffer, BolBuffer> map = new LABConcurrentSkipListMap(new LABStats(new AtomicLong()),
             new LABConcurrentSkipListMemory(
                 LABRawhide.SINGLETON, new LABIndexableMemory( new LABAppendOnlyAllocator("test", 2))
             ),
@@ -32,7 +32,7 @@ public class LABIndexNGTest {
 
     }
 
-    private void testLABIndex(LABIndex<BolBuffer, BolBuffer> map) throws Exception {
+    private void testLABIndex(LABMap<BolBuffer, BolBuffer> map) throws Exception {
         BolBuffer key = new BolBuffer(UIO.longBytes(8));
         BolBuffer value1 = new BolBuffer(UIO.longBytes(10));
 

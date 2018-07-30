@@ -291,7 +291,7 @@ public class LABAppendableIndex implements RawAppendableIndex {
                     batchCount++;
 
                     if (batchCount == batchSize) {
-                        int maxRun = hashBactchLinearProbeIndex(runHisto, length, hashIndexMaxCapacity, hashIndexLongPrecision, c, startOfEntryOffsets, hashIndexes, batchCount);
+                        int maxRun = hashBatchLinearProbeIndex(runHisto, length, hashIndexMaxCapacity, hashIndexLongPrecision, c, startOfEntryOffsets, hashIndexes, batchCount);
                         worstRun = Math.max(maxRun, worstRun);
                         batchCount = 0;
                     }
@@ -304,7 +304,7 @@ public class LABAppendableIndex implements RawAppendableIndex {
                 }
             }
             if (batchCount > 0) {
-                int maxRun = hashBactchLinearProbeIndex(runHisto, length, hashIndexMaxCapacity, hashIndexLongPrecision, c, startOfEntryOffsets, hashIndexes, batchCount);
+                int maxRun = hashBatchLinearProbeIndex(runHisto, length, hashIndexMaxCapacity, hashIndexLongPrecision, c, startOfEntryOffsets, hashIndexes, batchCount);
                 worstRun = Math.max(maxRun, worstRun);
             }
             f.getFD().sync();
@@ -314,7 +314,7 @@ public class LABAppendableIndex implements RawAppendableIndex {
             f.close();
         }
 
-        LOG.info("Built hash index for {} with {} entries in {} + {} millis precision: {} cost: {} bytes worstRun:{}",
+        LOG.debug("Built hash index for {} with {} entries in {} + {} millis precision: {} cost: {} bytes worstRun:{}",
             appendOnlyFile.getFile(),
             count,
             clear,
@@ -333,7 +333,7 @@ public class LABAppendableIndex implements RawAppendableIndex {
         }
     }
 
-    private int hashBactchLinearProbeIndex(long[] runHisto,
+    private int hashBatchLinearProbeIndex(long[] runHisto,
         long length,
         long hashIndexMaxCapacity,
         byte hashIndexLongPrecision,

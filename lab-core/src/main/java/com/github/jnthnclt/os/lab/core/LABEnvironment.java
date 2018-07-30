@@ -13,7 +13,7 @@ import com.github.jnthnclt.os.lab.core.api.rawhide.LABKeyValueRawhide;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.LABFiles;
-import com.github.jnthnclt.os.lab.core.guts.LABIndexProvider;
+import com.github.jnthnclt.os.lab.core.guts.LABMapProvider;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABAppendOnlyAllocator;
@@ -68,19 +68,19 @@ public class LABEnvironment {
     private final StripingBolBufferLocks stripingBolBufferLocks;
 
     public static ExecutorService buildLABHeapSchedulerThreadPool(int count) {
-        return LABBoundedExecutor.newBoundedExecutor(count, "lap-heap");
+        return LABBoundedExecutor.newBoundedExecutor(count, "lab-heap");
     }
 
     public static ExecutorService buildLABSchedulerThreadPool(int count) {
-        return LABBoundedExecutor.newBoundedExecutor(count, "lap-scheduler");
+        return LABBoundedExecutor.newBoundedExecutor(count, "lab-scheduler");
     }
 
     public static ExecutorService buildLABCompactorThreadPool(int count) {
-        return LABBoundedExecutor.newBoundedExecutor(count, "lap-compact");
+        return LABBoundedExecutor.newBoundedExecutor(count, "lab-compact");
     }
 
     public static ExecutorService buildLABDestroyThreadPool(int count) {
-        return LABBoundedExecutor.newBoundedExecutor(count, "lap-destroy");
+        return LABBoundedExecutor.newBoundedExecutor(count, "lab-destroy");
     }
 
     public static LRUConcurrentBAHLinkedHash<Leaps> buildLeapsCache(int maxCapacity, int concurrency) {
@@ -271,7 +271,7 @@ public class LABEnvironment {
             }
         }
 
-        LABIndexProvider<BolBuffer, BolBuffer> indexProvider = (rawhide1, poweredUpToHint) -> {
+        LABMapProvider<BolBuffer, BolBuffer> indexProvider = (rawhide1, poweredUpToHint) -> {
             LABAppendOnlyAllocator allocator = new LABAppendOnlyAllocator(config.primaryName,
                 Math.max(config.entryLengthPower, (poweredUpToHint - config.entryLengthPower) / 2)
             );

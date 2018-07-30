@@ -4,7 +4,7 @@ import com.github.jnthnclt.os.lab.base.BolBuffer;
 import com.github.jnthnclt.os.lab.core.LABHeapPressure;
 import com.github.jnthnclt.os.lab.core.LABStats;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
-import com.github.jnthnclt.os.lab.core.guts.LABIndex.Compute;
+import com.github.jnthnclt.os.lab.core.guts.LABMap.Compute;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABCostChangeInBytes;
 import com.github.jnthnclt.os.lab.core.guts.api.AppendEntries;
 import com.github.jnthnclt.os.lab.core.guts.api.AppendEntryStream;
@@ -25,7 +25,7 @@ public class LABMemoryIndex implements RawAppendableIndex {
 
     private static final LABLogger LOG = LABLoggerFactory.getLogger();
 
-    private final LABIndex<BolBuffer, BolBuffer> index;
+    private final LABMap<BolBuffer, BolBuffer> index;
     private final AtomicLong approximateCount = new AtomicLong();
     private final AtomicBoolean disposed = new AtomicBoolean(false);
 
@@ -49,7 +49,7 @@ public class LABMemoryIndex implements RawAppendableIndex {
         LABHeapPressure LABHeapPressure,
         LABStats stats,
         Rawhide rawhide,
-        LABIndex<BolBuffer, BolBuffer> index) {
+        LABMap<BolBuffer, BolBuffer> index) {
 
         this.costChangeInBytes = (allocated, resued) -> {
             costInBytes.addAndGet(allocated);

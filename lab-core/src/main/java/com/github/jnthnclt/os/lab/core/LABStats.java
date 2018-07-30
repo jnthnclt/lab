@@ -26,6 +26,7 @@ public class LABStats {
     public final LongAdder closed = new LongAdder();
 
     public final LongAdder append = new LongAdder();
+    public final LongAdder appendSlowed = new LongAdder();
     public final LongAdder journaledAppend = new LongAdder();
 
     public final LongAdder gets = new LongAdder();
@@ -37,14 +38,17 @@ public class LABStats {
     public final AtomicLong merging = new AtomicLong();
     public final AtomicLong spliting = new AtomicLong();
 
+    public final AtomicLong merged = new AtomicLong();
+    public final AtomicLong split = new AtomicLong();
+
+
     public final LongAdder slabbed = new LongAdder();
-    public final LongAdder allocationed = new LongAdder();
+    public final LongAdder allocated = new LongAdder();
     public final LongAdder released = new LongAdder();
     public final LongAdder freed = new LongAdder();
 
     public final LongAdder gc = new LongAdder();
     public final LongAdder gcCommit = new LongAdder();
-    public final LongAdder pressureCommit = new LongAdder();
     public final LongAdder commit = new LongAdder();
     public final LongAdder fsyncedCommit = new LongAdder();
 
@@ -61,51 +65,55 @@ public class LABStats {
         register("heap>pressure", new LongCounter(globalHeapCostInBytes));
         register("lab>commitable", new LongCounter(commitable));
 
-        register("files>debt", new LongAdderCounter(debt));
-        register("files>open", new LongAdderCounter(open));
-        register("files>closed", new LongAdderCounter(closed));
+        register("files>debt", new LongCounter(debt));
+        register("files>open", new LongCounter(open));
+        register("files>closed", new LongCounter(closed));
 
-        register("append>append", new LongAdderCounter(append));
-        register("append>journaledAppend", new LongAdderCounter(journaledAppend));
+        register("append>append", new LongCounter(append));
+        register("append>journaledAppend", new LongCounter(journaledAppend));
+        register("append>appendSlowed", new LongCounter(appendSlowed));
 
-        register("read>gets", new LongAdderCounter(gets));
-        register("read>rangeScan", new LongAdderCounter(rangeScan));
-        register("read>pointRangeScan", new LongAdderCounter(pointRangeScan));
-        register("read>multiRangeScan", new LongAdderCounter(multiRangeScan));
-        register("read>rowScan", new LongAdderCounter(rowScan));
+        register("read>gets", new LongCounter(gets));
+        register("read>rangeScan", new LongCounter(rangeScan));
+        register("read>pointRangeScan", new LongCounter(pointRangeScan));
+        register("read>multiRangeScan", new LongCounter(multiRangeScan));
+        register("read>rowScan", new LongCounter(rowScan));
 
         register("lsm>merging", new LongCounter(merging));
         register("lsm>spliting", new LongCounter(spliting));
 
-        register("memory.slabbed", new LongAdderCounter(slabbed));
-        register("memory.allocationed", new LongAdderCounter(allocationed));
-        register("memory.released", new LongAdderCounter(released));
-        register("memory.freed", new LongAdderCounter(freed));
+        register("lsm>merged", new LongCounter(merged));
+        register("lsm>split", new LongCounter(split));
 
 
-        register("commits>gc", new LongAdderCounter(gc));
-        register("commits>gcCommit", new LongAdderCounter(gcCommit));
-        register("commits>pressureCommit", new LongAdderCounter(pressureCommit));
-        register("commits>commit", new LongAdderCounter(commit));
-        register("commits>fsyncedCommit", new LongAdderCounter(fsyncedCommit));
+        register("memory>slabbed", new LongCounter(slabbed));
+        register("memory>allocationed", new LongCounter(allocated));
+        register("memory>released", new LongCounter(released));
+        register("memory>freed", new LongCounter(freed));
 
-        register("bytes>writtenToWAL", new LongAdderCounter(bytesWrittenToWAL));
-        register("bytes>writtenAsIndex", new LongAdderCounter(bytesWrittenAsIndex));
-        register("bytes>writtenAsSplit", new LongAdderCounter(bytesWrittenAsSplit));
-        register("bytes>writtenAsMerge", new LongAdderCounter(bytesWrittenAsMerge));
+
+        register("commits>gc", new LongCounter(gc));
+        register("commits>gcCommit", new LongCounter(gcCommit));
+        register("commits>commit", new LongCounter(commit));
+        register("commits>fsyncedCommit", new LongCounter(fsyncedCommit));
+
+        register("bytes>writtenToWAL", new LongCounter(bytesWrittenToWAL));
+        register("bytes>writtenAsIndex", new LongCounter(bytesWrittenAsIndex));
+        register("bytes>writtenAsSplit", new LongCounter(bytesWrittenAsSplit));
+        register("bytes>writtenAsMerge", new LongCounter(bytesWrittenAsMerge));
 
     }
 
     public class LongCounter implements LABCounterMXBean {
-        private final AtomicLong atomicLong;
+        private final Number number;
 
-        public LongCounter(AtomicLong atomicLong) {
-            this.atomicLong = atomicLong;
+        public LongCounter(Number number) {
+            this.number = number;
         }
 
         @Override
         public long getValue() {
-            return atomicLong.get();
+            return number.longValue();
         }
 
         @Override
@@ -114,23 +122,6 @@ public class LABStats {
         }
     }
 
-    public class LongAdderCounter implements LABCounterMXBean {
-        private final LongAdder longAdder;
-
-        public LongAdderCounter(LongAdder longAdder) {
-            this.longAdder = longAdder;
-        }
-
-        @Override
-        public long getValue() {
-            return longAdder.sum();
-        }
-
-        @Override
-        public String getType() {
-            return "count";
-        }
-    }
 
     public interface LABCounterMXBean {
 

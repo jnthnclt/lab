@@ -155,23 +155,20 @@ public class CompactableIndexes {
             return null;
         }
 
-        long[] start = new long[] { compactorCheckVersion.incrementAndGet() };
         if (!compacting.compareAndSet(false, true)) {
             return null;
         }
 
         return () -> {
             try {
-                ///while (true) {
-//                    if (disposed) {
-//                        break;
-//                    }
+
                 if (splittable(splittableIfKeysLargerThanBytes, splittableIfValuesLargerThanBytes, splittableIfLargerThanBytes)) {
                     Callable<Void> splitter = splitterBuilder.buildSplitter(rawhideName, fsync, this::buildSplitter);
                     if (splitter != null) {
                         stats.spliting.incrementAndGet();
                         try {
                             splitter.call();
+                            stats.split.incrementAndGet();
                         } finally {
                             stats.spliting.decrementAndGet();
                         }
@@ -184,18 +181,13 @@ public class CompactableIndexes {
                         stats.merging.incrementAndGet();
                         try {
                             merger.call();
+                            stats.merged.incrementAndGet();
                         } finally {
                             stats.merging.decrementAndGet();
                         }
                     }
                 }
 
-//                    if (start[0] < compactorCheckVersion.get()) {
-//                        start[0] = compactorCheckVersion.get();
-//                    } else {
-//                       break;
-//                    }
-//                }
                 return null;
             } finally {
                 compacting.set(false);

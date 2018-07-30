@@ -16,8 +16,8 @@ import com.github.jnthnclt.os.lab.core.guts.InterleaveStream;
 import com.github.jnthnclt.os.lab.core.guts.InterleavingStreamFeed;
 import com.github.jnthnclt.os.lab.core.guts.LABFiles;
 import com.github.jnthnclt.os.lab.core.guts.LABHashIndexType;
-import com.github.jnthnclt.os.lab.core.guts.LABIndex;
-import com.github.jnthnclt.os.lab.core.guts.LABIndexProvider;
+import com.github.jnthnclt.os.lab.core.guts.LABMap;
+import com.github.jnthnclt.os.lab.core.guts.LABMapProvider;
 import com.github.jnthnclt.os.lab.core.guts.LABMemoryIndex;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
 import com.github.jnthnclt.os.lab.core.guts.RangeStripedCompactableIndexes;
@@ -77,7 +77,7 @@ public class LAB implements ValueIndex<byte[]> {
     private final LABStats stats;
     private final String rawhideName;
     private final Rawhide rawhide;
-    private final LABIndexProvider<BolBuffer, BolBuffer> indexProvider;
+    private final LABMapProvider<BolBuffer, BolBuffer> indexProvider;
     private final boolean hashIndexEnabled;
 
     private volatile long lastAppendTimestamp = 0;
@@ -102,7 +102,7 @@ public class LAB implements ValueIndex<byte[]> {
         long splitWhenValuesTotalExceedsNBytes,
         long splitWhenValuesAndKeysTotalExceedsNBytes,
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache,
-        LABIndexProvider<BolBuffer, BolBuffer> indexProvider,
+        LABMapProvider<BolBuffer, BolBuffer> indexProvider,
         boolean fsyncFileRenames,
         LABHashIndexType hashIndexType,
         double hashIndexLoadFactor,
@@ -790,7 +790,7 @@ public class LAB implements ValueIndex<byte[]> {
                 }
                 appendVersion = this.appendVersion.incrementAndGet();
                 flushingMemoryIndex = memoryIndex;
-                LABIndex<BolBuffer, BolBuffer> labIndex = indexProvider.create(rawhide, flushingMemoryIndex.poweredUpTo());
+                LABMap<BolBuffer, BolBuffer> labIndex = indexProvider.create(rawhide, flushingMemoryIndex.poweredUpTo());
                 memoryIndex = new LABMemoryIndex(destroy, heapPressure, stats, rawhide, labIndex);
             } finally {
                 commitSemaphore.release(Short.MAX_VALUE);

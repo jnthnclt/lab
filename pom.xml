@@ -19,6 +19,7 @@
         <module>lab-collections</module>
         <module>lab-roaring</module>
         <module>lab-consistency</module>
+        <module>lab-nn</module>
     </modules>
 
 

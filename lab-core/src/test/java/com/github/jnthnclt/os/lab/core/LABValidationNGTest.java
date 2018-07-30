@@ -5,7 +5,7 @@ import com.github.jnthnclt.os.lab.base.UIO;
 import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.api.exceptions.LABClosedException;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
-import com.github.jnthnclt.os.lab.core.guts.LABIndexProvider;
+import com.github.jnthnclt.os.lab.core.guts.LABMapProvider;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
 import com.github.jnthnclt.os.lab.core.guts.StripingBolBufferLocks;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABAppendOnlyAllocator;
@@ -65,7 +65,7 @@ public class LABValidationNGTest {
 
         LABWAL wal = new LABWAL(labStats, walRoot, 1024 * 1024 * 10, 1000, 1024 * 1024 * 10, 1024 * 1024 * 10);
 
-        LABIndexProvider indexProvider = (rawhide1, poweredUpTo) -> {
+        LABMapProvider indexProvider = (rawhide1, poweredUpTo) -> {
             LABAppendOnlyAllocator allocator = new LABAppendOnlyAllocator("test", Math.max(3, poweredUpTo));
             LABIndexableMemory memory = new LABIndexableMemory(allocator);
             LABConcurrentSkipListMemory skipList = new LABConcurrentSkipListMemory(rawhide1, memory);
@@ -208,7 +208,7 @@ public class LABValidationNGTest {
 
         LABRawhide rawhide = LABRawhide.SINGLETON;
 
-        LABIndexProvider indexProvider = (rawhide1, poweredUpTo) -> {
+        LABMapProvider indexProvider = (rawhide1, poweredUpTo) -> {
             LABAppendOnlyAllocator allocator = new LABAppendOnlyAllocator("test", Math.max(3, poweredUpTo));
             LABIndexableMemory memory = new LABIndexableMemory(allocator);
             LABConcurrentSkipListMemory skipList = new LABConcurrentSkipListMemory(rawhide1, memory);

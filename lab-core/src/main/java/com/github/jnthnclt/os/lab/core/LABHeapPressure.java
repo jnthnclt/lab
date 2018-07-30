@@ -55,8 +55,8 @@ public class LABHeapPressure {
         this.globalHeapCostInBytes = globalHeapCostInBytes;
         this.freeHeapStrategy = freeHeapStrategy;
 
-        Preconditions.checkArgument(maxHeapPressureInBytes <= blockOnHeapPressureInBytes,
-            "maxHeapPressureInBytes must be less than or equal to blockOnHeapPressureInBytes");
+        Preconditions.checkArgument(maxHeapPressureInBytes < blockOnHeapPressureInBytes,
+            "maxHeapPressureInBytes must be less than blockOnHeapPressureInBytes");
 
         this.schedule.submit(() -> {
             while (true) {
@@ -88,21 +88,31 @@ public class LABHeapPressure {
         long heap = globalHeapCostInBytes.get();
         if (heap >= blockOnHeapPressureInBytes) {
             synchronized (globalHeapCostInBytes) {
-                LOG.info("Blocking writes '{}' because heap pressure is maxed out!", lab.name());
+                LOG.warn("Blocking writes '{}' because heap pressure is maxed out!", lab.name());
                 globalHeapCostInBytes.wait();
                 LOG.info("Resuming writes '{}'", lab.name());
             }
         } else if (heap >= maxHeapPressureInBytes) {
             double percent = (heap - maxHeapPressureInBytes) / (double) (blockOnHeapPressureInBytes - maxHeapPressureInBytes);
+            percent = Math.min(percent, 1.0);
             long slow = (int) (percent * 1000); // TODO config
             if (slowing != slow) {
                 slowing = slow;
-                LOG.info("Slowing writes '{}' by {} millis because of heap pressure", lab.name(), slow);
+                stats.appendSlowed.increment();
+                LOG.debug("Slowing writes '{}' by {} millis because of heap pressure", lab.name(), slow);
             }
             Thread.sleep(slow);
         } else {
             slowing = -1;
         }
+    }
+
+    public static void main(String[] args) {
+        double percent = (100) / (double) (0);
+        System.out.println(percent);
+        //percent = Math.min(percent, 1.0);
+        long slow = (int) (percent * 1000); // TODO config
+        System.out.println(slow);
     }
 
 

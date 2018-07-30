@@ -8,7 +8,7 @@ import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
  *
  * @author jonathan.colt
  */
-public interface LABIndex<E, B> {
+public interface LABMap<E, B> {
 
     interface Compute<E, B> {
 

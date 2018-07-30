@@ -107,7 +107,7 @@ public class LABStress {
 
         totalCardinality = 1_000_000_000L;
 
-        int threadCount = 1; //Runtime.getRuntime().availableProcessors();
+        int threadCount = Runtime.getRuntime().availableProcessors();
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
 
         futures = new ArrayList<>();
@@ -392,12 +392,11 @@ public class LABStress {
                     + " " + stats.merging.get()
                     + " " + stats.spliting.get()
                     + " " + stats.slabbed.sumThenReset()
-                    + " " + stats.allocationed.sumThenReset()
+                    + " " + stats.allocated.sumThenReset()
                     + " " + stats.released.sumThenReset()
                     + " " + stats.freed.sumThenReset()
                     + " " + stats.gc.sumThenReset()
                     + " " + stats.gcCommit.sumThenReset()
-                    + " " + stats.pressureCommit.sumThenReset()
                     + " " + stats.commit.sumThenReset()
                     + " " + stats.fsyncedCommit.sumThenReset()
                     + " " + stats.bytesWrittenToWAL.sumThenReset()
