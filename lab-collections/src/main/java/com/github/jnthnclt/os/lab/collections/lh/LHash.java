@@ -14,7 +14,7 @@ public class LHash<V> {
         this.state = state;
     }
 
-    public long size() {
+    public int size() {
         return state.size();
     }
 
@@ -26,7 +26,7 @@ public class LHash<V> {
         return get(Long.hashCode(key), key);
     }
 
-    public V get(long hashCode, long key) {
+    public V get(int hashCode, long key) {
         LHMapState< V> s = state;
         long nil = s.nil();
         long skipped = s.skipped();
@@ -36,11 +36,11 @@ public class LHash<V> {
         if (s.size() == 0) {
             return null;
         }
-        long capacity = s.capacity();
-        long start = s.indexForHash(hashCode);
-        for (long i = start, j = 0, k = capacity; // stack vars for efficiency
-            j < k; // max search for key
-            i = (++i) % k, j++) { // wraps around table
+        int capacity = s.capacity();
+        int start = s.indexForHash(hashCode);
+        for (int i = start, j = 0;  // stack vars for efficiency
+             j < capacity; // max search for key
+             i = (++i) % capacity, j++) { // wraps around table
 
             long storedKey = s.key(i);
             if (storedKey == skipped) {
@@ -54,7 +54,6 @@ public class LHash<V> {
             }
         }
         return null;
-
     }
 
     public void remove(long key) {
@@ -62,7 +61,7 @@ public class LHash<V> {
     }
 
     @SuppressWarnings("unchecked")
-    public void remove(long hashCode, long key) {
+    public void remove(int hashCode, long key) {
         LHMapState<V> s = state;
         long nil = s.nil();
         long skipped = s.skipped();
@@ -72,11 +71,11 @@ public class LHash<V> {
         if (s.size() == 0) {
             return;
         }
-        long capacity = s.capacity();
-        long start = s.indexForHash(hashCode);
-        for (long i = start, j = 0, k = capacity; // stack vars for efficiency
-            j < k; // max search for key
-            i = (++i) % k, j++) {					// wraps around table
+        int capacity = s.capacity();
+        int start = s.indexForHash(hashCode);
+        for (int i = start, j = 0;  // stack vars for efficiency
+             j < capacity; // max search for key
+             i = (++i) % capacity, j++) { // wraps around table
 
             long storedKey = s.key(i);
             if (storedKey == skipped) {
@@ -87,11 +86,11 @@ public class LHash<V> {
             }
 
             if (storedKey == key) {
-                long next = (i + 1) % k;
+                int next = (i + 1) % capacity;
 
                 s.remove(i, skipped, null);
                 if (s.key(next) == nil) {
-                    for (long z = i, y = 0; y < capacity; z = (z + capacity - 1) % k, y++) {
+                    for (int z = i, y = 0; y < capacity; z = (z + capacity - 1) % capacity, y++) {
                         if (s.key(z) != skipped) {
                             break;
                         }
@@ -108,7 +107,7 @@ public class LHash<V> {
     }
 
     @SuppressWarnings("unchecked")
-    public void put(long hashCode, long key, V value) {
+    public void put(int hashCode, long key, V value) {
         LHMapState<V> s = state;
         long capacity = s.capacity();
         if (s.size() * 2 >= capacity) {
@@ -120,15 +119,14 @@ public class LHash<V> {
         internalPut(s, hashCode, key, value);
     }
 
-    private void internalPut(LHMapState<V> s, long hashCode, long key, V value) {
-        long capacity = s.capacity();
-        long start = s.indexForHash(hashCode);
+    private void internalPut(LHMapState<V> s, int hashCode, long key, V value) {
+        int capacity = s.capacity();
+        int start = s.indexForHash(hashCode);
         long nil = s.nil();
         long skipped = s.skipped();
-        for (long i = start, j = 0, k = capacity; // stack vars for efficiency
-            j < k; // max search for available slot
-            i = (++i) % k, j++) {
-            // wraps around table
+        for (int i = start, j = 0;  // stack vars for efficiency
+             j < capacity; // max search for available slot
+             i = (++i) % capacity, j++) { // wraps around table
 
             long storedKey = s.key(i);
             if (storedKey == nil || storedKey == skipped) {
@@ -143,13 +141,13 @@ public class LHash<V> {
     }
 
     private void rehash(LHMapState<V> from, LHMapState<V> to) {
-        long i = from.first();
+        int i = from.first();
         long nil = to.nil();
         long skipped = to.skipped();
         while (i != -1) {
             long storedKey = from.key(i);
             if (storedKey != nil && storedKey != skipped) {
-                long hash = Long.hashCode(storedKey);
+                int hash = Long.hashCode(storedKey);
                 internalPut(to, hash, storedKey, from.value(i));
             }
             i = from.next(i);
@@ -167,13 +165,13 @@ public class LHash<V> {
 
     public boolean stream(Semaphore semaphore, LHashValueStream<V> stream) throws Exception {
         LHMapState<V> s = state;
-        long c = s.capacity();
+        int c = s.capacity();
         if (c <= 0) {
             return true;
         }
         long nil = s.nil();
         long skipped = s.skipped();
-        long i = s.first();
+        int i = s.first();
         while (i != -1) {
 
             long key;

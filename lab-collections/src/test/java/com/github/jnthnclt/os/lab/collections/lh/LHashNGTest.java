@@ -126,7 +126,7 @@ public class LHashNGTest {
 
         for (long bs : removed) {
             if (bs >= 0) {
-                Assert.assertEquals(map.get(bs), null);
+                Assert.assertNull(map.get(bs));
             }
         }
 
@@ -147,7 +147,7 @@ public class LHashNGTest {
             if (r.nextBoolean()) {
                 //System.out.println("Removed:" + i);
                 map.remove(i);
-                validation.remove(i);
+                validation.remove((long) i);
                 removed[i] = i;
             } else {
                 retained[i] = i;
@@ -162,7 +162,7 @@ public class LHashNGTest {
 
         for (long bs : removed) {
             if (bs >=0 ) {
-                Assert.assertEquals(map.get(bs), null);
+                Assert.assertNull(map.get(bs));
             }
         }
 
@@ -174,7 +174,7 @@ public class LHashNGTest {
 
         // Remove all in reverse order
         for (byte i = (byte) count; i > -1; i--) {
-            validation.remove(i);
+            validation.remove((long) i);
             map.remove(i);
         }
 
