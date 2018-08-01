@@ -148,6 +148,25 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>findbugs-maven-plugin</artifactId>
+                <version>3.0.4</version>
+                <executions>
+                    <execution>
+                        <id>check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <fork>false</fork>
+                    <includeTests>true</includeTests>
+                    <failOnError>false</failOnError>
+                </configuration>
+            </plugin>
         </plugins>
 
     </build>
