@@ -1,7 +1,11 @@
 package com.github.jnthnclt.os.lab.nn;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 public class LABNN {
@@ -50,7 +54,7 @@ public class LABNN {
         }
 
         int closest(N n) {
-            return absInsertion(Arrays.binarySearch(neighbors, n, nComparator));
+            return Math.min(absInsertion(Arrays.binarySearch(neighbors, n, nComparator)), neighbors.length - 1);
         }
 
         N n(int i) {
@@ -77,50 +81,6 @@ public class LABNN {
         return nearest;
     }
 
-    public static N naive2(N query, N[] neighbors) {
-
-        int features = neighbors[0].features.length;
-        double[] lows = new double[features];
-        double[] highs = new double[features];
-        Arrays.fill(lows, -Double.MAX_VALUE);
-        Arrays.fill(highs, Double.MAX_VALUE);
-
-        double min = Double.MAX_VALUE;
-        N nearest = null;
-        int count = 0;
-        int skipped = 0;
-        NEXT:
-        for (N neighbor : neighbors) {
-//            for (int i = 0; i < features; i++) {
-//                double f = neighbor.features[i];
-//                if (f < lows[i]) {
-//                    skipped++;
-//                    continue NEXT;
-//                }
-//                if (f > highs[i]) {
-//                    skipped++;
-//                    continue NEXT;
-//                }
-//            }
-            count++;
-            double d = euclidianDistance(query.features, neighbor.features, -1);
-            if (d < min) {
-                min = d;
-                nearest = neighbor;
-
-                for (int i = 0; i < features; i++) {
-                    double partialDistance = euclidianDistance(query.features, nearest.features, i);
-                    lows[i] = low(min, nearest.features[i], partialDistance);
-                    highs[i] = high(min, nearest.features[i], partialDistance);
-                }
-
-                hl("", lows, highs);
-            }
-        }
-
-        System.out.println("count:" + count + " skipped:" + skipped);
-        return nearest;
-    }
 
     public static int absInsertion(int binarysearchIndex) {
         return binarysearchIndex < 0 ? (-(binarysearchIndex) - 1) : binarysearchIndex;
@@ -128,11 +88,11 @@ public class LABNN {
 
     public static void main(String[] args) {
 
+        long seed = System.currentTimeMillis();
+        Random rand = new Random(seed);
 
-        Random rand = new Random();
-
-        int numFeatures = 4;
-        int numN = 1000;
+        int numFeatures = 100;
+        int numN = 100;
         int loops = 1;
 
         N[] neighbors = new N[numN];
@@ -152,13 +112,13 @@ public class LABNN {
         long timestamp = System.currentTimeMillis();
         long ids = 0;
         for (int i = 0; i < loops; i++) {
-            //n = fancy(query, dimensions);
-            n = naive2(query, neighbors);
+            n = fancy(query, dimensions);
+            //n = naive2(query, neighbors);
             ids += n.id;
         }
         long elapse = System.currentTimeMillis() - timestamp;
 
-        System.out.println(elapse + " fancy answer:" + n + " " + ids);
+        System.out.println(euclidianDistance(n.features, query.features, -1) + "|" + elapse + " fancy answer:" + n + " " + ids);
 
 
         timestamp = System.currentTimeMillis();
@@ -168,199 +128,173 @@ public class LABNN {
             ids += n.id;
         }
         elapse = System.currentTimeMillis() - timestamp;
-        System.out.println(elapse + " naive answer:" + n + " " + ids);
+        System.out.println(euclidianDistance(n.features, query.features, -1) + "|" + elapse + " naive answer:" + n + " " + ids);
         System.out.println("query:" + query);
+        System.out.println("seed:" + seed);
 
     }
-
 
     public static N fancy(N query, Dimension[] dimensions) {
 
         double min = Double.MAX_VALUE;
-        N nearest = query;
-        int count = 0;
-        int totalCount = 0;
+        N nearest = null;
 
-        double[] lows = new double[dimensions.length];
-        double[] highs = new double[dimensions.length];
-        Arrays.fill(lows, -Double.MAX_VALUE);
-        Arrays.fill(highs, Double.MAX_VALUE);
+        int gets = 0;
 
-        //N search = qnew N(-1, Arrays.copyOf(query.features, query.features.length));
+        int dl = dimensions.length;
+        int[] fis = new int[dl];
+        int[] highs = new int[dl];
+        int[] lows = new int[dl];
 
-        int[] dc = new int[dimensions.length];
-        Arrays.fill(dc, Integer.MAX_VALUE);
-        int[] l = new int[dimensions.length];
-        Arrays.fill(l, 1);
-        int[] h = new int[dimensions.length];
-        Arrays.fill(h, 1);
-        N[] ns = new N[dimensions.length];
+        int max_neighbors = dimensions[0].neighbors.length;
 
-        boolean more = true;
-        while (more) {
-            int start = totalCount;
-            for (int d = 0; d < dimensions.length; d++) {
-                ns[d] = null;
-                if (dc[d] == Integer.MAX_VALUE) {
-                    dc[d] = dimensions[d].closest(nearest);
-                    ns[d] = dimensions[d].nn(dc[d]);
-                } else {
-                    while (true) {
-                        if (l[d] > 0 && h[d] > 0) {
-                            if (l[d] > h[d]) {
-                                ns[d] = dimensions[d].n(dc[d] + h[d]);
-                                h[d]++;
-                                if (ns[d] == null || ns[d].features[d] > highs[d]) {
-                                    h[d] = -h[d];
-                                    ns[d] = null;
-                                }
-                            } else {
-                                ns[d] = dimensions[d].n(dc[d] - l[d]);
-                                l[d]++;
-                                if (ns[d] == null || ns[d].features[d] < lows[d]) {
-                                    l[d] = -l[d];
-                                    ns[d] = null;
-                                }
-                            }
-                        } else if (l[d] > 0) {
-                            ns[d] = dimensions[d].n(dc[d] - l[d]);
-                            l[d]++;
-                            if (ns[d] == null || ns[d].features[d] < lows[d]) {
-                                l[d] = -l[d];
-                                ns[d] = null;
-                            }
-                        } else if (h[d] > 0) {
-                            ns[d] = dimensions[d].n(dc[d] + h[d]);
-                            h[d]++;
-                            if (ns[d] == null || ns[d].features[d] > highs[d]) {
-                                h[d] = -h[d];
-                                ns[d] = null;
-                            }
-                        }
-                        if (ns[d] != null && ns[d].used == false) {
-                            break;
-                        }
-                        if (h[d] < 0 && l[d] < 0) {
-                            break;
-                        }
-                    }
-                }
-
-                if (ns[d] != null) {
-                    totalCount++;
-
-                    double ed = euclidianDistance(query.features, ns[d].features, -1);
-                    if (ed < min) {
-                        min = ed;
-                        nearest = ns[d];
-
-                        for (int i = 0; i < dimensions.length; i++) {
-                            double partialDistance = euclidianDistance(query.features, ns[d].features, i);
-                            double nl = low(min, query.features[i], partialDistance);
-                            double nh = high(min, query.features[i], partialDistance);
-                            lows[i] = nl;
-                            highs[i] = nh;
-                        }
-
-                        //hl("", lows, highs);
-
-                    }
-                }
-            }
-            if (start == totalCount) {
-                break;
-            }
+        Map<Long, Integer> counts = Maps.newHashMap();
+        for (int i = 0; i < dl; i++) {
+            gets++;
+            fis[i] = lows[i] = highs[i] = dimensions[i].closest(query);
+            long id = dimensions[i].nn(fis[i]).id;
+            counts.put(id, 1);
+            System.out.println("S " + i + " i=" + fis[i] + " id=" + id + " count=1");
         }
-        System.out.println(totalCount + " vs " + dimensions[0].neighbors.length);
+        int topN = 1;
+        List<N> nearests = Lists.newArrayList();
+        while (nearests.isEmpty() && topN >= 0) {
 
-//        while (d < dimensions.length) {
-//            N n = null;
-//            if (dc == Integer.MAX_VALUE) {
-//                dc = dimensions[d].closest(nearest);
-//                n = dimensions[d].nn(dc);
-//            } else {
-//                while (true) {
-//                    n = null;
-//                    if (l > 0 && h > 0) {
-//                        if (l > h) {
-//                            n = dimensions[d].n(dc + h);
-//                            h++;
-//                            if (n == null || n.features[d] > highs[d]) {
-//                                h = -h;
-//                                n = null;
-//                            }
-//                        } else {
-//                            n = dimensions[d].n(dc - l);
-//                            l++;
-//                            if (n == null || n.features[d] < lows[d]) {
-//                                l = -l;
-//                                n = null;
-//                            }
-//                        }
-//                    } else if (l > 0) {
-//                        n = dimensions[d].n(dc - l);
-//                        l++;
-//                        if (n == null || n.features[d] < lows[d]) {
-//                            l = -l;
-//                            n = null;
-//                        }
-//                    } else if (h > 0) {
-//                        n = dimensions[d].n(dc + h);
-//                        h++;
-//                        if (n == null || n.features[d] > highs[d]) {
-//                            h = -h;
-//                            n = null;
-//                        }
-//                    }
-//
-//                    if (n != null && n.used == false) {
-//                        break;
-//                    }
-//                    if (h < 0 && l < 0) {
-//                        break;
-//                    }
-//                }
-//            }
-//            if (n == null) {
-//                System.out.println("dim=" + d
-//                    + " min=" + dimensions[d].min
-//                    + " max=" +  dimensions[d].max
-//                    + " count=" + count
-//                    + " c=" + dc
-//                    + " l=" + Math.abs(l)
-//                    + " h=" + Math.abs(h)
-//                    + " lows=" + lows[d]
-//                    + " highs=" + highs[d]);
-//                d++;
-//                l = 1;
-//                h = 1;
-//                dc = Integer.MAX_VALUE;
-//                count = 0;
-//
-//                if (d < dimensions.length) {
-//                    double partialDistance = euclidianDistance(query.features, nearest.features, d);
-//                    lows[d] = low(min, query.features[d], partialDistance);
-//                    highs[d] = high(min, query.features[d], partialDistance);
-//                    //search.features[d] = lows[d] + ((highs[d] - lows[d]) / 2);
-//                }
-//                continue;
-//            }
-//            count++;
-//            totalCount++;
-//
-//            n.used = true;
-//
-//            double partialDistance = euclidianDistance(query.features, n.features, d);
-//            double v = query.features[d] - n.features[d];
-//            double ed = partialDistance + (v * v);
-//            if (ed < min) {
-//                min = ed;
-//                nearest = n;
-//                lows[d] = low(min, query.features[d], partialDistance);
-//                highs[d] = high(min, query.features[d], partialDistance);
-//            }
-//        }
+            for (int i = 0; i < dl; i++) {
+                if (lows[i] > 0) {
+                    lows[i]--;
+                    gets++;
+                    long id = dimensions[i].nn(lows[i]).id;
+                    Integer c = counts.compute(id, (k, v) -> v == null ? 1 : v + 1);
+                    if (c == dl) {
+                        nearests.add(dimensions[i].nn(lows[i]));
+                    }
 
+                    System.out.println("L " + i + " i=" + lows[i] + " id=" + id + " count=" + c);
+                }
+
+                if (highs[i] < max_neighbors - 1) {
+                    highs[i]++;
+                    gets++;
+                    long id = dimensions[i].nn(highs[i]).id;
+                    Integer c = counts.compute(id, (k, v) -> v == null ? 1 : v + 1);
+                    if (c == dl) {
+                        nearests.add(dimensions[i].nn(highs[i]));
+                    }
+                    System.out.println("H " + i + " i=" + highs[i] + " id=" + id + " count=" + c);
+                }
+            }
+
+            if (!nearests.isEmpty()) {
+                int better = 0;
+                for (N n : nearests) {
+                    double d = euclidianDistance(n.features, query.features, -1);
+                    if (d < min) {
+                        min = d;
+                        nearest = n;
+                        better++;
+                    }
+                }
+                if (better == 0) {
+                    topN--;
+                }
+                nearests.clear();
+            }
+
+        }
+
+
+        System.out.println("gets:" + gets);
+        return nearest;
+
+    }
+
+
+    public static N fancy_hmm(N query, Dimension[] dimensions) {
+
+        double min = Double.MAX_VALUE;
+        N nearest = query;
+        int compares = 0;
+
+        int dl = dimensions.length;
+        int[] fis = new int[dl];
+        int[] highs = new int[dl];
+        int[] cis = new int[dl];
+        int[] lows = new int[dl];
+
+
+        int max_neighbors = dimensions[0].neighbors.length;
+        int di = 0;
+        while (di < dl) {
+
+            fis[di] = lows[di] = highs[di] = cis[di] = dimensions[di].closest(nearest);
+
+            N n = dimensions[di].nn(cis[di]);
+
+            double pd = euclidianDistance(query.features, n.features, di);
+            double delta = query.features[di] = n.features[di];
+            double d = pd + (delta * delta);
+            compares++;
+            if (d < min) {
+                nearest = n;
+                min = d;
+            }
+
+            double low = low(min, nearest.features[di], pd * dl);
+            double high = high(min, nearest.features[di], pd * dl);
+            System.out.println(di + " " + low + " " + nearest.features[di] + " " + high);
+            boolean lowDone = false;
+            boolean highDone = false;
+            while ((!lowDone && lows[di] > 0) || (!highDone && highs[di] < max_neighbors - 1)) {
+                if (!lowDone && lows[di] > 0) {
+                    lows[di]--;
+                    n = dimensions[di].nn(lows[di]);
+                    if (n.features[di] >= low) {
+                        pd = euclidianDistance(query.features, n.features, di);
+                        compares++;
+                        delta = query.features[di] = n.features[di];
+                        d = pd + (delta * delta);
+                        if (d < min) {
+                            lowDone = false;
+                            highDone = false;
+                            nearest = n;
+                            min = d;
+                            low = low(min, nearest.features[di], pd * dl);
+                            high = high(min, nearest.features[di], pd * dl);
+                            System.out.println(di + " LOW CLOSER:" + d + " " + low + " " + nearest.features[di] + " " + high);
+                        }
+                    } else {
+                        lowDone = true;
+                        System.out.println(di + " LOW DONE:" + n.features[di] + " >= " + low);
+                    }
+                }
+                if (!highDone && highs[di] < max_neighbors - 1) {
+                    highs[di]++;
+                    n = dimensions[di].nn(highs[di]);
+                    if (n.features[di] <= high) {
+                        pd = euclidianDistance(query.features, n.features, di);
+                        compares++;
+                        delta = query.features[di] = n.features[di];
+                        d = pd + (delta * delta);
+                        if (d < min) {
+                            lowDone = false;
+                            highDone = false;
+                            nearest = n;
+                            min = d;
+                            low = low(min, nearest.features[di], pd * dl);
+                            high = high(min, nearest.features[di], pd * dl);
+                            System.out.println(di + " HIGH CLOSER:" + d + " " + low + " " + nearest.features[di] + " " + high);
+                        }
+                    } else {
+                        highDone = true;
+                        System.out.println(di + " HIGH DONE:" + n.features[di] + " <= " + high);
+                    }
+                }
+            }
+            di++;
+        }
+
+        System.out.println(compares + " " + max_neighbors);
         return nearest;
     }
 
@@ -382,7 +316,8 @@ public class LABNN {
     // -x < sqrt(325 - 25) - 10
     // x < -(sqrt(325 - 25) - 10)
     public static double low(double best, double dim, double partialDistance) {
-        return -(Math.sqrt(best - partialDistance) - dim);
+        double v = -(Math.sqrt(best - partialDistance) - dim);
+        return Double.isNaN(v) ? 0.0 : v;
     }
 
 
@@ -395,7 +330,8 @@ public class LABNN {
     // -sqrt(325 + 25) - 10 < -x
     // -(-sqrt(325 + 25) - 10) < x
     public static double high(double best, double dim, double partialDistance) {
-        return -(-Math.sqrt(best + partialDistance) - dim);
+        double v = -(-Math.sqrt(best + partialDistance) - dim);
+        return Double.isNaN(v) ? 0.0 : v;
     }
 
 

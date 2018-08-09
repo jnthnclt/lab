@@ -33,9 +33,7 @@ public class LABHeapPressure {
     private final long blockOnHeapPressureInBytes;
     private final AtomicLong globalHeapCostInBytes;
     private final Map<LAB, Boolean> committableLabs = Maps.newConcurrentMap();
-    private volatile boolean running = false;
     private final AtomicLong changed = new AtomicLong();
-    private final AtomicLong freeHeapVersion = new AtomicLong();
     private final FreeHeapStrategy freeHeapStrategy;
 
     public LABHeapPressure(LABStats stats,
@@ -62,12 +60,81 @@ public class LABHeapPressure {
             while (true) {
                 try {
                     freeHeap();
-                    Thread.sleep(50); // hmm
+                    Thread.sleep(1000); // hmm
                 } catch (Exception x) {
                     LOG.error("Failure monitoring lab heap", x);
                 }
             }
         });
+    }
+
+
+    private void freeHeap() {
+
+        try {
+            stats.commitable.set(committableLabs.size());
+            long globalHeap = globalHeapCostInBytes.get();
+            if (globalHeap < maxHeapPressureInBytes) {
+                return;
+            }
+
+            long greed = (long) (maxHeapPressureInBytes * 0.50); // TODO config?
+            AtomicLong debtInBytes = new AtomicLong(globalHeap - greed);
+            stats.gc.increment();
+
+            LAB[] labs = committableLabs.keySet().toArray(new LAB[0]);
+            if (labs.length > 0) {
+
+                Freeable[] freeables = new Freeable[labs.length];
+                for (int i = 0; i < labs.length; i++) {
+                    freeables[i] = new Freeable(labs[i],
+                        labs[i].approximateHeapPressureInBytes(),
+                        labs[i].lastAppendTimestamp(),
+                        labs[i].lastCommitTimestamp()
+                    );
+                }
+                if (freeHeapStrategy == FreeHeapStrategy.mostBytesFirst) {
+                    Arrays.sort(freeables, (o1, o2) -> -Long.compare(o1.approximateHeapPressureInBytes, o2.approximateHeapPressureInBytes));
+                } else if (freeHeapStrategy == FreeHeapStrategy.oldestAppendFirst) {
+                    Arrays.sort(freeables, Comparator.comparingLong(o -> o.lastAppendTimestamp));
+                } else if (freeHeapStrategy == FreeHeapStrategy.longestElapseSinceCommit) {
+                    Arrays.sort(freeables, Comparator.comparingLong(o -> o.lastCommitTimestamp));
+                }
+
+                List<Future<Object>> waitForCommits = Lists.newArrayList();
+                for (Freeable freeable : freeables) {
+                    if (debtInBytes.get() <= 0) {
+                        break;
+                    }
+                    LOG.debug("Freeing {} for {}", freeable.approximateHeapPressureInBytes, freeable.lab.name());
+                    Boolean efsyncOnFlush = this.committableLabs.remove(freeable.lab);
+                    if (efsyncOnFlush != null) {
+                        try {
+                            waitForCommits.addAll(freeable.lab.commit(efsyncOnFlush, false));
+                            stats.gcCommit.increment();
+                        } catch (LABCorruptedException | LABClosedException x) {
+                            LOG.error("Failed to commit.", x);
+                        } catch (Exception x) {
+                            this.committableLabs.compute(freeable.lab,
+                                (t, u) -> u == null ? efsyncOnFlush : (boolean) u || efsyncOnFlush);
+                            throw x;
+                        }
+                    }
+                    debtInBytes.addAndGet(-freeable.approximateHeapPressureInBytes);
+                }
+
+                for (Future<Object> c : waitForCommits) {
+                    c.get();
+                }
+            }
+
+            synchronized (globalHeapCostInBytes) {
+                globalHeapCostInBytes.notifyAll();
+            }
+
+        } catch (Exception x) {
+            LOG.warn("Free heap encountered an error.", x);
+        }
     }
 
     public void change(long delta) {
@@ -104,100 +171,6 @@ public class LABHeapPressure {
             Thread.sleep(slow);
         } else {
             slowing = -1;
-        }
-    }
-
-    public static void main(String[] args) {
-        double percent = (100) / (double) (0);
-        System.out.println(percent);
-        //percent = Math.min(percent, 1.0);
-        long slow = (int) (percent * 1000); // TODO config
-        System.out.println(slow);
-    }
-
-
-    public void freeHeap() {
-
-        try {
-            stats.commitable.set(committableLabs.size());
-            long globalHeap = globalHeapCostInBytes.get();
-            if (globalHeapCostInBytes.get() < maxHeapPressureInBytes) {
-                return;
-            }
-            long version = freeHeapVersion.incrementAndGet();
-            synchronized (globalHeapCostInBytes) {
-                if (running) {
-                    return;
-                } else {
-                    running = true;
-                }
-            }
-
-            while (globalHeap >= maxHeapPressureInBytes || version != freeHeapVersion.get()) {
-                version = freeHeapVersion.get();
-
-                long greed = (long) (maxHeapPressureInBytes * 0.50); // TODO config?
-                AtomicLong debtInBytes = new AtomicLong(globalHeap - greed);
-                stats.gc.increment();
-
-                LAB[] labs = committableLabs.keySet().toArray(new LAB[0]);
-                if (labs.length > 0) {
-
-                    Freeable[] freeables = new Freeable[labs.length];
-                    for (int i = 0; i < labs.length; i++) {
-                        freeables[i] = new Freeable(labs[i],
-                            labs[i].approximateHeapPressureInBytes(),
-                            labs[i].lastAppendTimestamp(),
-                            labs[i].lastCommitTimestamp()
-                        );
-                    }
-                    if (freeHeapStrategy == FreeHeapStrategy.mostBytesFirst) {
-                        Arrays.sort(freeables, (o1, o2) -> -Long.compare(o1.approximateHeapPressureInBytes, o2.approximateHeapPressureInBytes));
-                    } else if (freeHeapStrategy == FreeHeapStrategy.oldestAppendFirst) {
-                        Arrays.sort(freeables, Comparator.comparingLong(o -> o.lastAppendTimestamp));
-                    } else if (freeHeapStrategy == FreeHeapStrategy.longestElapseSinceCommit) {
-                        Arrays.sort(freeables, Comparator.comparingLong(o -> o.lastCommitTimestamp));
-                    }
-
-                    List<Future<Object>> waitForCommits = Lists.newArrayList();
-                    for (Freeable freeable : freeables) {
-                        if (debtInBytes.get() <= 0) {
-                            break;
-                        }
-                        LOG.debug("Freeing {} for {}", freeable.approximateHeapPressureInBytes, freeable.lab.name());
-                        Boolean efsyncOnFlush = this.committableLabs.remove(freeable.lab);
-                        if (efsyncOnFlush != null) {
-                            try {
-                                waitForCommits.addAll(freeable.lab.commit(efsyncOnFlush, false));
-                                stats.gcCommit.increment();
-                            } catch (LABCorruptedException | LABClosedException x) {
-                                LOG.error("Failed to commit.", x);
-                            } catch (Exception x) {
-                                this.committableLabs.compute(freeable.lab,
-                                    (t, u) -> u == null ? efsyncOnFlush : (boolean) u || efsyncOnFlush);
-                                throw x;
-                            }
-                        }
-                        debtInBytes.addAndGet(-freeable.approximateHeapPressureInBytes);
-                    }
-
-                    for (Future<Object> c : waitForCommits) {
-                        c.get();
-                    }
-                }
-                globalHeap = globalHeapCostInBytes.get();
-            }
-
-            synchronized (globalHeapCostInBytes) {
-                globalHeapCostInBytes.notifyAll();
-            }
-
-        } catch (Exception x) {
-            LOG.warn("Free heap encountered an error.", x);
-        } finally {
-            synchronized (globalHeapCostInBytes) {
-                running = false;
-            }
         }
     }
 
