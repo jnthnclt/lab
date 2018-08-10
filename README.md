@@ -1,7 +1,8 @@
 ![L.A.B](https://github.com/jnthnclt/lab/wiki/images/lab-logo.png)
 =========
 
-[![][maven img]][maven]
+[![Maven Central status](https://img.shields.io/maven-central/v/com.atlassian.commonmark/commonmark.svg)](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.github.jnthnclt%22%20)
+
 [![Build Status](https://travis-ci.org/jnthnclt/lab.png)](https://travis-ci.org/jnthnclt/lab)
 [![Coverage Status](https://coveralls.io/repos/github/jnthnclt/lab/badge.svg?branch=master)](https://coveralls.io/github/jnthnclt/lab?branch=master)
 [![docs-badge][]][docs]
@@ -23,10 +24,6 @@ Leaps And Bounds is licensed under the Apache License, Version 2.0. See LICENSE 
 
 [license]:LICENSE
 [license img]:https://img.shields.io/badge/License-Apache%202-blue.svg
-
-
-[maven img]:https://maven-badges.herokuapp.com/maven-central/com.github.jnthnclt/os.lab/badge.svg
-[maven]:http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.github.jnthnclt%22%20
 
 [docs-badge]:https://img.shields.io/badge/API-docs-blue.svg?style=flat-square
 [docs]:http://www.javadoc.io/doc/com.github.jnthnclt/os.lab.core/
