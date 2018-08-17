@@ -1,14 +1,15 @@
 package com.github.jnthnclt.os.lab.nn;
 
-public class NNUtil {
+public class NN {
 
-    static public double euclidianDistance(double[] a, double[] b, int exclude) {
+    /*
+    Euclidian Distance without the final sqrt
+     */
+    static public double comparableEuclidianDistance(double[] a, double[] b) {
         double v = 0;
         for (int i = 0; i < a.length; i++) {
-            if (i != exclude) {
-                double d = a[i] - b[i];
-                v += (d * d);
-            }
+            double d = a[i] - b[i];
+            v += (d * d);
         }
         return v;
     }
