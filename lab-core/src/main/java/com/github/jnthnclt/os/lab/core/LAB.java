@@ -24,6 +24,7 @@ import com.github.jnthnclt.os.lab.core.guts.RangeStripedCompactableIndexes;
 import com.github.jnthnclt.os.lab.core.guts.ReaderTx;
 import com.github.jnthnclt.os.lab.core.guts.api.KeyToString;
 import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
+import com.github.jnthnclt.os.lab.core.guts.api.TombstonedVersion;
 import com.github.jnthnclt.os.lab.log.LABLogger;
 import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
 import java.io.File;
@@ -107,7 +108,7 @@ public class LAB implements ValueIndex<byte[]> {
         LABHashIndexType hashIndexType,
         double hashIndexLoadFactor,
         boolean hashIndexEnabled,
-        long deleteTombstonedVersionsAfterMillis,
+        TombstonedVersion tombstonedVersion,
         LABFiles labFiles) throws Exception {
 
         stats.open.increment();
@@ -139,7 +140,7 @@ public class LAB implements ValueIndex<byte[]> {
             fsyncFileRenames,
             hashIndexType,
             hashIndexLoadFactor,
-            deleteTombstonedVersionsAfterMillis);
+            tombstonedVersion);
         this.minDebt = minDebt;
         this.maxDebt = maxDebt;
         this.indexProvider = indexProvider;

@@ -80,7 +80,7 @@ public class RangeStripedCompactableIndexesStressNGTest {
             false,
             hashIndexType,
             0.75d,
-            Long.MAX_VALUE);
+            () -> 0);
 
         int count = 0;
 

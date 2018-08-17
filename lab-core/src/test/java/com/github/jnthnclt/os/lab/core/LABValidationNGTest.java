@@ -96,7 +96,7 @@ public class LABValidationNGTest {
             TestUtils.indexType,
             0.75d,
             true,
-            Long.MAX_VALUE,
+            () -> 0,
             null);
 
         int writerCount = 12;
@@ -235,7 +235,7 @@ public class LABValidationNGTest {
             TestUtils.indexType,
             0.75d,
             true,
-            Long.MAX_VALUE,
+            () -> 0,
             null);
 
         validationTest(lab);

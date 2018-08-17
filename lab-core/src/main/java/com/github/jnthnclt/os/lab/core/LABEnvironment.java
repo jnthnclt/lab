@@ -20,6 +20,7 @@ import com.github.jnthnclt.os.lab.core.guts.allocators.LABAppendOnlyAllocator;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABConcurrentSkipListMap;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABConcurrentSkipListMemory;
 import com.github.jnthnclt.os.lab.core.guts.allocators.LABIndexableMemory;
+import com.github.jnthnclt.os.lab.core.guts.api.TombstonedVersion;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import java.io.File;
@@ -54,7 +55,6 @@ public class LABEnvironment {
     private final int minMergeDebt;
     private final int maxMergeDebt;
     private final LRUConcurrentBAHLinkedHash<Leaps> leapsCache;
-    private final boolean useIndexableMemory;
     private final boolean fsyncFileRenames;
 
     private final String metaName;
@@ -134,7 +134,6 @@ public class LABEnvironment {
             this.walName = null;
             this.wal = null;
         }
-        this.useIndexableMemory = useIndexableMemory;
         this.fsyncFileRenames = fsyncFileRenames;
         this.stripingBolBufferLocks = bolBufferLocks;
     }
@@ -280,6 +279,8 @@ public class LABEnvironment {
             return new LABConcurrentSkipListMap(stats, skipListMemory, stripingBolBufferLocks);
         };
 
+        TombstonedVersion tombstonedVersion = () -> System.currentTimeMillis() - config.deleteTombstonedVersionsAfterMillis;
+
         return new LAB(stats,
             config.rawhideName,
             rawhide,
@@ -304,7 +305,7 @@ public class LABEnvironment {
             config.hashIndexType,
             config.hashIndexLoadFactor,
             config.hashIndexEnabled,
-            config.deleteTombstonedVersionsAfterMillis,
+            tombstonedVersion,
             labFiles);
 
     }

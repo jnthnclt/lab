@@ -15,6 +15,7 @@ import com.github.jnthnclt.os.lab.core.guts.api.MergerBuilder;
 import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.Scanner;
 import com.github.jnthnclt.os.lab.core.guts.api.SplitterBuilder;
+import com.github.jnthnclt.os.lab.core.guts.api.TombstonedVersion;
 import com.github.jnthnclt.os.lab.log.LABLogger;
 import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
 import java.io.File;
@@ -62,7 +63,7 @@ public class RangeStripedCompactableIndexes {
     private final boolean fsyncFileRenames;
     private final LABHashIndexType hashIndexType;
     private final double hashIndexLoadFactor;
-    private final long deleteTombstonedVersionsAfterMillis;
+    private final TombstonedVersion tombstonedVersion;
 
     public RangeStripedCompactableIndexes(byte[] labId,
         LABStats stats,
@@ -79,7 +80,7 @@ public class RangeStripedCompactableIndexes {
         boolean fsyncFileRenames,
         LABHashIndexType hashIndexType,
         double hashIndexLoadFactor,
-        long deleteTombstonedVersionsAfterMillis) throws Exception {
+        TombstonedVersion tombstonedVersion) throws Exception {
 
         this.labId = labId;
         this.stats = stats;
@@ -97,7 +98,7 @@ public class RangeStripedCompactableIndexes {
         this.hashIndexType = hashIndexType;
         this.hashIndexLoadFactor = hashIndexLoadFactor;
         this.indexes = new ConcurrentSkipListMap<>(rawhide.getKeyComparator());
-        this.deleteTombstonedVersionsAfterMillis = deleteTombstonedVersionsAfterMillis;
+        this.tombstonedVersion = tombstonedVersion;
 
         File indexRoot = new File(root, primaryName);
         File[] stripeDirs = indexRoot.listFiles();
@@ -296,7 +297,7 @@ public class RangeStripedCompactableIndexes {
             BolBuffer entryBuffer,
             BolBuffer entryKeyBuffer) throws Exception {
 
-            ReadOnlyIndex lab = flushMemoryIndexToDisk(
+            ReadOnlyIndex readOnlyIndex = flushMemoryIndexToDisk(
                 rawhideName,
                 memoryIndex,
                 minKey,
@@ -308,9 +309,9 @@ public class RangeStripedCompactableIndexes {
                 entryBuffer,
                 entryKeyBuffer);
 
-            if (compactableIndexes.append(lab)) {
+            if (readOnlyIndex != null && compactableIndexes.append(readOnlyIndex)) {
                 if (labFiles != null) {
-                    labFiles.add(labId, appendVersion, lab.getFile());
+                    labFiles.add(labId, appendVersion, readOnlyIndex.getFile());
                 }
             }
         }
@@ -342,6 +343,7 @@ public class RangeStripedCompactableIndexes {
             FileUtils.deleteQuietly(commitingIndexFile);
             AppendOnlyFile appendOnlyFile = new AppendOnlyFile(commitingIndexFile);
             LABAppendableIndex appendableIndex = null;
+            boolean exists = false;
             try {
                 appendableIndex = new LABAppendableIndex(stats.bytesWrittenAsIndex,
                     indexRangeId,
@@ -351,8 +353,9 @@ public class RangeStripedCompactableIndexes {
                     rawhide,
                     hashIndexType,
                     hashIndexLoadFactor,
-                    deleteTombstonedVersionsAfterMillis);
+                    tombstonedVersion);
                 appendableIndex.append((stream) -> {
+
                     ReadIndex reader = memoryIndex.acquireReader();
                     try {
                         Scanner scanner = reader.rangeScan(false,false, minKey, maxKey, entryBuffer, entryKeyBuffer);
@@ -371,7 +374,12 @@ public class RangeStripedCompactableIndexes {
                         reader.release();
                     }
                 }, keyBuffer);
-                appendableIndex.closeAppendable(fsync);
+                if (appendableIndex.getCount() > 0) {
+                    appendableIndex.closeAppendable(fsync);
+                    exists = true;
+                } else {
+                    appendableIndex.delete();
+                }
             } catch (Exception x) {
                 try {
                     if (appendableIndex != null) {
@@ -387,11 +395,19 @@ public class RangeStripedCompactableIndexes {
             }
 
             File commitedIndexFile = indexRangeId.toFile(activeRoot);
-            return moveIntoPlace(rawhideName, commitingIndexFile, commitedIndexFile, indexRangeId, fsync);
+            if (exists) { // Merge can cause index to disappear if all items are tombstoned and removed by ttl
+                return moveIntoPlace(rawhideName, commitingIndexFile, commitedIndexFile, indexRangeId);
+            } else {
+                FileUtils.deleteDirectory(commitedIndexFile.getParentFile());
+                FileUtils.deleteDirectory(commitingIndexFile.getParentFile());
+                return null;
+            }
         }
 
         private ReadOnlyIndex moveIntoPlace(String rawhideName,
-            File commitingIndexFile, File commitedIndexFile, IndexRangeId indexRangeId, boolean fsync) throws Exception {
+            File commitingIndexFile,
+            File commitedIndexFile,
+            IndexRangeId indexRangeId) throws Exception {
 
             FileUtils.forceMkdir(commitedIndexFile.getParentFile());
             Files.move(commitingIndexFile.toPath(), commitedIndexFile.toPath(), StandardCopyOption.ATOMIC_MOVE);
@@ -474,7 +490,7 @@ public class RangeStripedCompactableIndexes {
                             rawhide,
                             hashIndexType,
                             hashIndexLoadFactor,
-                            deleteTombstonedVersionsAfterMillis);
+                            tombstonedVersion);
                     };
 
                     IndexFactory rightHalfIndexFactory = (id, worstCaseCount) -> {
@@ -493,7 +509,7 @@ public class RangeStripedCompactableIndexes {
                             rawhide,
                             hashIndexType,
                             hashIndexLoadFactor,
-                            deleteTombstonedVersionsAfterMillis);
+                            tombstonedVersion);
                     };
 
                     CommitIndex commitIndex = (ids) -> {
@@ -588,13 +604,14 @@ public class RangeStripedCompactableIndexes {
                     rawhide,
                     hashIndexType,
                     hashIndexLoadFactor,
-                    deleteTombstonedVersionsAfterMillis);
+                    tombstonedVersion);
             };
+
             CommitIndex commitIndex = (ids) -> {
                 File mergedIndexFile = ids.get(0).toFile(mergingRoot);
                 File file = ids.get(0).toFile(activeRoot);
                 FileUtils.deleteQuietly(file);
-                return moveIntoPlace(rawhideName, mergedIndexFile, file, ids.get(0), fsync);
+                return moveIntoPlace(rawhideName, mergedIndexFile, file, ids.get(0));
             };
 
             return callback.call(minimumRun, fsync, indexFactory, commitIndex);

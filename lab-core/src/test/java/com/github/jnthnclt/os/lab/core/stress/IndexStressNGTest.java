@@ -84,7 +84,7 @@ public class IndexStressNGTest {
                                     rawhide,
                                     TestUtils.indexType,
                                     0.75d,
-                                    Long.MAX_VALUE);
+                                    () -> 0);
                             },
                             (ids) -> {
                                 File mergedFile = ids.get(0).toFile(root);
@@ -199,7 +199,7 @@ public class IndexStressNGTest {
                 rawhide,
                 TestUtils.indexType,
                 0.75d,
-                Long.MAX_VALUE);
+                () -> 0);
             BolBuffer keyBuffer = new BolBuffer();
             long lastKey = TestUtils.append(rand, write, 0, maxKeyIncrement, batchSize, null, keyBuffer);
             write.closeAppendable(fsync);

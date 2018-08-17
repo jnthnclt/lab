@@ -57,6 +57,10 @@ public class LABNGTest {
     }
 
     private ValueIndex buildTmpValueIndex(LABEnvironment env) throws Exception {
+        return buildTmpValueIndex(env, Long.MAX_VALUE);
+    }
+
+    private ValueIndex buildTmpValueIndex(LABEnvironment env, long deleteTombstonedVersionsAfterMillis) throws Exception {
         long splitAfterSizeInBytes = 16; //1024 * 1024 * 1024;
 
         ValueIndexConfig valueIndexConfig = new ValueIndexConfig("foo",
@@ -72,7 +76,7 @@ public class LABNGTest {
             TestUtils.indexType,
             0.75d,
             false,
-            Long.MAX_VALUE);
+            deleteTombstonedVersionsAfterMillis);
 
         return env.open(valueIndexConfig);
     }
@@ -235,15 +239,15 @@ public class LABNGTest {
         }, fsync, rawEntryBuffer, keyBuffer);
         commitAndWait(index, fsync);
 
-        testPointRangeScanExpected(index, UIO.longBytes(9),UIO.longBytes(10), new long[]{});
-        testPointRangeScanExpected(index, UIO.longBytes(10),UIO.longBytes(10), new long[]{});
-        testPointRangeScanExpected(index, UIO.longBytes(10),UIO.longBytes(11), new long[]{10});
-        testPointRangeScanExpected(index, UIO.longBytes(10),UIO.longBytes(30), new long[]{10});
-        testPointRangeScanExpected(index, UIO.longBytes(10),UIO.longBytes(31), new long[]{10,30});
-        testPointRangeScanExpected(index, UIO.longBytes(10),UIO.longBytes(71), new long[]{10,30,50,70});
-        testPointRangeScanExpected(index, UIO.longBytes(70),null, new long[]{70,90});
-        testPointRangeScanExpected(index, UIO.longBytes(69),null, new long[]{});
-        testPointRangeScanExpected(index, UIO.longBytes(91),null, new long[]{});
+        testPointRangeScanExpected(index, UIO.longBytes(9), UIO.longBytes(10), new long[] {});
+        testPointRangeScanExpected(index, UIO.longBytes(10), UIO.longBytes(10), new long[] {});
+        testPointRangeScanExpected(index, UIO.longBytes(10), UIO.longBytes(11), new long[] { 10 });
+        testPointRangeScanExpected(index, UIO.longBytes(10), UIO.longBytes(30), new long[] { 10 });
+        testPointRangeScanExpected(index, UIO.longBytes(10), UIO.longBytes(31), new long[] { 10, 30 });
+        testPointRangeScanExpected(index, UIO.longBytes(10), UIO.longBytes(71), new long[] { 10, 30, 50, 70 });
+        testPointRangeScanExpected(index, UIO.longBytes(70), null, new long[] { 70, 90 });
+        testPointRangeScanExpected(index, UIO.longBytes(69), null, new long[] {});
+        testPointRangeScanExpected(index, UIO.longBytes(91), null, new long[] {});
 
         env.shutdown();
 
@@ -265,9 +269,9 @@ public class LABNGTest {
         }, fsync, rawEntryBuffer, keyBuffer);
         commitAndWait(index, fsync);
 
-        testPointRangeScanExpected(index, UIO.longBytes(9),UIO.longBytes(10), new long[]{});
-        testPointRangeScanExpected(index, UIO.longBytes(10),UIO.longBytes(10), new long[]{});
-        testPointRangeScanExpected(index, UIO.longBytes(10),UIO.longBytes(11), new long[]{10});
+        testPointRangeScanExpected(index, UIO.longBytes(9), UIO.longBytes(10), new long[] {});
+        testPointRangeScanExpected(index, UIO.longBytes(10), UIO.longBytes(10), new long[] {});
+        testPointRangeScanExpected(index, UIO.longBytes(10), UIO.longBytes(11), new long[] { 10 });
         env.shutdown();
 
     }
@@ -567,6 +571,72 @@ public class LABNGTest {
         assertEquals(gotTimestamp[0], 19);
     }
 
+    @Test(enabled = false)
+    public void testTombstones() throws Exception {
+
+        boolean fsync = false;
+        LABEnvironment env = buildTmpEnv();
+        ValueIndex index = buildTmpValueIndex(env, 25);
+
+        BolBuffer rawEntryBuffer = new BolBuffer();
+        BolBuffer keyBuffer = new BolBuffer();
+        int count = 10;
+
+        index.append((stream) -> {
+            for (int i = 0; i < count; i++) {
+                stream.stream(i, UIO.longBytes(i), 1, false, System.currentTimeMillis(), UIO.longBytes(i));
+            }
+            return true;
+        }, fsync, rawEntryBuffer, keyBuffer);
+
+        commitAndWait(index, fsync);
+
+        long[] expectedValues = new long[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+
+        index.get((keyStream) -> {
+            for (int i = 0; i < expectedValues.length; i++) {
+                keyStream.key(i, UIO.longBytes(i), 0, 8);
+            }
+            return true;
+        }, (index1, key, timestamp, tombstoned, version, payload) -> {
+            //System.out.println(IndexUtil.toString(key) + " " + timestamp + " " + tombstoned + " " + version + " " + IndexUtil.toString(payload));
+            assertEquals(UIO.bytesLong(payload.copy()), expectedValues[index1]);
+            return true;
+        }, true);
+
+
+        index.append((stream) -> {
+            for (int i = 0; i < count; i++) {
+                stream.stream(i, UIO.longBytes(i), 2, true, 0, UIO.longBytes(i));
+            }
+            return true;
+        }, fsync, rawEntryBuffer, keyBuffer);
+
+        commitAndWait(index, fsync);
+        Thread.sleep(1000); // LAME
+        index.compact(true, 0, 0, true);
+
+
+        AtomicLong failures = new AtomicLong();
+        index.get((keyStream) -> {
+            for (int i = 1; i < count; i++) {
+                keyStream.key(i, UIO.longBytes(i), 0, 8);
+            }
+            return true;
+        }, (index1, key, timestamp, tombstoned, version, payload) -> {
+            if (payload != null) {
+                System.out.println("GRRR:" + IndexUtil.toString(key) + " " + timestamp + " " + tombstoned + " " + version + " " + IndexUtil.toString(payload));
+                failures.incrementAndGet();
+            }
+            return true;
+        }, true);
+        Assert.assertEquals(failures.get(),0);
+
+        env.shutdown();
+
+    }
+
+
     private void commitAndWait(ValueIndex index, boolean fsync) throws Exception, ExecutionException, InterruptedException {
         List<Future<Object>> awaitable = index.commit(fsync, true);
         for (Future<Object> future : awaitable) {
@@ -679,7 +749,8 @@ public class LABNGTest {
         List<Long> scanned = new ArrayList<>();
         index.pointRangeScan(from, to, (index1, key, timestamp, tombstoned, version, payload) -> {
             if (!tombstoned) {
-                //System.out.println("scan:" + IndexUtil.toString(key) + " " + timestamp + " " + tombstoned + " " + version + " " + IndexUtil.toString(payload));
+                //System.out.println("scan:" + IndexUtil.toString(key) + " " + timestamp + " " + tombstoned + " " + version + " " + IndexUtil.toString
+                // (payload));
                 scanned.add(payload.getLong(0));
             }
             return true;

@@ -64,7 +64,7 @@ public class IndexNGTest {
             rawhide,
             hashIndexType,
             0.75d,
-            Long.MAX_VALUE
+            () -> 0
         );
 
         BolBuffer keyBuffer = new BolBuffer();
@@ -158,7 +158,7 @@ public class IndexNGTest {
             rawhide,
             hashIndexType,
             0.75d,
-            Long.MAX_VALUE);
+            () -> 0);
 
         diskIndex.append((stream) -> {
             ReadIndex reader = memoryIndex.acquireReader();

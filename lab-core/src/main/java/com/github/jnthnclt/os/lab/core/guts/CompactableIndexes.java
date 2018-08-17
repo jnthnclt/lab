@@ -22,7 +22,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author jonathan.colt
@@ -43,7 +42,6 @@ public class CompactableIndexes {
     private volatile long version;
     private volatile boolean disposed = false;
     private volatile boolean closed = false;
-    private final AtomicLong compactorCheckVersion = new AtomicLong();
     private final AtomicBoolean compacting = new AtomicBoolean();
     private volatile TimestampAndVersion maxTimestampAndVersion = TimestampAndVersion.NULL;
 
@@ -369,8 +367,16 @@ public class CompactableIndexes {
                             }
 
                             LOG.debug("Splitting is flushing for a middle of:{}", Arrays.toString(middle));
-                            leftAppendableIndex.closeAppendable(fsync);
-                            rightAppendableIndex.closeAppendable(fsync);
+                            if (leftAppendableIndex.getCount() > 0) {
+                                leftAppendableIndex.closeAppendable(fsync);
+                            } else {
+                                leftAppendableIndex.delete();
+                            }
+                            if (rightAppendableIndex.getCount() > 0) {
+                                rightAppendableIndex.closeAppendable(fsync);
+                            } else {
+                                rightAppendableIndex.delete();
+                            }
                         } catch (Exception x) {
                             try {
                                 if (leftAppendableIndex != null) {
@@ -662,6 +668,7 @@ public class CompactableIndexes {
                 }
 
                 index = commitIndex.commit(Collections.singletonList(mergeRangeId));
+
 
                 int indexLengthChange;
                 synchronized (indexesLock) {

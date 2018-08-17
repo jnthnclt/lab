@@ -5,8 +5,9 @@ import com.github.jnthnclt.os.lab.base.UIO;
 import com.github.jnthnclt.os.lab.core.api.rawhide.Rawhide;
 import com.github.jnthnclt.os.lab.core.guts.api.AppendEntries;
 import com.github.jnthnclt.os.lab.core.guts.api.RawAppendableIndex;
-import com.github.jnthnclt.os.lab.io.AppendableHeap;
+import com.github.jnthnclt.os.lab.core.guts.api.TombstonedVersion;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
+import com.github.jnthnclt.os.lab.io.AppendableHeap;
 import com.github.jnthnclt.os.lab.io.IAppendOnly;
 import com.github.jnthnclt.os.lab.log.LABLogger;
 import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
@@ -37,7 +38,7 @@ public class LABAppendableIndex implements RawAppendableIndex {
     private final Rawhide rawhide;
     private final LABHashIndexType hashIndexType;
     private final double hashIndexLoadFactor;
-    private final long deleteTombstonedVersionsAfterMillis;
+    private final TombstonedVersion tombstonedVersion;
 
     private LeapFrog latestLeapFrog;
     private int updatesSinceLeap;
@@ -63,7 +64,7 @@ public class LABAppendableIndex implements RawAppendableIndex {
         Rawhide rawhide,
         LABHashIndexType hashIndexType,
         double hashIndexLoadFactor,
-        long deleteTombstonedVersionsAfterMillis) {
+        TombstonedVersion tombstonedVersion) {
 
         this.appendedStat = appendedStat;
         this.indexRangeId = indexRangeId;
@@ -73,9 +74,13 @@ public class LABAppendableIndex implements RawAppendableIndex {
         this.rawhide = rawhide;
         this.hashIndexType = hashIndexType;
         this.hashIndexLoadFactor = hashIndexLoadFactor;
-        this.deleteTombstonedVersionsAfterMillis = deleteTombstonedVersionsAfterMillis;
+        this.tombstonedVersion = tombstonedVersion;
 
         this.startOfEntryIndex = new long[updatesBetweenLeaps];
+    }
+
+    public long getCount() {
+        return count;
     }
 
     @Override
@@ -83,13 +88,14 @@ public class LABAppendableIndex implements RawAppendableIndex {
         if (appendOnly == null) {
             appendOnly = appendOnlyFile.appender();
         }
-        // TODO the is be passed in by a provider so we can distort time
-        long approximateCurrentVersion = System.currentTimeMillis();
-        long deleteIfVersionOldThanTimestamp = approximateCurrentVersion - deleteTombstonedVersionsAfterMillis;
+
+        long deleteIfVersionOldThanTimestamp = tombstonedVersion.deleteIfVersionOldThan();
 
         AtomicLong expiredTombstones = new AtomicLong();
         AppendableHeap appendableHeap = new AppendableHeap(1024);
         appendEntries.consume((rawEntryBuffer) -> {
+
+
 
             //entryBuffer.reset();
             // Unfortunately this impl expect version to me timestampMillis
@@ -97,7 +103,7 @@ public class LABAppendableIndex implements RawAppendableIndex {
             long rawEntryTimestamp = rawhide.timestamp(rawEntryBuffer);
             long version = rawhide.version(rawEntryBuffer);
 
-            if (deleteTombstonedVersionsAfterMillis > 0
+            if (deleteIfVersionOldThanTimestamp > 0
                 && rawhide.tombstone(rawEntryBuffer)
                 && version < deleteIfVersionOldThanTimestamp) {
                 expiredTombstones.incrementAndGet();
@@ -157,7 +163,7 @@ public class LABAppendableIndex implements RawAppendableIndex {
 
         if (expiredTombstones.get() > 0) {
             LOG.info("{} records were dropped during the append because there version was more than {} millis old",
-                expiredTombstones.get(), deleteTombstonedVersionsAfterMillis);
+                expiredTombstones.get(), deleteIfVersionOldThanTimestamp);
         }
 
         return true;
@@ -166,7 +172,6 @@ public class LABAppendableIndex implements RawAppendableIndex {
     @Override
     public void closeAppendable(boolean fsync) throws Exception {
         try {
-
             if (firstKey == null || lastKey == null) {
                 throw new IllegalStateException("Tried to close appendable index without a key range: " + this);
             }

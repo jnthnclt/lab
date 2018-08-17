@@ -67,7 +67,7 @@ public class CompactableIndexsNGTest {
                 rawhide,
                 hashIndexType,
                 0.75d,
-                Long.MAX_VALUE);
+                () -> 0);
 
             write.append((stream) -> {
                 for (int i = 0; i < counts[ci]; i++) {
@@ -143,7 +143,7 @@ public class CompactableIndexsNGTest {
                     rawhide,
                     hashIndexType,
                     0.75d,
-                    Long.MAX_VALUE);
+                    () -> 0);
                 TestUtils.append(rand, write, 0, step, count, desired, keyBuffer);
                 write.closeAppendable(fsync);
 
@@ -173,7 +173,7 @@ public class CompactableIndexsNGTest {
                         rawhide,
                         TestUtils.indexType,
                         0.75d,
-                        Long.MAX_VALUE);
+                        () -> 0);
                 },
                 (ids) -> {
                     LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
@@ -221,7 +221,7 @@ public class CompactableIndexsNGTest {
                 rawhide,
                 hashIndexType,
                 0.75d,
-                Long.MAX_VALUE);
+                () -> 0);
             TestUtils.append(rand, write, 0, step, count, desired, keyBuffer);
             write.closeAppendable(fsync);
 
@@ -268,7 +268,7 @@ public class CompactableIndexsNGTest {
                         rawhide,
                         TestUtils.indexType,
                         0.75d,
-                        Long.MAX_VALUE);
+                        () -> 0);
                 }, (ids) -> {
                     LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
                     return new ReadOnlyIndex(null, destroy, ids.get(0), new ReadOnlyFile(indexFiler), rawhide,
