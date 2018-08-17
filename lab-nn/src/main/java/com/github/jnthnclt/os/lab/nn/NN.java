@@ -13,4 +13,30 @@ public class NN {
         }
         return v;
     }
+
+
+
+    static public double[] avg(double[] as, double[] bs) {
+        double[] ns = new double[as.length];
+        for (int i = 0; i < as.length; i++) {
+            ns[i] = (as[i] + bs[i]) / 2.0;
+        }
+        return ns;
+    }
+
+    static public double[] max(double[] as, double[] bs) {
+        double[] ns = new double[as.length];
+        for (int i = 0; i < as.length; i++) {
+            ns[i] = Math.max(as[i], bs[i]);
+        }
+        return ns;
+    }
+
+    static public double[] min(double[] as, double[] bs) {
+        double[] ns = new double[as.length];
+        for (int i = 0; i < as.length; i++) {
+            ns[i] = Math.min(as[i], bs[i]);
+        }
+        return ns;
+    }
 }

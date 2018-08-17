@@ -76,7 +76,7 @@ public class LABGG {
                             lut.remove(from.n.id);
                             lut.remove(forwardBest.n.id);
 
-                            double[] f = avg(from.n.features, forwardBest.n.features);
+                            double[] f = NN.avg(from.n.features, forwardBest.n.features);
                             P n = new P(id, f);
                             NP value = new NP(n);
                             value.depth = depth;
@@ -156,29 +156,7 @@ public class LABGG {
     }
 
 
-    static double[] avg(double[] as, double[] bs) {
-        double[] ns = new double[as.length];
-        for (int i = 0; i < as.length; i++) {
-            ns[i] = (as[i] + bs[i]) / 2.0;
-        }
-        return ns;
-    }
 
-    static double[] max(double[] as, double[] bs) {
-        double[] ns = new double[as.length];
-        for (int i = 0; i < as.length; i++) {
-            ns[i] = Math.max(as[i], bs[i]);
-        }
-        return ns;
-    }
-
-    static double[] min(double[] as, double[] bs) {
-        double[] ns = new double[as.length];
-        for (int i = 0; i < as.length; i++) {
-            ns[i] = Math.min(as[i], bs[i]);
-        }
-        return ns;
-    }
 
 
     static class TN {
