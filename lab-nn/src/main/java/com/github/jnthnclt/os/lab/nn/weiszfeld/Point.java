@@ -109,7 +109,7 @@ public class Point implements Comparable<Point>, Cloneable {
 
 
 
-    public String showValues() {
+    public String toString() {
         String s = "";
         for (int i = 0; i < values.length; i++) {
             if (i != 0) {

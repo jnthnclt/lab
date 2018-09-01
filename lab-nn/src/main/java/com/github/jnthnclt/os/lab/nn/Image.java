@@ -56,7 +56,7 @@ public class Image {
     }
 
 
-    private static int[][] convertTo2DWithoutUsingGetRGB(BufferedImage image) {
+    public static int[][] convertTo2DWithoutUsingGetRGB(BufferedImage image) {
 
         final byte[] pixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
         final int width = image.getWidth();

@@ -623,6 +623,39 @@ public class LABSearchIndex {
         return true;
     }
 
+    /**
+     * @param externalIds
+     * @return -1 if not found
+     * @throws Exception
+     */
+    public RoaringBitmap toBitmap(long... externalIds) throws Exception {
+        long[] internalIds = new long[externalIds.length];
+        Arrays.fill(internalIds, -1);
+        synchronized (guidToIdx) {
+            guidToIdx.get(keyStream -> {
+                for (int i = 0; i < externalIds.length; i++) {
+                    keyStream.key(i, UIO.longBytes(externalIds[i]), 0, 8);
+                }
+                return true;
+            }, (int index, BolBuffer key, long timestamp, boolean tombstoned, long version, BolBuffer payload) -> {
+                if (payload != null) {
+                    internalIds[index] = payload.getLong(0);
+                }
+                return true;
+            }, true);
+        }
+        if (internalIds[0] == -1) {
+            return null;
+        }
+        RoaringBitmap bitmap = new RoaringBitmap();
+        for (long internalId : internalIds) {
+            if (internalId != -1) {
+                bitmap.add((int) internalId);
+            }
+        }
+        return bitmap;
+    }
+
 
     private long[] allocateIdxs(Collection<Long> externalIds, ValueIndex<byte[]> externalIdToInternalIdx) throws Exception {
         AtomicLong maxId = new AtomicLong(0);

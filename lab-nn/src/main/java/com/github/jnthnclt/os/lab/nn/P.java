@@ -1,33 +1,29 @@
 package com.github.jnthnclt.os.lab.nn;
 
-import java.util.Arrays;
 import java.util.Random;
 
 public class P {
 
 
-    public static P random(Random random, int id, int numFeatures) {
+    public static P random(Random random,  int numFeatures, double[][] bounds) {
         double[] features = new double[numFeatures];
         for (int i = 0; i < features.length; i++) {
-            features[i] = random.nextDouble();
+            double r = random.nextDouble();
+            if (bounds != null && i < bounds.length) {
+                features[i] = bounds[i][0] + ((bounds[i][1] - bounds[i][0]) * r);
+            } else {
+                features[i] = r;
+            }
         }
-        return new P(id, features);
+        return new P(features);
     }
 
 
-    public final int id;
-    public final double[] features;
+    public double[] features;
 
-    public P(int id, double[] features) {
-        this.id = id;
+    public P(double[] features) {
         this.features = features;
     }
 
-    @Override
-    public String toString() {
-        return "N{" +
-            "id=" + id +
-            ", features=" + Arrays.toString(features) +
-            '}';
-    }
+
 }

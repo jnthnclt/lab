@@ -39,4 +39,10 @@ public class NN {
         }
         return ns;
     }
+
+    public static void sum(double[] features, double[] add) {
+        for (int i = 0; i < features.length; i++) {
+            features[i] += add[i];
+        }
+    }
 }
