@@ -18,6 +18,7 @@ public class LABSearchIndexer {
     private final Semaphore semaphore = new Semaphore(Byte.MAX_VALUE);
     private final ExecutorService indexerThread = Executors.newSingleThreadExecutor();
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private final AtomicReference<Exception> failure = new AtomicReference<>(null);
 
     public LABSearchIndexer(int capacity, LABSearchIndex searchIndex) {
         this.capacity = capacity;
@@ -28,7 +29,10 @@ public class LABSearchIndexer {
         void update(LABSearchIndexUpdates updates);
     }
 
-    public void update(Update update) throws InterruptedException {
+    public void update(Update update) throws Exception {
+        if (failure.get() != null) {
+            throw failure.get();
+        }
         semaphore.acquire();
         try {
             LABSearchIndexUpdates updates = indexUpdates.get();
@@ -47,6 +51,10 @@ public class LABSearchIndexer {
         } finally {
             semaphore.release();
         }
+    }
+
+    public void reset() {
+        failure.set(null);
     }
 
 
@@ -85,7 +93,7 @@ public class LABSearchIndexer {
                                     took.clear();
                                 } catch (Exception x) {
                                     LOG.error("Indexer has lost updates!", x);
-                                    // TODO add ways to handle this
+                                    failure.set(x);
                                 }
                             } else {
                                 synchronized (semaphore) {
