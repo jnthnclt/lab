@@ -9,7 +9,7 @@ import java.util.Map;
  * Created by josue on 12/08/15.
  * To get the geometric median for a set of n-dimensional points.
  * Based on the Modified Weiszfeld Method from
- * @link{http://ie.technion.ac.il/Home/Users/becka/Weiszfeld_review-v3.pdf}
+ * http://ie.technion.ac.il/Home/Users/becka/Weiszfeld_review-v3.pdf
  * described up to the section 6.3
  */
 public class WeiszfeldAlgorithm {

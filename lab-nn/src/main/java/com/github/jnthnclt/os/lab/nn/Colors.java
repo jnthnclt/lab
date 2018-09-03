@@ -71,10 +71,7 @@ public class Colors {
         return lab;
     }
 
-    /**
-     * Computes the difference between two RGB colors by converting them to the L*a*b scale and
-     * comparing them using the CIE76 algorithm { http://en.wikipedia.org/wiki/Color_difference#CIE76}
-     */
+
     public static double getColorDifference(int a, int b) {
         int r1, g1, b1, r2, g2, b2;
         r1 = (a >> 16) & 0xFF;
@@ -87,7 +84,6 @@ public class Colors {
         int[] lab2 = rgb2lab(r2, g2, b2);
         return Math.sqrt(Math.pow(lab2[0] - lab1[0], 2) + Math.pow(lab2[1] - lab1[1], 2) + Math.pow(lab2[2] - lab1[2], 2));
     }
-
 
 
 }
