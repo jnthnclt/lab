@@ -30,7 +30,7 @@ public class LABMemoryIndex implements RawAppendableIndex {
     private final AtomicBoolean disposed = new AtomicBoolean(false);
 
     private final ExecutorService destroy;
-    private final com.github.jnthnclt.os.lab.core.LABHeapPressure LABHeapPressure;
+    private final LABHeapPressure heapPressure;
     private final AtomicLong costInBytes = new AtomicLong();
 
     private final Rawhide rawhide;
@@ -46,14 +46,14 @@ public class LABMemoryIndex implements RawAppendableIndex {
     private final Compute<BolBuffer, BolBuffer> compute;
 
     public LABMemoryIndex(ExecutorService destroy,
-        LABHeapPressure LABHeapPressure,
+        LABHeapPressure heapPressure,
         LABStats stats,
         Rawhide rawhide,
         LABMap<BolBuffer, BolBuffer> index) {
 
         this.costChangeInBytes = (allocated, resued) -> {
             costInBytes.addAndGet(allocated);
-            LABHeapPressure.change(allocated);
+            heapPressure.change(allocated);
             stats.released.add(-resued);
         };
 
@@ -82,7 +82,7 @@ public class LABMemoryIndex implements RawAppendableIndex {
         };
 
         this.destroy = destroy;
-        this.LABHeapPressure = LABHeapPressure;
+        this.heapPressure = heapPressure;
         this.rawhide = rawhide;
         this.index = index;
         this.reader = new ReadIndex() {
@@ -156,7 +156,7 @@ public class LABMemoryIndex implements RawAppendableIndex {
                 disposed.set(true);
                 index.clear();
                 long cost = costInBytes.get();
-                LABHeapPressure.change(-cost);
+                heapPressure.change(-cost);
                 costInBytes.addAndGet(-cost);
             } catch (Throwable t) {
                 LOG.error("Destroy failed horribly!", t);

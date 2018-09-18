@@ -32,12 +32,15 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.function.Function;
 import org.apache.commons.io.FileUtils;
 import org.roaringbitmap.RoaringBitmap;
@@ -280,85 +283,78 @@ public class LABSearchIndex {
     }
 
     public void values(RoaringBitmap all, int[] fieldOrdinals, StreamFieldValues streamValues) throws Exception {
+        ExecutorService gets = Executors.newFixedThreadPool(fieldOrdinals.length); // lame
+        try {
+            values(all, fieldOrdinals, gets, streamValues);
+        } finally {
+            gets.shutdown();
+        }
+    }
+
+    public void values(RoaringBitmap all, int[] fieldOrdinals, ExecutorService executorService, StreamFieldValues streamValues) throws Exception {
         if (all != null) {
-            String[] values = new String[fieldOrdinals.length];
-            int[] indexes = new int[fieldOrdinals.length];
+            int count = fieldOrdinals.length;
 
-            AtomicBoolean canceled = new AtomicBoolean(false);
-            ExecutorService gets = Executors.newFixedThreadPool(fieldOrdinals.length); // lame
-            Object rendezvous = new Object();
-            try {
-                List<Future<Void>> futures = Lists.newArrayList();
-                for (int i = 0; i < fieldOrdinals.length; i++) {
 
-                    ValueIndex<byte[]> fieldNameBlob = getOrCreateFieldNameBlob("fieldName_" + fieldOrdinals[i]); // lame
-                    int ef_id = i;
-                    futures.add(gets.submit(() -> {
+            AtomicInteger index = new AtomicInteger();
+            AtomicReferenceArray<String> values = new AtomicReferenceArray<>(new String[count]);
+            CyclicBarrier cyclicBarrier = new CyclicBarrier(count, () -> {
+
+                String[] copy = new String[count];
+                for (int i = 0; i < count; i++) {
+                    copy[i] = values.get(i);
+                }
+                try {
+                    streamValues.value(index.get(), copy);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+
+            });
+
+
+            List<Future<Void>> futures = Lists.newArrayList();
+            for (int i = 0; i < count; i++) {
+
+                int fieldId = i;
+                ValueIndex<byte[]> fieldNameBlob = getOrCreateFieldNameBlob("fieldName_" + fieldOrdinals[fieldId]); // lame
+                futures.add(executorService.submit(() -> {
+
+                    try {
                         fieldNameBlob.get(keyStream -> {
                             for (Integer idx : all) {
                                 keyStream.key(idx, UIO.longBytes(idx, new byte[8], 0), 0, 4);
-                                if (canceled.get()) {
-                                    return false;
-                                }
                             }
                             return true;
-                        }, (index, key, timestamp, tombstoned, version, payload) -> {
+                        }, (idx, key, timestamp, tombstoned, version, payload) -> {
 
-                            indexes[ef_id] = index;
-                            values[ef_id] = null;
-
+                            String value = null;
                             if (!tombstoned && payload != null) {
-                                try {
-                                    values[ef_id] = new String(payload.copy(), StandardCharsets.UTF_8);
-                                } catch (CancellationException ce) {
-                                    canceled.set(true);
-                                    return false;
-                                } catch (Exception x) {
-                                    LOG.error("values callback failed.", x);
-                                    return false;
-                                }
+                                value = new String(payload.copy(), StandardCharsets.UTF_8);
                             }
 
-                            synchronized (rendezvous) {
-                                int expected = indexes[0];
-                                for (int j = 1; j < indexes.length; j++) {
-                                    if (indexes[0] != expected) {
-                                        rendezvous.wait();
-                                        return true;
-                                    }
-                                }
-
-                                try {
-                                    if (!streamValues.value(index, Arrays.copyOf(values, values.length))) {
-                                        canceled.set(true);
-                                        return false;
-                                    }
-                                } finally {
-                                    rendezvous.notifyAll();
-                                }
-                            }
+                            index.set(idx);
+                            values.set(fieldId, value);
+                            cyclicBarrier.await();
 
                             return true;
+
                         }, true);
-
-                        return null;
-                    }));
-                }
-
-                for (Future<Void> future : futures) {
-                    try {
-                        future.get();
                     } catch (Exception x) {
-                        LOG.error("Oops", x);
-                        canceled.set(true);
+                        System.out.println("Died:" + x);
+                        x.printStackTrace();
                     }
-                }
-
-            } finally {
-                gets.shutdownNow();
+                    return null;
+                }));
             }
+
+            for (Future<Void> future : futures) {
+                future.get();
+            }
+
         }
     }
+
 
     public TimeSeries timeSeriesStream(String fieldName,
         List<String> keys,
