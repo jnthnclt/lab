@@ -88,7 +88,7 @@ public class LABSearchIndexer {
                             LABSearchIndexUpdates took = take();
                             if (took != null) {
                                 try {
-                                    LOG.info("Indexing " + took.size());
+                                    LOG.debug("Indexing " + took.size());
                                     searchIndex.update(took, false); // TODO add support for deletes
                                     took.clear();
                                 } catch (Exception x) {
