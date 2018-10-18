@@ -20,6 +20,13 @@ public class BolBuffer {
     public BolBuffer() {
     }
 
+    public void reset() {
+        bb = null;
+        bytes = null;
+        offset = 0;
+        length = -1;
+    }
+
     public void force(ByteBuffer bb, int offset, int length) {
         this.bytes = null;
         this.bb = bb;
