@@ -22,8 +22,6 @@ public class ReadOnlyIndex implements ReadIndex {
     private static final AtomicLong CACHE_KEYS = new AtomicLong();
     private final IndexRangeId id;
     private final ReadOnlyFile readOnlyFile;
-    private final LABFiles labFiles;
-    private final ExecutorService destroy;
     private final AtomicBoolean disposed = new AtomicBoolean(false);
     private final LRUConcurrentBAHLinkedHash<Leaps> leapsCache;
     private final Footer footer;
@@ -40,15 +38,11 @@ public class ReadOnlyIndex implements ReadIndex {
 
     private final long cacheKey = CACHE_KEYS.incrementAndGet();
 
-    public ReadOnlyIndex(LABFiles labFiles,
-        ExecutorService destroy,
-        IndexRangeId id,
+    public ReadOnlyIndex(IndexRangeId id,
         ReadOnlyFile readOnlyFile,
         Rawhide rawhide,
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache) throws Exception {
 
-        this.labFiles = labFiles;
-        this.destroy = destroy;
         this.id = id;
         this.readOnlyFile = readOnlyFile;
         this.hideABone = new Semaphore(Short.MAX_VALUE, true);
@@ -144,7 +138,7 @@ public class ReadOnlyIndex implements ReadIndex {
         return id;
     }
 
-    // you must call release on this reader! Try to only use it as long have you have to!
+    // you must call release on this reader! Try to only use it as long as have you have to!
     public ReadIndex acquireReader() throws Exception {
         hideABone.acquire();
         if (disposed.get() || readOnlyFile.isClosed()) {
@@ -226,7 +220,7 @@ public class ReadOnlyIndex implements ReadIndex {
         }
     }
 
-    public void destroy() {
+    public void destroy(ExecutorService destroy, LABFiles labFiles) {
         if (destroy != null) {
             destroy.submit(() -> {
 
@@ -379,7 +373,7 @@ public class ReadOnlyIndex implements ReadIndex {
         while ((type = readable.read(fp)) >= 0) {
             fp++;
             if (type == LABAppendableIndex.ENTRY) {
-                fp += rawhide.rawEntryToBuffer(readable, fp, entryBuffer);
+                rawhide.rawEntryToBuffer(readable, fp, entryBuffer);
                 return entryBuffer;
             } else if (type == LABAppendableIndex.LEAP) {
                 int length = readable.readInt(fp); // entryLength
