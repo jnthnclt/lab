@@ -94,6 +94,9 @@ public class LABSearchFailFastOdometer {
         private V edgeValue;
 
         public FailFastdometer(List<V> values, FailFastdometer<V, E> next) {
+            if (values.size() == 0) {
+                throw new IllegalArgumentException("values must have a size of 1 or more");
+            }
             this.values = values;
             this.next = next;
         }
@@ -104,6 +107,14 @@ public class LABSearchFailFastOdometer {
                 c *= next.combinations();
             }
             return c;
+        }
+
+        public int length() {
+            int l = 1;
+            if (next != null) {
+                l += next.length();
+            }
+            return l;
         }
 
         public boolean hasNext() {

@@ -15,5 +15,11 @@
             <artifactId>os.lab.core</artifactId>
             <version>1.9-SNAPSHOT</version>
         </dependency>
+        <dependency>
+            <groupId>com.github.jnthnclt</groupId>
+            <artifactId>os.lab.roaring</artifactId>
+            <version>1.9-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 </project>
