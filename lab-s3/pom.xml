@@ -8,18 +8,7 @@
         <version>1.10-SNAPSHOT</version>
     </parent>
     <groupId>com.github.jnthnclt</groupId>
-    <artifactId>os.lab.nn</artifactId>
+    <artifactId>os.lab.s3</artifactId>
     <dependencies>
-        <dependency>
-            <groupId>com.github.jnthnclt</groupId>
-            <artifactId>os.lab.core</artifactId>
-            <version>1.10-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.jnthnclt</groupId>
-            <artifactId>os.lab.roaring</artifactId>
-            <version>1.10-SNAPSHOT</version>
-            <scope>compile</scope>
-        </dependency>
     </dependencies>
 </project>
