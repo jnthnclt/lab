@@ -292,11 +292,8 @@ public class BitSortPOC {
         }
 
         public int top(RoaringBitmap answer, RoaringBitmap keep, int limit) {
-
             RoaringBitmap and = RoaringBitmap.and(answer, bitmap);
             int cardinality = and.getCardinality();
-            //System.out.println("Check:" + cardinality + " " + answer.getCardinality() + " " + bitmap.getCardinality());
-
             if (cardinality > limit) {
                 if (high != null) {
                     int keeping = high.top(answer, keep, limit);
@@ -311,17 +308,10 @@ public class BitSortPOC {
                 } else {
                     keep.or(and);
                 }
-
             } else {
                 keep.or(and);
             }
-
-            //System.out.println("Keep:" + keep.getCardinality());
-
             return keep.getCardinality();
-
         }
-
-
     }
 }

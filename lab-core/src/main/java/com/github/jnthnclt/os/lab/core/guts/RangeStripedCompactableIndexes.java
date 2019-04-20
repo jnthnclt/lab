@@ -26,13 +26,11 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.SortedMap;
-import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
@@ -65,6 +63,7 @@ public class RangeStripedCompactableIndexes {
     private final LABHashIndexType hashIndexType;
     private final double hashIndexLoadFactor;
     private final TombstonedVersion tombstonedVersion;
+    private final RangeStripeSet rangeStripeSet;
 
     public RangeStripedCompactableIndexes(byte[] labId,
                                           LABStats stats,
@@ -101,53 +100,28 @@ public class RangeStripedCompactableIndexes {
         this.indexes = new ConcurrentSkipListMap<>(rawhide.getKeyComparator());
         this.tombstonedVersion = tombstonedVersion;
 
-        File indexRoot = new File(root, primaryName);
-        File[] stripeDirs = indexRoot.listFiles();
-        if (stripeDirs != null) {
-            Map<File, Stripe> stripes = new HashMap<>();
-            for (File stripeDir : stripeDirs) {
-                Stripe stripe = loadStripe(stripeDir);
-                if (stripe != null) {
-                    stripes.put(stripeDir, stripe);
-                }
+        this.rangeStripeSet = new RangeStripeSet(labId,
+                stats,
+                rawhide,
+                leapsCache,
+                labFiles);
+
+        rangeStripeSet.load(new File(root, primaryName), largestIndexId, (stripeId, rangeStripe) -> {
+            if (largestStripeId.get() < stripeId) {
+                largestStripeId.set(stripeId);
             }
 
-            @SuppressWarnings("unchecked")
-            Map.Entry<File, Stripe>[] entries = stripes.entrySet().toArray(new Map.Entry[0]);
-            for (int i = 0; i < entries.length; i++) {
-                if (entries[i] == null) {
-                    continue;
-                }
-                for (int j = i + 1; j < entries.length; j++) {
-                    if (entries[j] == null) {
-                        continue;
-                    }
-                    if (entries[i].getValue().keyRange.contains(entries[j].getValue().keyRange)) {
-                        FileUtils.forceDelete(entries[j].getKey());
-                        entries[j] = null;
-                    }
-                }
-            }
+            indexes.put(rangeStripe.keyRange.start, new FileBackMergableIndexes(destroy,
+                    largestStripeId,
+                    largestIndexId,
+                    root,
+                    primaryName,
+                    stripeId,
+                    rangeStripe.mergeableIndexes));
+        });
 
-            for (Entry<File, Stripe> entry : entries) {
-                if (entry != null) {
-                    long stripeId = Long.parseLong(entry.getKey().getName());
-                    if (largestStripeId.get() < stripeId) {
-                        largestStripeId.set(stripeId);
-                    }
+        indexesArray = indexes.entrySet().toArray(new Entry[0]);
 
-                    indexes.put(entry.getValue().keyRange.start, new FileBackMergableIndexes(destroy,
-                            largestStripeId,
-                            largestIndexId,
-                            root,
-                            primaryName,
-                            stripeId,
-                            entry.getValue().mergeableIndexes));
-                }
-            }
-
-            indexesArray = indexes.entrySet().toArray(new Entry[0]);
-        }
     }
 
     @Override
@@ -162,90 +136,6 @@ public class RangeStripedCompactableIndexes {
                 + ", splitWhenValuesTotalExceedsNBytes=" + splitWhenValuesTotalExceedsNBytes
                 + ", splitWhenValuesAndKeysTotalExceedsNBytes=" + splitWhenValuesAndKeysTotalExceedsNBytes
                 + '}';
-    }
-
-    private Stripe loadStripe(File stripeRoot) throws Exception {
-        if (stripeRoot.isDirectory()) {
-            File activeDir = new File(stripeRoot, "active");
-            if (activeDir.exists()) {
-                TreeSet<IndexRangeId> ranges = new TreeSet<>();
-                File[] listFiles = activeDir.listFiles();
-                if (listFiles != null) {
-                    for (File file : listFiles) {
-                        String rawRange = file.getName();
-                        String[] range = rawRange.split("-");
-                        long start = Long.parseLong(range[0]);
-                        long end = Long.parseLong(range[1]);
-                        long generation = Long.parseLong(range[2]);
-
-                        ranges.add(new IndexRangeId(start, end, generation));
-                        if (largestIndexId.get() < end) {
-                            largestIndexId.set(end); //??
-                        }
-                    }
-                }
-
-                IndexRangeId active = null;
-                TreeSet<IndexRangeId> remove = new TreeSet<>();
-                for (IndexRangeId range : ranges) {
-                    if (active == null || !active.intersects(range)) {
-                        active = range;
-                    } else {
-                        LOG.debug("Destroying index for overlaping range:{}", range);
-                        remove.add(range);
-                    }
-                }
-
-                for (IndexRangeId range : remove) {
-                    File file = range.toFile(activeDir);
-                    FileUtils.deleteQuietly(file);
-                }
-                ranges.removeAll(remove);
-
-                /**
-                 0/1-1-0 a,b,c,d -append
-                 0/2-2-0 x,y,z - append
-                 0/1-2-1 a,b,c,d,x,y,z - merge
-                 0/3-3-0 -a,-b - append
-                 0/1-3-2 c,d,x,y,z - merge
-                 - split
-                 1/1-3-2 c,d
-                 2/1-3-2 x,y,z
-                 - delete 0/*
-                 */
-                CompactableIndexes mergeableIndexes = new CompactableIndexes(stats, rawhide);
-                KeyRange keyRange = null;
-                for (IndexRangeId range : ranges) {
-                    File file = range.toFile(activeDir);
-                    if (file.length() == 0) {
-                        file.delete();
-                        continue;
-                    }
-                    ReadOnlyFile indexFile = new ReadOnlyFile(file);
-                    ReadOnlyIndex lab = new ReadOnlyIndex(range, indexFile, rawhide, leapsCache);
-                    if (lab.minKey() != null && lab.maxKey() != null) {
-                        if (keyRange == null) {
-                            keyRange = new KeyRange(rawhide.getKeyComparator(), lab.minKey(), lab.maxKey());
-                        } else {
-                            keyRange = keyRange.join(lab.minKey(), lab.maxKey());
-                        }
-                        if (!mergeableIndexes.append(lab)) {
-                            throw new IllegalStateException("Bueller");
-                        }
-                        if (labFiles != null) {
-                            labFiles.add(labId, -1, file);
-                        }
-                    } else {
-                        indexFile.close();
-                        indexFile.delete();
-                    }
-                }
-                if (keyRange != null) {
-                    return new Stripe(keyRange, mergeableIndexes);
-                }
-            }
-        }
-        return null;
     }
 
     private class FileBackMergableIndexes implements SplitterBuilder, MergerBuilder {
@@ -537,8 +427,8 @@ public class RangeStripedCompactableIndexes {
                                     rightActive.toPath(),
                                     StandardCopyOption.ATOMIC_MOVE);
 
-                            Stripe leftStripe = loadStripe(left);
-                            Stripe rightStripe = loadStripe(right);
+                            RangeStripe leftStripe = rangeStripeSet.loadStripe(left, largestIndexId);
+                            RangeStripe rightStripe = rangeStripeSet.loadStripe(right, largestIndexId);
                             synchronized (copyIndexOnWrite) {
                                 ConcurrentSkipListMap<byte[], FileBackMergableIndexes> copyOfIndexes = new ConcurrentSkipListMap<>(
                                         rawhide.getKeyComparator());
