@@ -241,6 +241,7 @@ public class BitSortPOC {
                 bitSort.add(i, indexFieldValue[0]);
                 i++;
             }
+            bitSort.done();
             System.out.println("index:"+(System.currentTimeMillis()-start));
         }
 
@@ -271,14 +272,23 @@ public class BitSortPOC {
         }
 
         public void add(int order, int id) {
-            bitmap.add(id);
             if (high != null) {
                 if (order < halfSize) {
                     high.add(order, id);
                 } else {
                     low.add(order - halfSize, id);
                 }
+            } else {
+                bitmap.add(id);
             }
+        }
+
+        public RoaringBitmap done() {
+            if (high != null) {
+                bitmap.or(high.done());
+                bitmap.or(low.done());
+            }
+            return bitmap;
         }
 
         public int top(RoaringBitmap answer, RoaringBitmap keep, int limit) {
