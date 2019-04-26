@@ -496,6 +496,7 @@ public class RangeStripedCompactableIndexes {
                                     int minimumRun,
                                     boolean fsync,
                                     MergerBuilderCallback callback) throws Exception {
+
             File indexRoot = new File(root, indexName);
             File stripeRoot = new File(indexRoot, String.valueOf(stripeId));
             File activeRoot = new File(stripeRoot, "active");
@@ -530,18 +531,6 @@ public class RangeStripedCompactableIndexes {
 
         private void auditRanges(String prefix, KeyToString keyToString) {
             compactableIndexes.auditRanges(prefix, keyToString);
-        }
-
-    }
-
-    private static class Stripe {
-
-        final KeyRange keyRange;
-        final CompactableIndexes mergeableIndexes;
-
-        public Stripe(KeyRange keyRange, CompactableIndexes mergeableIndexes) {
-            this.keyRange = keyRange;
-            this.mergeableIndexes = mergeableIndexes;
         }
 
     }

@@ -2,6 +2,7 @@ package com.github.jnthnclt.os.lab.base;
 
 import com.github.jnthnclt.os.lab.log.LABLogger;
 import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
+
 import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
 
@@ -240,13 +241,13 @@ public class BolBuffer {
         return ByteBuffer.wrap(copy());
     }
 
-    public void get(int offset, byte[] copyInto, int o, int l) {
+    public void get(int offset, byte[] copyInto, int copyIntoOffset, int length) {
         if (bb != null) {
             for (int i = 0; i < copyInto.length; i++) {
-                copyInto[o + i] = bb.get(o + i);
+                copyInto[copyIntoOffset + i] = bb.get(this.offset + i);
             }
         } else {
-            System.arraycopy(bytes, offset, copyInto, o, l);
+            System.arraycopy(bytes, this.offset + offset, copyInto, copyIntoOffset, length);
         }
     }
 

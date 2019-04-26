@@ -165,6 +165,9 @@ public class CompactableIndexes {
 
                 if (splittable(splittableIfKeysLargerThanBytes, splittableIfValuesLargerThanBytes,
                         splittableIfLargerThanBytes)) {
+
+
+
                     Callable<Void> splitter = splitterBuilder.buildSplitter(rawhideName, fsync, this::buildSplitter);
                     if (splitter != null) {
                         stats.spliting.incrementAndGet();

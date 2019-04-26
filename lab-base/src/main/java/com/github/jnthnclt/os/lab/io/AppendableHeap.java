@@ -23,7 +23,7 @@ import java.io.IOException;
  */
 public class AppendableHeap implements IAppendOnly {
 
-    private byte[] bytes = new byte[0];
+    private byte[] bytes;
     private int fp = 0;
     private int maxLength = 0;
 
@@ -33,15 +33,11 @@ public class AppendableHeap implements IAppendOnly {
     }
 
     public byte[] getBytes() {
-        if (maxLength == bytes.length) {
-            return bytes;
-        } else {
-            byte[] newSrc = new byte[maxLength];
-            System.arraycopy(bytes, 0, newSrc, 0, maxLength);
-            return newSrc;
-
-        }
+        byte[] newSrc = new byte[maxLength];
+        System.arraycopy(bytes, 0, newSrc, 0, maxLength);
+        return newSrc;
     }
+
 
     public byte[] leakBytes() {
         return bytes;
