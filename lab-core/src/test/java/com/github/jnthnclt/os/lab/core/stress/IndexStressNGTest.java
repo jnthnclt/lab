@@ -18,8 +18,6 @@ import com.github.jnthnclt.os.lab.core.guts.RangeStripedCompactableIndexes;
 import com.github.jnthnclt.os.lab.core.guts.ReadOnlyFile;
 import com.github.jnthnclt.os.lab.core.guts.ReadOnlyIndex;
 import com.google.common.io.Files;
-import org.testng.annotations.Test;
-
 import java.io.File;
 import java.text.NumberFormat;
 import java.util.Random;
@@ -30,6 +28,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
+import org.testng.annotations.Test;
 
 /**
  * @author jonathan.colt
@@ -70,38 +69,29 @@ public class IndexStressNGTest {
 
                 try {
 
-                    Callable<Void> compactor = indexs.compactor(new LABStats(new AtomicLong()),
-                            "test",
-                            -1,
-                            -1,
-                            -1,
-                            null,
-                            minMergeDebt,
-                            fsync,
-                            (rawhideName, minimumRun1, fsync1, callback) -> callback.call(minimumRun1, fsync1,
-                                    (id, worstCaseCount) -> {
+                    Callable<Void> compactor = indexs.compactor(new LABStats(new AtomicLong()), "test", -1, -1, -1, null, minMergeDebt, fsync,
+                        (rawhideName, minimumRun1, fsync1, callback) -> callback.call(minimumRun1, fsync1,
+                            (id, worstCaseCount) -> {
 
-                                        long m = merge.incrementAndGet();
-                                        int maxLeaps = RangeStripedCompactableIndexes.calculateIdealMaxLeaps(
-                                                worstCaseCount, entriesBetweenLeaps);
-                                        File mergingFile = id.toFile(root);
-                                        return new LABAppendableIndex(new LongAdder(),
-                                                id,
-                                                new AppendOnlyFile(mergingFile),
-                                                maxLeaps,
-                                                entriesBetweenLeaps,
-                                                rawhide,
-                                                TestUtils.indexType,
-                                                0.75d,
-                                                () -> 0);
-                                    },
-                                    (ids) -> {
-                                        File mergedFile = ids.get(0).toFile(root);
-                                        LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(
-                                                100, 8);
-                                        return new ReadOnlyIndex(ids.get(0), new ReadOnlyFile(mergedFile),
-                                                rawhide, leapsCache);
-                                    }, destroy, null));
+                                long m = merge.incrementAndGet();
+                                int maxLeaps = RangeStripedCompactableIndexes.calculateIdealMaxLeaps(worstCaseCount, entriesBetweenLeaps);
+                                File mergingFile = id.toFile(root);
+                                return new LABAppendableIndex(new LongAdder(),
+                                    id,
+                                    new AppendOnlyFile(mergingFile),
+                                    maxLeaps,
+                                    entriesBetweenLeaps,
+                                    rawhide,
+                                    TestUtils.indexType,
+                                    0.75d,
+                                    () -> 0);
+                            },
+                            (ids) -> {
+                                File mergedFile = ids.get(0).toFile(root);
+                                LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
+                                return new ReadOnlyIndex(null, destroy, ids.get(0), new ReadOnlyFile(mergedFile),
+                                    rawhide, leapsCache);
+                            }));
                     if (compactor != null) {
                         waitForDebtToDrain.incrementAndGet();
                         compactor.call();
@@ -145,34 +135,34 @@ public class IndexStressNGTest {
                     continue;
                 }
                 while (indexs.tx(-1, false, null, null,
-                        (index, pointFrom, fromKey, toKey, acquired, hydrateValues) -> {
+                    (index, pointFrom, fromKey, toKey, acquired, hydrateValues) -> {
 
-                            try {
+                    try {
 
-                                int longKey = rand.nextInt(maxKey.intValue());
-                                UIO.longBytes(longKey, key, 0);
+                        int longKey = rand.nextInt(maxKey.intValue());
+                        UIO.longBytes(longKey, key, 0);
 
-                                BolBuffer rawEntry = PointInterleave.get(acquired, key, rawhide, true);
-                                if (rawEntry != null) {
-                                    if (rawEntry != null) {
-                                        hits[0]++;
-                                    } else {
-                                        misses[0]++;
-                                    }
-                                }
-
-
-                                if ((hits[0] + misses[0]) % logInterval == 0) {
-                                    return false;
-                                }
-
-                                //Thread.sleep(1);
-                            } catch (Exception x) {
-                                x.printStackTrace();
-                                Thread.sleep(10);
+                        BolBuffer rawEntry = PointInterleave.get(acquired,  key, rawhide, true);
+                        if (rawEntry != null) {
+                            if (rawEntry != null) {
+                                hits[0]++;
+                            } else {
+                                misses[0]++;
                             }
-                            return true;
-                        }, true)) {
+                        }
+
+
+                        if ((hits[0] + misses[0]) % logInterval == 0) {
+                            return false;
+                        }
+
+                        //Thread.sleep(1);
+                    } catch (Exception x) {
+                        x.printStackTrace();
+                        Thread.sleep(10);
+                    }
+                    return true;
+                }, true)) {
                 }
 
                 long getEnd = System.currentTimeMillis();
@@ -184,9 +174,8 @@ public class IndexStressNGTest {
                 }
 
                 System.out.println(
-                        "Hits:" + hits[0] + " Misses:" + misses[0] + " Elapse:" + elapse + " Best:" + rps(logInterval,
-                                best) + " Avg:" + rps(logInterval,
-                                (long) (total / (double) samples)));
+                    "Hits:" + hits[0] + " Misses:" + misses[0] + " Elapse:" + elapse + " Best:" + rps(logInterval, best) + " Avg:" + rps(logInterval,
+                    (long) (total / (double) samples)));
                 hits[0] = 0;
                 misses[0] = 0;
                 getStart = getEnd;
@@ -203,14 +192,14 @@ public class IndexStressNGTest {
 
             long startMerge = System.currentTimeMillis();
             LABAppendableIndex write = new LABAppendableIndex(new LongAdder(),
-                    id,
-                    new AppendOnlyFile(indexFiler),
-                    maxLeaps,
-                    entriesBetweenLeaps,
-                    rawhide,
-                    TestUtils.indexType,
-                    0.75d,
-                    () -> 0);
+                id,
+                new AppendOnlyFile(indexFiler),
+                maxLeaps,
+                entriesBetweenLeaps,
+                rawhide,
+                TestUtils.indexType,
+                0.75d,
+                () -> 0);
             BolBuffer keyBuffer = new BolBuffer();
             long lastKey = TestUtils.append(rand, write, 0, maxKeyIncrement, batchSize, null, keyBuffer);
             write.closeAppendable(fsync);
@@ -218,12 +207,12 @@ public class IndexStressNGTest {
             maxKey.set(Math.max(maxKey.longValue(), lastKey));
             LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
             indexs.append(
-                    new ReadOnlyIndex(id, new ReadOnlyFile(indexFiler), rawhide, leapsCache));
+                new ReadOnlyIndex(null, destroy, id, new ReadOnlyFile(indexFiler), rawhide, leapsCache));
 
             count += batchSize;
 
             System.out.println("Insertions:" + format.format(count) + " ips:" + format.format(
-                    ((count / (double) (System.currentTimeMillis() - start))) * 1000) + " elapse:" + format.format(
+                ((count / (double) (System.currentTimeMillis() - start))) * 1000) + " elapse:" + format.format(
                     (System.currentTimeMillis() - startMerge)) + " mergeDebut:" + indexs.debt());
 
             if (indexs.debt() > 10) {
@@ -242,8 +231,8 @@ public class IndexStressNGTest {
         Thread.sleep(10_000L);*/
         merging.set(false);
         System.out.println(
-                " **************   Total time to add " + (numBatches * batchSize) + " including all merging: "
-                        + (System.currentTimeMillis() - start) + " millis *****************");
+            " **************   Total time to add " + (numBatches * batchSize) + " including all merging: "
+            + (System.currentTimeMillis() - start) + " millis *****************");
 
         pointGets.get();
 

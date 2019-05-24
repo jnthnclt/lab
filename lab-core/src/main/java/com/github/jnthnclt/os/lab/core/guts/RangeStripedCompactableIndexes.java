@@ -18,24 +18,25 @@ import com.github.jnthnclt.os.lab.core.guts.api.SplitterBuilder;
 import com.github.jnthnclt.os.lab.core.guts.api.TombstonedVersion;
 import com.github.jnthnclt.os.lab.log.LABLogger;
 import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
-import org.apache.commons.io.FileUtils;
-
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.SortedMap;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.commons.io.FileUtils;
 
 public class RangeStripedCompactableIndexes {
 
@@ -63,24 +64,23 @@ public class RangeStripedCompactableIndexes {
     private final LABHashIndexType hashIndexType;
     private final double hashIndexLoadFactor;
     private final TombstonedVersion tombstonedVersion;
-    private final RangeStripeSet rangeStripeSet;
 
     public RangeStripedCompactableIndexes(byte[] labId,
-                                          LABStats stats,
-                                          LABFiles labFiles,
-                                          ExecutorService destroy,
-                                          File root,
-                                          String primaryName,
-                                          int entriesBetweenLeaps,
-                                          long splitWhenKeysTotalExceedsNBytes,
-                                          long splitWhenValuesTotalExceedsNBytes,
-                                          long splitWhenValuesAndKeysTotalExceedsNBytes,
-                                          Rawhide rawhide,
-                                          LRUConcurrentBAHLinkedHash<Leaps> leapsCache,
-                                          boolean fsyncFileRenames,
-                                          LABHashIndexType hashIndexType,
-                                          double hashIndexLoadFactor,
-                                          TombstonedVersion tombstonedVersion) throws Exception {
+        LABStats stats,
+        LABFiles labFiles,
+        ExecutorService destroy,
+        File root,
+        String primaryName,
+        int entriesBetweenLeaps,
+        long splitWhenKeysTotalExceedsNBytes,
+        long splitWhenValuesTotalExceedsNBytes,
+        long splitWhenValuesAndKeysTotalExceedsNBytes,
+        Rawhide rawhide,
+        LRUConcurrentBAHLinkedHash<Leaps> leapsCache,
+        boolean fsyncFileRenames,
+        LABHashIndexType hashIndexType,
+        double hashIndexLoadFactor,
+        TombstonedVersion tombstonedVersion) throws Exception {
 
         this.labId = labId;
         this.stats = stats;
@@ -100,42 +100,151 @@ public class RangeStripedCompactableIndexes {
         this.indexes = new ConcurrentSkipListMap<>(rawhide.getKeyComparator());
         this.tombstonedVersion = tombstonedVersion;
 
-        this.rangeStripeSet = new RangeStripeSet(labId,
-                stats,
-                rawhide,
-                leapsCache,
-                labFiles);
-
-        rangeStripeSet.load(new File(root, primaryName), largestIndexId, (stripeId, rangeStripe) -> {
-            if (largestStripeId.get() < stripeId) {
-                largestStripeId.set(stripeId);
+        File indexRoot = new File(root, primaryName);
+        File[] stripeDirs = indexRoot.listFiles();
+        if (stripeDirs != null) {
+            Map<File, Stripe> stripes = new HashMap<>();
+            for (File stripeDir : stripeDirs) {
+                Stripe stripe = loadStripe(stripeDir);
+                if (stripe != null) {
+                    stripes.put(stripeDir, stripe);
+                }
             }
 
-            indexes.put(rangeStripe.keyRange.start, new FileBackMergableIndexes(destroy,
-                    largestStripeId,
-                    largestIndexId,
-                    root,
-                    primaryName,
-                    stripeId,
-                    rangeStripe.mergeableIndexes));
-        });
+            @SuppressWarnings("unchecked")
+            Map.Entry<File, Stripe>[] entries = stripes.entrySet().toArray(new Map.Entry[0]);
+            for (int i = 0; i < entries.length; i++) {
+                if (entries[i] == null) {
+                    continue;
+                }
+                for (int j = i + 1; j < entries.length; j++) {
+                    if (entries[j] == null) {
+                        continue;
+                    }
+                    if (entries[i].getValue().keyRange.contains(entries[j].getValue().keyRange)) {
+                        FileUtils.forceDelete(entries[j].getKey());
+                        entries[j] = null;
+                    }
+                }
+            }
 
-        indexesArray = indexes.entrySet().toArray(new Entry[0]);
+            for (Entry<File, Stripe> entry : entries) {
+                if (entry != null) {
+                    long stripeId = Long.parseLong(entry.getKey().getName());
+                    if (largestStripeId.get() < stripeId) {
+                        largestStripeId.set(stripeId);
+                    }
 
+                    indexes.put(entry.getValue().keyRange.start, new FileBackMergableIndexes(destroy,
+                        largestStripeId,
+                        largestIndexId,
+                        root,
+                        primaryName,
+                        stripeId,
+                        entry.getValue().mergeableIndexes));
+                }
+            }
+
+            indexesArray = indexes.entrySet().toArray(new Entry[0]);
+        }
     }
 
     @Override
     public String toString() {
         return "RangeStripedCompactableIndexes{"
-                + "largestStripeId=" + largestStripeId
-                + ", largestIndexId=" + largestIndexId
-                + ", root=" + root
-                + ", indexName=" + primaryName
-                + ", entriesBetweenLeaps=" + entriesBetweenLeaps
-                + ", splitWhenKeysTotalExceedsNBytes=" + splitWhenKeysTotalExceedsNBytes
-                + ", splitWhenValuesTotalExceedsNBytes=" + splitWhenValuesTotalExceedsNBytes
-                + ", splitWhenValuesAndKeysTotalExceedsNBytes=" + splitWhenValuesAndKeysTotalExceedsNBytes
-                + '}';
+            + "largestStripeId=" + largestStripeId
+            + ", largestIndexId=" + largestIndexId
+            + ", root=" + root
+            + ", indexName=" + primaryName
+            + ", entriesBetweenLeaps=" + entriesBetweenLeaps
+            + ", splitWhenKeysTotalExceedsNBytes=" + splitWhenKeysTotalExceedsNBytes
+            + ", splitWhenValuesTotalExceedsNBytes=" + splitWhenValuesTotalExceedsNBytes
+            + ", splitWhenValuesAndKeysTotalExceedsNBytes=" + splitWhenValuesAndKeysTotalExceedsNBytes
+            + '}';
+    }
+
+    private Stripe loadStripe(File stripeRoot) throws Exception {
+        if (stripeRoot.isDirectory()) {
+            File activeDir = new File(stripeRoot, "active");
+            if (activeDir.exists()) {
+                TreeSet<IndexRangeId> ranges = new TreeSet<>();
+                File[] listFiles = activeDir.listFiles();
+                if (listFiles != null) {
+                    for (File file : listFiles) {
+                        String rawRange = file.getName();
+                        String[] range = rawRange.split("-");
+                        long start = Long.parseLong(range[0]);
+                        long end = Long.parseLong(range[1]);
+                        long generation = Long.parseLong(range[2]);
+
+                        ranges.add(new IndexRangeId(start, end, generation));
+                        if (largestIndexId.get() < end) {
+                            largestIndexId.set(end); //??
+                        }
+                    }
+                }
+
+                IndexRangeId active = null;
+                TreeSet<IndexRangeId> remove = new TreeSet<>();
+                for (IndexRangeId range : ranges) {
+                    if (active == null || !active.intersects(range)) {
+                        active = range;
+                    } else {
+                        LOG.debug("Destroying index for overlaping range:{}", range);
+                        remove.add(range);
+                    }
+                }
+
+                for (IndexRangeId range : remove) {
+                    File file = range.toFile(activeDir);
+                    FileUtils.deleteQuietly(file);
+                }
+                ranges.removeAll(remove);
+
+                /**
+                 0/1-1-0 a,b,c,d -append
+                 0/2-2-0 x,y,z - append
+                 0/1-2-1 a,b,c,d,x,y,z - merge
+                 0/3-3-0 -a,-b - append
+                 0/1-3-2 c,d,x,y,z - merge
+                 - split
+                 1/1-3-2 c,d
+                 2/1-3-2 x,y,z
+                 - delete 0/*
+                 */
+                CompactableIndexes mergeableIndexes = new CompactableIndexes(stats, rawhide);
+                KeyRange keyRange = null;
+                for (IndexRangeId range : ranges) {
+                    File file = range.toFile(activeDir);
+                    if (file.length() == 0) {
+                        file.delete();
+                        continue;
+                    }
+                    ReadOnlyFile indexFile = new ReadOnlyFile(file);
+                    ReadOnlyIndex lab = new ReadOnlyIndex(labFiles, destroy, range, indexFile, rawhide, leapsCache);
+                    if (lab.minKey() != null && lab.maxKey() != null) {
+                        if (keyRange == null) {
+                            keyRange = new KeyRange(rawhide.getKeyComparator(), lab.minKey(), lab.maxKey());
+                        } else {
+                            keyRange = keyRange.join(lab.minKey(), lab.maxKey());
+                        }
+                        if (!mergeableIndexes.append(lab)) {
+                            throw new IllegalStateException("Bueller");
+                        }
+                        if (labFiles != null) {
+                            labFiles.add(labId, -1, file);
+                        }
+                    } else {
+                        indexFile.close();
+                        indexFile.delete();
+                    }
+                }
+                if (keyRange != null) {
+                    return new Stripe(keyRange, mergeableIndexes);
+                }
+            }
+        }
+        return null;
     }
 
     private class FileBackMergableIndexes implements SplitterBuilder, MergerBuilder {
@@ -150,12 +259,12 @@ public class RangeStripedCompactableIndexes {
         final CompactableIndexes compactableIndexes;
 
         public FileBackMergableIndexes(ExecutorService destroy,
-                                       AtomicLong largestStripeId,
-                                       AtomicLong largestIndexId,
-                                       File root,
-                                       String indexName,
-                                       long stripeId,
-                                       CompactableIndexes mergeableIndexes) {
+            AtomicLong largestStripeId,
+            AtomicLong largestIndexId,
+            File root,
+            String indexName,
+            long stripeId,
+            CompactableIndexes mergeableIndexes) {
 
             this.destroy = destroy;
             this.largestStripeId = largestStripeId;
@@ -179,26 +288,26 @@ public class RangeStripedCompactableIndexes {
         }
 
         void append(String rawhideName,
-                    long appendVersion,
-                    LABMemoryIndex memoryIndex,
-                    byte[] minKey,
-                    byte[] maxKey,
-                    boolean fsync,
-                    BolBuffer keyBuffer,
-                    BolBuffer entryBuffer,
-                    BolBuffer entryKeyBuffer) throws Exception {
+            long appendVersion,
+            LABMemoryIndex memoryIndex,
+            byte[] minKey,
+            byte[] maxKey,
+            boolean fsync,
+            BolBuffer keyBuffer,
+            BolBuffer entryBuffer,
+            BolBuffer entryKeyBuffer) throws Exception {
 
             ReadOnlyIndex readOnlyIndex = flushMemoryIndexToDisk(
-                    rawhideName,
-                    memoryIndex,
-                    minKey,
-                    maxKey,
-                    largestIndexId.incrementAndGet(),
-                    0,
-                    fsync,
-                    keyBuffer,
-                    entryBuffer,
-                    entryKeyBuffer);
+                rawhideName,
+                memoryIndex,
+                minKey,
+                maxKey,
+                largestIndexId.incrementAndGet(),
+                0,
+                fsync,
+                keyBuffer,
+                entryBuffer,
+                entryKeyBuffer);
 
             if (readOnlyIndex != null && compactableIndexes.append(readOnlyIndex)) {
                 if (labFiles != null) {
@@ -208,16 +317,16 @@ public class RangeStripedCompactableIndexes {
         }
 
         private ReadOnlyIndex flushMemoryIndexToDisk(
-                String rawhideName,
-                LABMemoryIndex memoryIndex,
-                byte[] minKey,
-                byte[] maxKey,
-                long nextIndexId,
-                int generation,
-                boolean fsync,
-                BolBuffer keyBuffer,
-                BolBuffer entryBuffer,
-                BolBuffer entryKeyBuffer) throws Exception {
+            String rawhideName,
+            LABMemoryIndex memoryIndex,
+            byte[] minKey,
+            byte[] maxKey,
+            long nextIndexId,
+            int generation,
+            boolean fsync,
+            BolBuffer keyBuffer,
+            BolBuffer entryBuffer,
+            BolBuffer entryKeyBuffer) throws Exception {
 
             File indexRoot = new File(root, indexName);
             File stripeRoot = new File(indexRoot, String.valueOf(stripeId));
@@ -237,19 +346,19 @@ public class RangeStripedCompactableIndexes {
             boolean exists = false;
             try {
                 appendableIndex = new LABAppendableIndex(stats.bytesWrittenAsIndex,
-                        indexRangeId,
-                        appendOnlyFile,
-                        maxLeaps,
-                        entriesBetweenLeaps,
-                        rawhide,
-                        hashIndexType,
-                        hashIndexLoadFactor,
-                        tombstonedVersion);
+                    indexRangeId,
+                    appendOnlyFile,
+                    maxLeaps,
+                    entriesBetweenLeaps,
+                    rawhide,
+                    hashIndexType,
+                    hashIndexLoadFactor,
+                    tombstonedVersion);
                 appendableIndex.append((stream) -> {
 
                     ReadIndex reader = memoryIndex.acquireReader();
                     try {
-                        Scanner scanner = reader.rangeScan(false, false, minKey, maxKey, entryBuffer, entryKeyBuffer);
+                        Scanner scanner = reader.rangeScan(false,false, minKey, maxKey, entryBuffer, entryKeyBuffer);
                         if (scanner != null) {
                             try {
                                 BolBuffer rawEntry = new BolBuffer();
@@ -296,14 +405,14 @@ public class RangeStripedCompactableIndexes {
         }
 
         private ReadOnlyIndex moveIntoPlace(String rawhideName,
-                                            File commitingIndexFile,
-                                            File commitedIndexFile,
-                                            IndexRangeId indexRangeId) throws Exception {
+            File commitingIndexFile,
+            File commitedIndexFile,
+            IndexRangeId indexRangeId) throws Exception {
 
             FileUtils.forceMkdir(commitedIndexFile.getParentFile());
             Files.move(commitingIndexFile.toPath(), commitedIndexFile.toPath(), StandardCopyOption.ATOMIC_MOVE);
             ReadOnlyFile readOnlyFile = new ReadOnlyFile(commitedIndexFile);
-            ReadOnlyIndex reopenedIndex = new ReadOnlyIndex(indexRangeId, readOnlyFile, rawhide, leapsCache);
+            ReadOnlyIndex reopenedIndex = new ReadOnlyIndex(labFiles, destroy, indexRangeId, readOnlyFile, rawhide, leapsCache);
             if (fsyncFileRenames) {
                 reopenedIndex.fsync();  // Sorry
                 // TODO Files.fsync index when java 9 supports it.
@@ -317,12 +426,7 @@ public class RangeStripedCompactableIndexes {
             return reopenedIndex;
         }
 
-        boolean tx(int index,
-                   boolean pointFrom,
-                   byte[] fromKey,
-                   byte[] toKey,
-                   ReaderTx tx,
-                   boolean hydrateValues) throws Exception {
+        boolean tx(int index, boolean pointFrom, byte[] fromKey, byte[] toKey, ReaderTx tx, boolean hydrateValues) throws Exception {
             return compactableIndexes.tx(index, pointFrom, fromKey, toKey, tx, hydrateValues);
         }
 
@@ -340,20 +444,18 @@ public class RangeStripedCompactableIndexes {
 
         Callable<Void> compactor(String rawhideName, int minMergeDebt, boolean fsync) throws Exception {
             return compactableIndexes.compactor(stats,
-                    rawhideName,
-                    splitWhenKeysTotalExceedsNBytes,
-                    splitWhenValuesTotalExceedsNBytes,
-                    splitWhenValuesAndKeysTotalExceedsNBytes,
-                    this,
-                    minMergeDebt,
-                    fsync,
-                    this);
+                rawhideName,
+                splitWhenKeysTotalExceedsNBytes,
+                splitWhenValuesTotalExceedsNBytes,
+                splitWhenValuesAndKeysTotalExceedsNBytes,
+                this,
+                minMergeDebt,
+                fsync,
+                this);
         }
 
         @Override
-        public Callable<Void> buildSplitter(String rawhideName,
-                                            boolean fsync,
-                                            SplitterBuilderCallback callback) throws Exception {
+        public Callable<Void> buildSplitter(String rawhideName, boolean fsync, SplitterBuilderCallback callback) throws Exception {
 
             File indexRoot = new File(root, indexName);
             File stripeRoot = new File(indexRoot, String.valueOf(stripeId));
@@ -381,14 +483,14 @@ public class RangeStripedCompactableIndexes {
                         LOG.debug("Creating new index for split: {}", splittingIndexFile);
                         AppendOnlyFile appendOnlyFile = new AppendOnlyFile(splittingIndexFile);
                         return new LABAppendableIndex(stats.bytesWrittenAsSplit,
-                                id,
-                                appendOnlyFile,
-                                maxLeaps,
-                                entriesBetweenLeaps,
-                                rawhide,
-                                hashIndexType,
-                                hashIndexLoadFactor,
-                                tombstonedVersion);
+                            id,
+                            appendOnlyFile,
+                            maxLeaps,
+                            entriesBetweenLeaps,
+                            rawhide,
+                            hashIndexType,
+                            hashIndexLoadFactor,
+                            tombstonedVersion);
                     };
 
                     IndexFactory rightHalfIndexFactory = (id, worstCaseCount) -> {
@@ -400,14 +502,14 @@ public class RangeStripedCompactableIndexes {
                         LOG.debug("Creating new index for split: {}", splittingIndexFile);
                         AppendOnlyFile appendOnlyFile = new AppendOnlyFile(splittingIndexFile);
                         return new LABAppendableIndex(stats.bytesWrittenAsSplit,
-                                id,
-                                appendOnlyFile,
-                                maxLeaps,
-                                entriesBetweenLeaps,
-                                rawhide,
-                                hashIndexType,
-                                hashIndexLoadFactor,
-                                tombstonedVersion);
+                            id,
+                            appendOnlyFile,
+                            maxLeaps,
+                            entriesBetweenLeaps,
+                            rawhide,
+                            hashIndexType,
+                            hashIndexLoadFactor,
+                            tombstonedVersion);
                     };
 
                     CommitIndex commitIndex = (ids) -> {
@@ -421,22 +523,21 @@ public class RangeStripedCompactableIndexes {
 
                         try {
                             Files.move(new File(splittingRoot, String.valueOf(nextStripeIdLeft)).toPath(),
-                                    leftActive.toPath(),
-                                    StandardCopyOption.ATOMIC_MOVE);
+                                leftActive.toPath(),
+                                StandardCopyOption.ATOMIC_MOVE);
                             Files.move(new File(splittingRoot, String.valueOf(nextStripeIdRight)).toPath(),
-                                    rightActive.toPath(),
-                                    StandardCopyOption.ATOMIC_MOVE);
+                                rightActive.toPath(),
+                                StandardCopyOption.ATOMIC_MOVE);
 
-                            RangeStripe leftStripe = rangeStripeSet.loadStripe(left, largestIndexId);
-                            RangeStripe rightStripe = rangeStripeSet.loadStripe(right, largestIndexId);
+                            Stripe leftStripe = loadStripe(left);
+                            Stripe rightStripe = loadStripe(right);
                             synchronized (copyIndexOnWrite) {
                                 ConcurrentSkipListMap<byte[], FileBackMergableIndexes> copyOfIndexes = new ConcurrentSkipListMap<>(
-                                        rawhide.getKeyComparator());
+                                    rawhide.getKeyComparator());
                                 copyOfIndexes.putAll(indexes);
 
-                                for (Iterator<Entry<byte[], FileBackMergableIndexes>> iterator = copyOfIndexes.entrySet()
-                                        .iterator(); iterator.hasNext();
-                                ) {
+                                for (Iterator<Entry<byte[], FileBackMergableIndexes>> iterator = copyOfIndexes.entrySet().iterator(); iterator.hasNext();
+                                    ) {
                                     Entry<byte[], FileBackMergableIndexes> next = iterator.next();
                                     if (next.getValue() == self) {
                                         iterator.remove();
@@ -445,21 +546,19 @@ public class RangeStripedCompactableIndexes {
                                 }
                                 if (leftStripe != null && leftStripe.keyRange != null && leftStripe.keyRange.start != null) {
                                     copyOfIndexes.put(leftStripe.keyRange.start,
-                                            new FileBackMergableIndexes(destroy, largestStripeId, largestIndexId, root,
-                                                    indexName, nextStripeIdLeft,
-                                                    leftStripe.mergeableIndexes));
+                                        new FileBackMergableIndexes(destroy, largestStripeId, largestIndexId, root, indexName, nextStripeIdLeft,
+                                            leftStripe.mergeableIndexes));
                                 }
 
                                 if (rightStripe != null && rightStripe.keyRange != null && rightStripe.keyRange.start != null) {
                                     copyOfIndexes.put(rightStripe.keyRange.start,
-                                            new FileBackMergableIndexes(destroy, largestStripeId, largestIndexId, root,
-                                                    indexName, nextStripeIdRight,
-                                                    rightStripe.mergeableIndexes));
+                                        new FileBackMergableIndexes(destroy, largestStripeId, largestIndexId, root, indexName, nextStripeIdRight,
+                                            rightStripe.mergeableIndexes));
                                 }
                                 indexes = copyOfIndexes;
                                 indexesArray = copyOfIndexes.entrySet().toArray(new Entry[0]);
                             }
-                            compactableIndexes.destroy(destroy, labFiles);
+                            compactableIndexes.destroy();
                             FileUtils.deleteQuietly(mergingRoot);
                             FileUtils.deleteQuietly(commitingRoot);
                             FileUtils.deleteQuietly(splittingRoot);
@@ -469,19 +568,12 @@ public class RangeStripedCompactableIndexes {
                         } catch (Exception x) {
                             FileUtils.deleteQuietly(left);
                             FileUtils.deleteQuietly(right);
-                            LOG.error("Failed to split:{} became left:{} right:{}",
-                                    new Object[]{stripeRoot, left, right}, x);
+                            LOG.error("Failed to split:{} became left:{} right:{}", new Object[] { stripeRoot, left, right }, x);
                             throw x;
                         }
                     };
 
-                    Callable<Void> call = callback.call(leftHalfIndexFactory,
-                            rightHalfIndexFactory,
-                            commitIndex,
-                            fsync,
-                            destroy,
-                            labFiles);
-
+                    Callable<Void> call = callback.call(leftHalfIndexFactory, rightHalfIndexFactory, commitIndex, fsync);
                     return call.call();
 
                 } finally {
@@ -492,11 +584,7 @@ public class RangeStripedCompactableIndexes {
         }
 
         @Override
-        public Callable<Void> build(String rawhideName,
-                                    int minimumRun,
-                                    boolean fsync,
-                                    MergerBuilderCallback callback) throws Exception {
-
+        public Callable<Void> build(String rawhideName, int minimumRun, boolean fsync, MergerBuilderCallback callback) throws Exception {
             File indexRoot = new File(root, indexName);
             File stripeRoot = new File(indexRoot, String.valueOf(stripeId));
             File activeRoot = new File(stripeRoot, "active");
@@ -509,14 +597,14 @@ public class RangeStripedCompactableIndexes {
                 FileUtils.deleteQuietly(mergingIndexFile);
                 AppendOnlyFile appendOnlyFile = new AppendOnlyFile(mergingIndexFile);
                 return new LABAppendableIndex(stats.bytesWrittenAsMerge,
-                        id,
-                        appendOnlyFile,
-                        maxLeaps,
-                        entriesBetweenLeaps,
-                        rawhide,
-                        hashIndexType,
-                        hashIndexLoadFactor,
-                        tombstonedVersion);
+                    id,
+                    appendOnlyFile,
+                    maxLeaps,
+                    entriesBetweenLeaps,
+                    rawhide,
+                    hashIndexType,
+                    hashIndexLoadFactor,
+                    tombstonedVersion);
             };
 
             CommitIndex commitIndex = (ids) -> {
@@ -526,7 +614,7 @@ public class RangeStripedCompactableIndexes {
                 return moveIntoPlace(rawhideName, mergedIndexFile, file, ids.get(0));
             };
 
-            return callback.call(minimumRun, fsync, indexFactory, commitIndex, destroy, labFiles);
+            return callback.call(minimumRun, fsync, indexFactory, commitIndex);
         }
 
         private void auditRanges(String prefix, KeyToString keyToString) {
@@ -535,13 +623,25 @@ public class RangeStripedCompactableIndexes {
 
     }
 
+    private static class Stripe {
+
+        final KeyRange keyRange;
+        final CompactableIndexes mergeableIndexes;
+
+        public Stripe(KeyRange keyRange, CompactableIndexes mergeableIndexes) {
+            this.keyRange = keyRange;
+            this.mergeableIndexes = mergeableIndexes;
+        }
+
+    }
+
     public void append(String rawhideName,
-                       long appendVersion,
-                       LABMemoryIndex memoryIndex,
-                       boolean fsync,
-                       BolBuffer keyBuffer,
-                       BolBuffer entryBuffer,
-                       BolBuffer entryKeyBuffer) throws Exception {
+        long appendVersion,
+        LABMemoryIndex memoryIndex,
+        boolean fsync,
+        BolBuffer keyBuffer,
+        BolBuffer entryBuffer,
+        BolBuffer entryKeyBuffer) throws Exception {
 
         appendSemaphore.acquire();
         try {
@@ -551,19 +651,17 @@ public class RangeStripedCompactableIndexes {
             if (indexes.isEmpty()) {
                 long stripeId = largestStripeId.incrementAndGet();
                 FileBackMergableIndexes index = new FileBackMergableIndexes(destroy,
-                        largestStripeId,
-                        largestIndexId,
-                        root,
-                        primaryName,
-                        stripeId,
-                        new CompactableIndexes(stats, rawhide));
+                    largestStripeId,
+                    largestIndexId,
+                    root,
+                    primaryName,
+                    stripeId,
+                    new CompactableIndexes(stats, rawhide));
 
-                index.append(rawhideName, appendVersion, memoryIndex, null, null, fsync, keyBuffer, entryBuffer,
-                        entryKeyBuffer);
+                index.append(rawhideName, appendVersion, memoryIndex, null, null, fsync, keyBuffer, entryBuffer, entryKeyBuffer);
 
                 synchronized (copyIndexOnWrite) {
-                    ConcurrentSkipListMap<byte[], FileBackMergableIndexes> copyOfIndexes = new ConcurrentSkipListMap<>(
-                            rawhide.getKeyComparator());
+                    ConcurrentSkipListMap<byte[], FileBackMergableIndexes> copyOfIndexes = new ConcurrentSkipListMap<>(rawhide.getKeyComparator());
                     copyOfIndexes.putAll(indexes);
                     copyOfIndexes.put(minKey.bytes, index);
                     indexes = copyOfIndexes;
@@ -580,8 +678,7 @@ public class RangeStripedCompactableIndexes {
                 if (priorKey == null) {
                     FileBackMergableIndexes moved;
                     synchronized (copyIndexOnWrite) {
-                        ConcurrentSkipListMap<byte[], FileBackMergableIndexes> copyOfIndexes = new ConcurrentSkipListMap<>(
-                                rawhide.getKeyComparator());
+                        ConcurrentSkipListMap<byte[], FileBackMergableIndexes> copyOfIndexes = new ConcurrentSkipListMap<>(rawhide.getKeyComparator());
                         copyOfIndexes.putAll(indexes);
                         moved = copyOfIndexes.remove(tailMap.firstKey());
                         copyOfIndexes.put(minKey.bytes, moved);
@@ -602,14 +699,14 @@ public class RangeStripedCompactableIndexes {
                 } else {
                     if (memoryIndex.containsKeyInRange(priorEntry.getKey(), currentEntry.getKey())) {
                         priorEntry.getValue().append(rawhideName,
-                                appendVersion,
-                                memoryIndex,
-                                priorEntry.getKey(),
-                                currentEntry.getKey(),
-                                fsync,
-                                keyBuffer,
-                                entryBuffer,
-                                entryKeyBuffer);
+                            appendVersion,
+                            memoryIndex,
+                            priorEntry.getKey(),
+                            currentEntry.getKey(),
+                            fsync,
+                            keyBuffer,
+                            entryBuffer,
+                            entryKeyBuffer);
                     }
                     priorEntry = currentEntry;
                     if (keyComparator.compare(maxKey.bytes, currentEntry.getKey()) < 0) {
@@ -620,14 +717,14 @@ public class RangeStripedCompactableIndexes {
             }
             if (priorEntry != null && memoryIndex.containsKeyInRange(priorEntry.getKey(), null)) {
                 priorEntry.getValue().append(rawhideName,
-                        appendVersion,
-                        memoryIndex,
-                        priorEntry.getKey(),
-                        null,
-                        fsync,
-                        keyBuffer,
-                        entryBuffer,
-                        entryKeyBuffer);
+                    appendVersion,
+                    memoryIndex,
+                    priorEntry.getKey(),
+                    null,
+                    fsync,
+                    keyBuffer,
+                    entryBuffer,
+                    entryKeyBuffer);
             }
 
         } finally {
@@ -637,15 +734,15 @@ public class RangeStripedCompactableIndexes {
     }
 
     public boolean pointTx(Keys keys,
-                           long newerThanTimestamp,
-                           long newerThanTimestampVersion,
-                           ReadIndex reader,
-                           ReadIndex flushingReader,
-                           boolean hashIndexEnabled,
-                           boolean hydrateValues,
-                           BolBuffer streamKeyBuffer,
-                           BolBuffer streamValueBuffer,
-                           ValueStream valueStream) throws Exception {
+        long newerThanTimestamp,
+        long newerThanTimestampVersion,
+        ReadIndex reader,
+        ReadIndex flushingReader,
+        boolean hashIndexEnabled,
+        boolean hydrateValues,
+        BolBuffer streamKeyBuffer,
+        BolBuffer streamValueBuffer,
+        ValueStream valueStream) throws Exception {
 
         ReaderTx tx = (index, pointFrom, fromKey, toKey, acquired, hydrateValues1) -> {
             int active = (reader == null) ? 0 : 1;
@@ -673,13 +770,13 @@ public class RangeStripedCompactableIndexes {
     private static final ReadIndex[] EMPTY = new ReadIndex[0];
 
     public boolean rangeTx(int index,
-                           boolean pointFrom,
-                           byte[] from,
-                           byte[] to,
-                           long newerThanTimestamp,
-                           long newerThanTimestampVersion,
-                           ReaderTx tx,
-                           boolean hydrateValues) throws Exception {
+        boolean pointFrom,
+        byte[] from,
+        byte[] to,
+        long newerThanTimestamp,
+        long newerThanTimestampVersion,
+        ReaderTx tx,
+        boolean hydrateValues) throws Exception {
 
         Comparator<byte[]> comparator = rawhide.getKeyComparator();
 
@@ -726,9 +823,9 @@ public class RangeStripedCompactableIndexes {
                 try {
                     TimestampAndVersion timestampAndVersion = mergableIndex.compactableIndexes.maxTimeStampAndVersion();
                     if (rawhide.mightContain(timestampAndVersion.maxTimestamp,
-                            timestampAndVersion.maxTimestampVersion,
-                            newerThanTimestamp,
-                            newerThanTimestampVersion)) {
+                        timestampAndVersion.maxTimestampVersion,
+                        newerThanTimestamp,
+                        newerThanTimestampVersion)) {
                         streamed = true;
                         if (!mergableIndex.tx(index, pointFrom, start, end, tx, hydrateValues)) {
                             return false;
@@ -749,10 +846,10 @@ public class RangeStripedCompactableIndexes {
 
 
     private static int binarySearch(
-            Comparator<byte[]> comparator,
-            Entry<byte[], ?>[] a,
-            byte[] key,
-            int low) {
+        Comparator<byte[]> comparator,
+        Entry<byte[], ?>[] a,
+        byte[] key,
+        int low) {
 
         int high = a.length - 1;
 

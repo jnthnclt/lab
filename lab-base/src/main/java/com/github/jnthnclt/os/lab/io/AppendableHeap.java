@@ -38,6 +38,13 @@ public class AppendableHeap implements IAppendOnly {
         return newSrc;
     }
 
+    public byte[] getBytesAndReset() {
+        byte[] newSrc = new byte[maxLength];
+        System.arraycopy(bytes, 0, newSrc, 0, maxLength);
+        reset();
+        return newSrc;
+    }
+
 
     public byte[] leakBytes() {
         return bytes;

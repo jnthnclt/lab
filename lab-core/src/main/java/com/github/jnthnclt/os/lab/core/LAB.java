@@ -22,7 +22,6 @@ import com.github.jnthnclt.os.lab.core.guts.LABMemoryIndex;
 import com.github.jnthnclt.os.lab.core.guts.Leaps;
 import com.github.jnthnclt.os.lab.core.guts.RangeStripedCompactableIndexes;
 import com.github.jnthnclt.os.lab.core.guts.ReaderTx;
-import com.github.jnthnclt.os.lab.core.guts.ThreadState;
 import com.github.jnthnclt.os.lab.core.guts.api.KeyToString;
 import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.TombstonedVersion;
@@ -183,68 +182,51 @@ public class LAB implements ValueIndex<byte[]> {
     @Override
     public boolean pointRangeScan(byte[] from, byte[] to, ValueStream stream, boolean hydrateValues) throws Exception {
 
-        //To get from pool
-        ThreadState threadState = new ThreadState(32);
-
         if (from == null) {
             LOG.warn("Using pointRangeScan with null from is pointless. Using range scan instead.");
             return rangeScan(from, to, stream, hydrateValues);
         }
 
-        BolBuffer streamKeyBuffer = threadState.allocate();
-        BolBuffer streamValueBuffer = hydrateValues ? threadState.allocate() : null;
-        try {
+        BolBuffer streamKeyBuffer = new BolBuffer();
+        BolBuffer streamValueBuffer = hydrateValues ? new BolBuffer() : null;
 
-            ReaderTx readerTx = (index, pointFrom, fromKey, toKey, readIndexes, hydrateValues1) -> {
+        ReaderTx readerTx = (index, pointFrom, fromKey, toKey, readIndexes, hydrateValues1) -> {
 
-                InterleaveStream interleaveStream = new InterleaveStream(rawhide,
-                    ActiveScan.indexToFeeds(readIndexes, hashIndexEnabled, pointFrom, fromKey, toKey, rawhide, null));
-                try {
+            InterleaveStream interleaveStream = new InterleaveStream(rawhide,
+                ActiveScan.indexToFeeds(readIndexes, hashIndexEnabled, pointFrom, fromKey, toKey, rawhide, null));
+            try {
 
-                    while (true) {
-
-
-                        BolBuffer rawEntry = threadState.allocate();
-                        try {
-                            BolBuffer next = interleaveStream.next(rawEntry, null);
-                            if (next == null) {
-                                break;
-                            }
-                            if (!rawhide.streamRawEntry(index,
-                                next,
-                                streamKeyBuffer,
-                                streamValueBuffer,
-                                stream)) {
-                                return false;
-                            }
-                        } finally {
-                            threadState.recycle(rawEntry);
-                        }
+                while (true) {
+                    BolBuffer next = interleaveStream.next(new BolBuffer(), null);
+                    if (next == null) {
+                        break;
                     }
-                    return true;
-                } finally {
-                    interleaveStream.close();
+                    if (!rawhide.streamRawEntry(index,
+                        next,
+                        streamKeyBuffer,
+                        streamValueBuffer,
+                        stream)) {
+                        return false;
+                    }
                 }
-            };
+                return true;
+            } finally {
+                interleaveStream.close();
+            }
+        };
 
-           boolean r = rangeTx(true,
-                -1,
-                true,
-                from,
-                to,
-                -1,
-                -1,
-                readerTx,
-                hydrateValues
-            );
-            stats.pointRangeScan.increment();
-            return r;
-        } finally {
-            threadState.recycle(streamKeyBuffer);
-            threadState.recycle(streamValueBuffer);
-
-            // TODO recycle threadState
-        }
+        boolean r = rangeTx(true,
+            -1,
+            true,
+            from,
+            to,
+            -1,
+            -1,
+            readerTx,
+            hydrateValues
+        );
+        stats.pointRangeScan.increment();
+        return r;
     }
 
     @Override
@@ -847,7 +829,7 @@ public class LAB implements ValueIndex<byte[]> {
             return Collections.emptyList();
         }
         if (ongoingCompactions.incrementAndGet() != 1) {
-            System.out.println("ongoingCompactions:"+ongoingCompactions.decrementAndGet());
+            LOG.info("ongoingCompactions:"+ongoingCompactions.decrementAndGet());
             return Collections.emptyList();
         }
         try {

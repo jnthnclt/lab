@@ -73,7 +73,7 @@ public class LABIndexProvider<T> {
             LABRawhide.NAME,
             MemoryRawEntryFormat.NAME,
             28,
-            LABHashIndexType.linearProbe,
+            LABHashIndexType.fibCuckoo,
             2d,
             true,
             Long.MAX_VALUE));
