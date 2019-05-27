@@ -1,6 +1,8 @@
 package com.github.jnthnclt.os.lab.bitrank;
 
 import com.github.jnthnclt.os.lab.base.UIO;
+import com.github.jnthnclt.os.lab.core.LABEnvironmentBuilder;
+import com.github.jnthnclt.os.lab.core.LABHeapPressureBuilder;
 import com.github.jnthnclt.os.lab.core.LABIndexProvider;
 import com.github.jnthnclt.os.lab.core.LABStats;
 import com.github.jnthnclt.os.lab.core.guts.LABFiles;
@@ -391,7 +393,12 @@ public class BitRank {
         AtomicLong globalHeapCostInBytes = new AtomicLong();
         LABStats stats = new LABStats(globalHeapCostInBytes);
         LABFiles labFiles = new LABFiles();
-        LABIndexProvider labIndexProvider = new LABIndexProvider(globalHeapCostInBytes, stats, labFiles);
+
+        LABHeapPressureBuilder labHeapPressureBuilder = new LABHeapPressureBuilder(globalHeapCostInBytes);
+        LABEnvironmentBuilder labEnvironmentBuilder = new LABEnvironmentBuilder().setLABFiles(labFiles);
+        LABIndexProvider<byte[]> labIndexProvider = new LABIndexProvider<>(stats,
+                labHeapPressureBuilder,
+                labEnvironmentBuilder);
         return new LABSearchIndex(labIndexProvider, root);
     }
 

@@ -8,4 +8,6 @@ public interface ValueIndex<P> extends ReadValueIndex, AppendableValuesIndex<P> 
 
     int debt() throws Exception;
 
+    boolean closed();
+
 }

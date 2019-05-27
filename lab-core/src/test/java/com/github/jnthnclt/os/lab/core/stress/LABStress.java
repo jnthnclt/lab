@@ -288,13 +288,13 @@ public class LABStress {
         while ((writeCount > 0 && totalWrites < writeCount) || (readCount > 0 && totalReads < readCount)) {
 
 
-            if (!files.isEmpty()) {
-                files.take((addedFiles, removedFiles) -> {
-                    System.out.println("Added:" + Lists.newArrayList(addedFiles));
-                    System.out.println("Removed:" + Lists.newArrayList(removedFiles));
-                    return true;
-                });
-            }
+//            if (!files.isEmpty()) {
+//                files.take((addedFiles, removedFiles) -> {
+//                    System.out.println("Added:" + Lists.newArrayList(addedFiles));
+//                    System.out.println("Removed:" + Lists.newArrayList(removedFiles));
+//                    return true;
+//                });
+//            }
 
             long start = System.currentTimeMillis();
             long writeElapse = 0;

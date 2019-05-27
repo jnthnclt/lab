@@ -22,6 +22,7 @@ public class ReadOnlyIndex implements ReadIndex {
     private static final AtomicLong CACHE_KEYS = new AtomicLong();
     private final IndexRangeId id;
     private final ReadOnlyFile readOnlyFile;
+    private final byte[] labId;
     private final LABFiles labFiles;
     private final ExecutorService destroy;
     private final AtomicBoolean disposed = new AtomicBoolean(false);
@@ -40,13 +41,14 @@ public class ReadOnlyIndex implements ReadIndex {
 
     private final long cacheKey = CACHE_KEYS.incrementAndGet();
 
-    public ReadOnlyIndex(LABFiles labFiles,
+    public ReadOnlyIndex(byte[] labId,
+        LABFiles labFiles,
         ExecutorService destroy,
         IndexRangeId id,
         ReadOnlyFile readOnlyFile,
         Rawhide rawhide,
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache) throws Exception {
-
+        this.labId = labId;
         this.labFiles = labFiles;
         this.destroy = destroy;
         this.id = id;
@@ -234,7 +236,7 @@ public class ReadOnlyIndex implements ReadIndex {
                 disposed.set(true);
                 try {
                     if (labFiles != null) {
-                        labFiles.delete(readOnlyFile.getFile());
+                        labFiles.delete(labId, readOnlyFile.getFile());
                     }
                     readOnlyFile.close();
                     readOnlyFile.delete();

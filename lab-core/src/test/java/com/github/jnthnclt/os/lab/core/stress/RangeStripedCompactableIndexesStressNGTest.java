@@ -199,7 +199,7 @@ public class RangeStripedCompactableIndexesStressNGTest {
                     new StripingBolBufferLocks(1024)
                 ));
             long lastKey = TestUtils.append(rand, index, 0, maxKeyIncrement, batchSize, null, keyBuffer);
-            indexs.append("test", 0, index, fsync, keyBuffer, entryBuffer, entryKeyBuffer);
+            indexs.append("test", 0, 0, index, fsync, keyBuffer, entryBuffer, entryKeyBuffer);
 
             int debt = indexs.debt();
             if (debt < minMergeDebt) {

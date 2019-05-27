@@ -24,12 +24,33 @@ import com.github.jnthnclt.os.lab.log.LABLogger;
 import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.text.DecimalFormat;
 import java.util.Comparator;
 import java.util.Iterator;
 
 public class UIO {
 
     private static final LABLogger LOG = LABLoggerFactory.getLogger();
+
+    static final DecimalFormat df = new DecimalFormat("0.0");
+
+    public static String ram(long _bytes) {
+        if (_bytes < 0L) {
+            return "0";
+        } else if (_bytes < 1024L) {
+            return _bytes + "b";
+        } else if (_bytes < 1048576L) {
+            return _bytes / 1024L + "kb";
+        } else if (_bytes < 1073741824L) {
+            return df.format((double)_bytes / 1048576.0D) + "mb";
+        } else if (_bytes < 1099511627776L) {
+            return df.format((double)_bytes / 1.073741824E9D) + "gb";
+        } else if (_bytes < 1125899906842624L) {
+            return df.format((double)_bytes / 1.099511627776E12D) + "tb";
+        } else {
+            return _bytes < 1152921504606846976L ? df.format((double)_bytes / 1.125899906842624E15D) + "pb" : "" + _bytes;
+        }
+    }
 
     private static void writeLength(IAppendOnly _filer, int l) throws IOException {
         _filer.appendInt(l);

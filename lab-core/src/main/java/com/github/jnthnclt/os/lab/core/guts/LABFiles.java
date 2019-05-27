@@ -2,76 +2,87 @@ package com.github.jnthnclt.os.lab.core.guts;
 
 import java.io.File;
 import java.util.Arrays;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class LABFiles {
 
-    private final Semaphore semaphore = new Semaphore(Short.MAX_VALUE);
+    private final ConcurrentLinkedQueue<AppendedFile> changes = new ConcurrentLinkedQueue<>();
+    private final AtomicLong version = new AtomicLong();
 
-    private final AtomicReference<Queue<AppendedFile>> appendedFiles = new AtomicReference<>(new ConcurrentLinkedQueue<>());
-    private final AtomicReference<Queue<File>> removedFiles = new AtomicReference<>(new ConcurrentLinkedQueue<>());
-
-    public void add(byte[] labId, long appendedVersion, File file) throws InterruptedException {
-        semaphore.acquire(1);
-        try {
-            appendedFiles.get().add(new AppendedFile(labId, appendedVersion, file));
-        } finally {
-            semaphore.release(1);
+    public void add(byte[] labId,
+                    long fromAppendVersion,
+                    long toAppendVersion,
+                    File file) {
+        synchronized (version) {
+            changes.add(new AppendedFile(labId, fromAppendVersion, toAppendVersion, file, false));
+            version.incrementAndGet();
+            version.notifyAll();
         }
     }
 
+    public void delete(byte[] labId, File file) {
+        synchronized (version) {
+            changes.add(new AppendedFile(labId, -1,-1, file, true));
+            version.incrementAndGet();
+            version.notifyAll();
+        }
+    }
+
+    public interface LABFileChanges {
+        boolean took(AppendedFile change) throws Exception;
+    }
+
+    public void take(LABFileChanges labFileChanges) throws Exception {
+        while (true) {
+            long v = version.get();
+            AppendedFile change = changes.poll();
+            if (!labFileChanges.took(change)) {
+                if (change != null) {
+                    changes.add(change);
+                }
+                return;
+            }
+            if (change == null) {
+                synchronized (version) {
+                    if (v == version.get()) {
+                        version.wait(1000);
+                    }
+                }
+            }
+        }
+    }
+
+
     public static class AppendedFile {
         public final byte[] labId;
-        public final long appendVersion;
+        public final long fromAppendVersion;
+        public final long toAppendVersion;
         public final File file;
+        public final boolean delete;
 
-        public AppendedFile(byte[] labId, long appendVersion, File file) {
+        public AppendedFile(byte[] labId,
+                            long fromAppendVersion,
+                            long toAppendVersion,
+                            File file,
+                            boolean delete) {
             this.labId = labId;
-            this.appendVersion = appendVersion;
+            this.fromAppendVersion = fromAppendVersion;
+            this.toAppendVersion = toAppendVersion;
             this.file = file;
+            this.delete = delete;
         }
 
         @Override
         public String toString() {
             return "AppendedFile{" +
-                "labId=" + Arrays.toString(labId) +
-                ", appendVersion=" + appendVersion +
-                ", file=" + file +
-                '}';
+                    "labId=" + Arrays.toString(labId) +
+                    ", fromAppendVersion=" + fromAppendVersion +
+                    ", toAppendVersion=" + toAppendVersion +
+                    ", file=" + file +
+                    ", delete=" + delete +
+                    '}';
         }
     }
-
-    public void delete(File file) throws InterruptedException {
-        semaphore.acquire(1);
-        try {
-            removedFiles.get().add(file);
-        } finally {
-            semaphore.release(1);
-        }
-    }
-
-    public interface LABFileChanges {
-        boolean took(Queue<AppendedFile> appendedFiles, Queue<File> removedFiles) throws Exception;
-    }
-
-    public void take(LABFileChanges labFileChanges) throws Exception {
-        Queue<AppendedFile> appended;
-        Queue<File> removed;
-        semaphore.acquire(Short.MAX_VALUE);
-        try {
-            appended = appendedFiles.getAndSet(new ConcurrentLinkedQueue<>());
-            removed = removedFiles.getAndSet(new ConcurrentLinkedQueue<>());
-        } finally {
-            semaphore.release(Short.MAX_VALUE);
-        }
-        labFileChanges.took(appended, removed);
-    }
-
-    public boolean isEmpty() {
-        return appendedFiles.get().isEmpty() && removedFiles.get().isEmpty();
-    }
-
 }

@@ -27,6 +27,7 @@ import com.github.jnthnclt.os.lab.core.guts.api.ReadIndex;
 import com.github.jnthnclt.os.lab.core.guts.api.TombstonedVersion;
 import com.github.jnthnclt.os.lab.log.LABLogger;
 import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -69,8 +70,10 @@ public class LAB implements ValueIndex<byte[]> {
     private final Semaphore commitSemaphore = new Semaphore(Short.MAX_VALUE, true);
     private final CompactLock compactLock = new CompactLock();
     private final AtomicLong ongoingCompactions = new AtomicLong();
+    private final AtomicBoolean closed = new AtomicBoolean(false);
     private final AtomicBoolean closeRequested = new AtomicBoolean(false);
 
+    private volatile long memoryIndexInitialAppendVersion;
     private volatile LABMemoryIndex memoryIndex;
     private volatile LABMemoryIndex flushingMemoryIndex;
     private volatile boolean corrupt = false;
@@ -85,31 +88,31 @@ public class LAB implements ValueIndex<byte[]> {
     private volatile long lastCommitTimestamp = System.currentTimeMillis();
 
     public LAB(LABStats stats,
-        String rawhideName,
-        Rawhide rawhide,
-        ExecutorService schedule,
-        ExecutorService compact,
-        ExecutorService destroy,
-        File root,
-        LABWAL wal,
-        byte[] labId,
-        String primaryName,
-        int entriesBetweenLeaps,
-        LABHeapPressure heapPressure,
-        long maxHeapPressureInBytes,
-        int minDebt,
-        int maxDebt,
-        long splitWhenKeysTotalExceedsNBytes,
-        long splitWhenValuesTotalExceedsNBytes,
-        long splitWhenValuesAndKeysTotalExceedsNBytes,
-        LRUConcurrentBAHLinkedHash<Leaps> leapsCache,
-        LABMapProvider<BolBuffer, BolBuffer> indexProvider,
-        boolean fsyncFileRenames,
-        LABHashIndexType hashIndexType,
-        double hashIndexLoadFactor,
-        boolean hashIndexEnabled,
-        TombstonedVersion tombstonedVersion,
-        LABFiles labFiles) throws Exception {
+               String rawhideName,
+               Rawhide rawhide,
+               ExecutorService schedule,
+               ExecutorService compact,
+               ExecutorService destroy,
+               File root,
+               LABWAL wal,
+               byte[] labId,
+               String primaryName,
+               int entriesBetweenLeaps,
+               LABHeapPressure heapPressure,
+               long maxHeapPressureInBytes,
+               int minDebt,
+               int maxDebt,
+               long splitWhenKeysTotalExceedsNBytes,
+               long splitWhenValuesTotalExceedsNBytes,
+               long splitWhenValuesAndKeysTotalExceedsNBytes,
+               LRUConcurrentBAHLinkedHash<Leaps> leapsCache,
+               LABMapProvider<BolBuffer, BolBuffer> indexProvider,
+               boolean fsyncFileRenames,
+               LABHashIndexType hashIndexType,
+               double hashIndexLoadFactor,
+               boolean hashIndexEnabled,
+               TombstonedVersion tombstonedVersion,
+               LABFiles labFiles) throws Exception {
 
         stats.open.increment();
 
@@ -123,24 +126,25 @@ public class LAB implements ValueIndex<byte[]> {
         this.labId = labId;
         this.heapPressure = heapPressure;
         this.maxHeapPressureInBytes = maxHeapPressureInBytes;
+        this.memoryIndexInitialAppendVersion = appendVersion.incrementAndGet();
         this.memoryIndex = new LABMemoryIndex(destroy, heapPressure, stats, rawhide, indexProvider.create(rawhide, -1));
         this.primaryName = primaryName;
         this.rangeStripedCompactableIndexes = new RangeStripedCompactableIndexes(labId,
-            stats,
-            labFiles,
-            destroy,
-            root,
-            primaryName,
-            entriesBetweenLeaps,
-            splitWhenKeysTotalExceedsNBytes,
-            splitWhenValuesTotalExceedsNBytes,
-            splitWhenValuesAndKeysTotalExceedsNBytes,
-            rawhide,
-            leapsCache,
-            fsyncFileRenames,
-            hashIndexType,
-            hashIndexLoadFactor,
-            tombstonedVersion);
+                stats,
+                labFiles,
+                destroy,
+                root,
+                primaryName,
+                entriesBetweenLeaps,
+                splitWhenKeysTotalExceedsNBytes,
+                splitWhenValuesTotalExceedsNBytes,
+                splitWhenValuesAndKeysTotalExceedsNBytes,
+                rawhide,
+                leapsCache,
+                fsyncFileRenames,
+                hashIndexType,
+                hashIndexLoadFactor,
+                tombstonedVersion);
         this.minDebt = minDebt;
         this.maxDebt = maxDebt;
         this.indexProvider = indexProvider;
@@ -163,17 +167,22 @@ public class LAB implements ValueIndex<byte[]> {
     }
 
     @Override
+    public boolean closed() {
+        return closed.get();
+    }
+
+    @Override
     public boolean get(Keys keys, ValueStream stream, boolean hydrateValues) throws Exception {
         BolBuffer streamKeyBuffer = new BolBuffer();
         BolBuffer streamValueBuffer = hydrateValues ? new BolBuffer() : null;
 
         boolean b = pointTx(keys,
-            -1,
-            -1,
-            streamKeyBuffer,
-            streamValueBuffer,
-            stream,
-            hydrateValues
+                -1,
+                -1,
+                streamKeyBuffer,
+                streamValueBuffer,
+                stream,
+                hydrateValues
         );
         stats.gets.increment();
         return b;
@@ -193,7 +202,7 @@ public class LAB implements ValueIndex<byte[]> {
         ReaderTx readerTx = (index, pointFrom, fromKey, toKey, readIndexes, hydrateValues1) -> {
 
             InterleaveStream interleaveStream = new InterleaveStream(rawhide,
-                ActiveScan.indexToFeeds(readIndexes, hashIndexEnabled, pointFrom, fromKey, toKey, rawhide, null));
+                    ActiveScan.indexToFeeds(readIndexes, hashIndexEnabled, pointFrom, fromKey, toKey, rawhide, null));
             try {
 
                 while (true) {
@@ -202,10 +211,10 @@ public class LAB implements ValueIndex<byte[]> {
                         break;
                     }
                     if (!rawhide.streamRawEntry(index,
-                        next,
-                        streamKeyBuffer,
-                        streamValueBuffer,
-                        stream)) {
+                            next,
+                            streamKeyBuffer,
+                            streamValueBuffer,
+                            stream)) {
                         return false;
                     }
                 }
@@ -216,14 +225,14 @@ public class LAB implements ValueIndex<byte[]> {
         };
 
         boolean r = rangeTx(true,
-            -1,
-            true,
-            from,
-            to,
-            -1,
-            -1,
-            readerTx,
-            hydrateValues
+                -1,
+                true,
+                from,
+                to,
+                -1,
+                -1,
+                readerTx,
+                hydrateValues
         );
         stats.pointRangeScan.increment();
         return r;
@@ -237,7 +246,7 @@ public class LAB implements ValueIndex<byte[]> {
         ReaderTx readerTx = (index, pointFrom, fromKey, toKey, readIndexes, hydrateValues1) -> {
 
             InterleaveStream interleaveStream = new InterleaveStream(rawhide,
-                ActiveScan.indexToFeeds(readIndexes, false, false, fromKey, toKey, rawhide, null));
+                    ActiveScan.indexToFeeds(readIndexes, false, false, fromKey, toKey, rawhide, null));
             try {
 
                 while (true) {
@@ -246,10 +255,10 @@ public class LAB implements ValueIndex<byte[]> {
                         break;
                     }
                     if (!rawhide.streamRawEntry(index,
-                        next,
-                        streamKeyBuffer,
-                        streamValueBuffer,
-                        stream)) {
+                            next,
+                            streamKeyBuffer,
+                            streamValueBuffer,
+                            stream)) {
                         return false;
                     }
                 }
@@ -259,8 +268,8 @@ public class LAB implements ValueIndex<byte[]> {
             }
         };
         boolean r = rangeTx(true, -1, false, from, to, -1, -1,
-            readerTx,
-            hydrateValues
+                readerTx,
+                hydrateValues
         );
         stats.rangeScan.increment();
         return r;
@@ -272,30 +281,30 @@ public class LAB implements ValueIndex<byte[]> {
         BolBuffer streamValueBuffer = hydrateValues ? new BolBuffer() : null;
         boolean r = ranges.ranges((index, from, to) -> {
             return rangeTx(true, index, false, from, to, -1, -1,
-                (index1, pointFrom1, fromKey, toKey, readIndexes, hydrateValues1) -> {
+                    (index1, pointFrom1, fromKey, toKey, readIndexes, hydrateValues1) -> {
 
-                    InterleaveStream interleaveStream = new InterleaveStream(rawhide,
-                        ActiveScan.indexToFeeds(readIndexes, false, false, fromKey, toKey, rawhide, null));
-                    try {
-                        while (true) {
-                            BolBuffer next = interleaveStream.next(new BolBuffer(), null);
-                            if (next == null) {
-                                break;
+                        InterleaveStream interleaveStream = new InterleaveStream(rawhide,
+                                ActiveScan.indexToFeeds(readIndexes, false, false, fromKey, toKey, rawhide, null));
+                        try {
+                            while (true) {
+                                BolBuffer next = interleaveStream.next(new BolBuffer(), null);
+                                if (next == null) {
+                                    break;
+                                }
+                                if (!rawhide.streamRawEntry(index,
+                                        next,
+                                        streamKeyBuffer,
+                                        streamValueBuffer,
+                                        stream)) {
+                                    return false;
+                                }
                             }
-                            if (!rawhide.streamRawEntry(index,
-                                next,
-                                streamKeyBuffer,
-                                streamValueBuffer,
-                                stream)) {
-                                return false;
-                            }
+                            return true;
+                        } finally {
+                            interleaveStream.close();
                         }
-                        return true;
-                    } finally {
-                        interleaveStream.close();
-                    }
-                },
-                hydrateValues
+                    },
+                    hydrateValues
             );
         });
         stats.multiRangeScan.increment();
@@ -317,94 +326,94 @@ public class LAB implements ValueIndex<byte[]> {
 
 
         boolean r = rangeTx(true,
-            -1,
-            false,
-            SMALLEST_POSSIBLE_KEY,
-            null,
-            -1,
-            -1,
-            (index, pointFrom, fromKey, toKey, readIndexes, hydrateValues1) -> {
+                -1,
+                false,
+                SMALLEST_POSSIBLE_KEY,
+                null,
+                -1,
+                -1,
+                (index, pointFrom, fromKey, toKey, readIndexes, hydrateValues1) -> {
 
-                AtomicBoolean eos = new AtomicBoolean();
+                    AtomicBoolean eos = new AtomicBoolean();
 
-                PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds = ActiveScan.indexToFeeds(readIndexes,
-                    false, false, fromKey, toKey, rawhide, keyHint[0]);
-                InterleaveStream interleaveStream = new InterleaveStream(rawhide, interleavingStreamFeeds);
+                    PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds = ActiveScan.indexToFeeds(readIndexes,
+                            false, false, fromKey, toKey, rawhide, keyHint[0]);
+                    InterleaveStream interleaveStream = new InterleaveStream(rawhide, interleavingStreamFeeds);
 
-                try {
+                    try {
 
-                    while (true) {
-                        if (keyHint[0] == null) {
-                            return true;
-                        }
+                        while (true) {
+                            if (keyHint[0] == null) {
+                                return true;
+                            }
 
-                        if (lastNext[0] != null) {
-                            int c = rawhide.compareKey(lastNext[0], keyBuffer, keyHint[0]);
-                            if (c == 0) {
-                                BolBuffer next = lastNext[0];
+                            if (lastNext[0] != null) {
+                                int c = rawhide.compareKey(lastNext[0], keyBuffer, keyHint[0]);
+                                if (c == 0) {
+                                    BolBuffer next = lastNext[0];
+                                    lastNext[0] = null;
+                                    if (!rawhide.streamRawEntry(index,
+                                            next,
+                                            streamKeyBuffer,
+                                            streamValueBuffer,
+                                            stream)) {
+                                        return false;
+                                    }
+                                    keyHint[0] = keys.nextKey();
+                                    continue;
+                                } else if (c > 0) {
+                                    if (!rawhide.streamRawEntry(index,
+                                            null,
+                                            streamKeyBuffer,
+                                            streamValueBuffer,
+                                            stream)) {
+                                        return false;
+                                    }
+                                    keyHint[0] = keys.nextKey();
+                                    continue;
+                                }
+                            }
+
+                            BolBuffer rawEntry = new BolBuffer();
+                            BolBuffer next = interleaveStream.next(rawEntry, keyHint[0]);
+                            if (next == null) {
+                                return true;
+                            }
+                            if (rawhide.compareKey(next, keyBuffer, keyHint[0]) == 0) {
                                 lastNext[0] = null;
                                 if (!rawhide.streamRawEntry(index,
-                                    next,
-                                    streamKeyBuffer,
-                                    streamValueBuffer,
-                                    stream)) {
+                                        next,
+                                        streamKeyBuffer,
+                                        streamValueBuffer,
+                                        stream)) {
                                     return false;
                                 }
-                                keyHint[0] = keys.nextKey();
-                                continue;
-                            } else if (c > 0) {
+                            } else {
+                                lastNext[0] = next;
                                 if (!rawhide.streamRawEntry(index,
-                                    null,
-                                    streamKeyBuffer,
-                                    streamValueBuffer,
-                                    stream)) {
+                                        null,
+                                        streamKeyBuffer,
+                                        streamValueBuffer,
+                                        stream)) {
                                     return false;
                                 }
-                                keyHint[0] = keys.nextKey();
-                                continue;
                             }
+                            keyHint[0] = keys.nextKey();
                         }
 
-                        BolBuffer rawEntry = new BolBuffer();
-                        BolBuffer next = interleaveStream.next(rawEntry, keyHint[0]);
-                        if (next == null) {
-                            return true;
-                        }
-                        if (rawhide.compareKey(next, keyBuffer, keyHint[0]) == 0) {
-                            lastNext[0] = null;
-                            if (!rawhide.streamRawEntry(index,
-                                next,
-                                streamKeyBuffer,
-                                streamValueBuffer,
-                                stream)) {
-                                return false;
-                            }
-                        } else {
-                            lastNext[0] = next;
-                            if (!rawhide.streamRawEntry(index,
-                                null,
-                                streamKeyBuffer,
-                                streamValueBuffer,
-                                stream)) {
-                                return false;
-                            }
-                        }
-                        keyHint[0] = keys.nextKey();
+                    } finally {
+                        interleaveStream.close();
                     }
-
-                } finally {
-                    interleaveStream.close();
-                }
-            },
-            hydrateValues
+                },
+                hydrateValues
         );
 
         while (keyHint[0] != null) {
             if (!rawhide.streamRawEntry(-1,
-                null,
-                streamKeyBuffer,
-                streamValueBuffer,
-                stream)) {
+                    null,
+                    streamKeyBuffer,
+                    streamValueBuffer,
+                    stream)) {
                 return false;
             }
             keyHint[0] = keys.nextKey();
@@ -419,42 +428,42 @@ public class LAB implements ValueIndex<byte[]> {
         BolBuffer streamKeyBuffer = new BolBuffer();
         BolBuffer streamValueBuffer = hydrateValues ? new BolBuffer() : null;
         boolean r = rangeTx(true,
-            -1,
-            false,
-            SMALLEST_POSSIBLE_KEY,
-            null,
-            -1,
-            -1,
-            (index, pointFrom, fromKey, toKey, readIndexes, hydrateValues1) -> {
+                -1,
+                false,
+                SMALLEST_POSSIBLE_KEY,
+                null,
+                -1,
+                -1,
+                (index, pointFrom, fromKey, toKey, readIndexes, hydrateValues1) -> {
 
-                PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds = ActiveScan.indexToFeeds(readIndexes,
-                    false,
-                    false,
-                    fromKey,
-                    toKey,
-                    rawhide,
-                    null);
-                InterleaveStream interleaveStream = new InterleaveStream(rawhide, interleavingStreamFeeds);
-                try {
-                    BolBuffer rawEntry = new BolBuffer();
-                    while (true) {
-                        BolBuffer next = interleaveStream.next(rawEntry, null);
-                        if (next == null) {
-                            return true;
+                    PriorityQueue<InterleavingStreamFeed> interleavingStreamFeeds = ActiveScan.indexToFeeds(readIndexes,
+                            false,
+                            false,
+                            fromKey,
+                            toKey,
+                            rawhide,
+                            null);
+                    InterleaveStream interleaveStream = new InterleaveStream(rawhide, interleavingStreamFeeds);
+                    try {
+                        BolBuffer rawEntry = new BolBuffer();
+                        while (true) {
+                            BolBuffer next = interleaveStream.next(rawEntry, null);
+                            if (next == null) {
+                                return true;
+                            }
+                            if (!rawhide.streamRawEntry(index,
+                                    next,
+                                    streamKeyBuffer,
+                                    streamValueBuffer,
+                                    stream)) {
+                                return false;
+                            }
                         }
-                        if (!rawhide.streamRawEntry(index,
-                            next,
-                            streamKeyBuffer,
-                            streamValueBuffer,
-                            stream)) {
-                            return false;
-                        }
+                    } finally {
+                        interleaveStream.close();
                     }
-                } finally {
-                    interleaveStream.close();
-                }
-            },
-            hydrateValues
+                },
+                hydrateValues
         );
         stats.rowScan.increment();
         return r;
@@ -475,7 +484,8 @@ public class LAB implements ValueIndex<byte[]> {
         LABMemoryIndex stackCopyMemoryIndex = memoryIndex;
 
         return memoryIndex.sizeInBytes()
-            + ((stackCopyFlushingMemoryIndex != null && stackCopyFlushingMemoryIndex != stackCopyMemoryIndex) ? stackCopyFlushingMemoryIndex.sizeInBytes() : 0);
+                + ((stackCopyFlushingMemoryIndex != null && stackCopyFlushingMemoryIndex != stackCopyMemoryIndex) ? stackCopyFlushingMemoryIndex
+                .sizeInBytes() : 0);
     }
 
     public long lastAppendTimestamp() {
@@ -487,12 +497,12 @@ public class LAB implements ValueIndex<byte[]> {
     }
 
     private boolean pointTx(Keys keys,
-        long newerThanTimestamp,
-        long newerThanTimestampVersion,
-        BolBuffer streamKeyBuffer,
-        BolBuffer streamValueBuffer,
-        ValueStream valueStream,
-        boolean hydrateValues) throws Exception {
+                            long newerThanTimestamp,
+                            long newerThanTimestampVersion,
+                            BolBuffer streamKeyBuffer,
+                            BolBuffer streamValueBuffer,
+                            ValueStream valueStream,
+                            boolean hydrateValues) throws Exception {
 
         ReadIndex memoryIndexReader = null;
         ReadIndex flushingMemoryIndexReader = null;
@@ -514,7 +524,8 @@ public class LAB implements ValueIndex<byte[]> {
                     memoryIndexReader = memoryIndexStackCopy.acquireReader();
                     if (memoryIndexReader != null) {
                         if (flushingMemoryIndexStackCopy != null) {
-                            if (flushingMemoryIndexStackCopy.mightContain(newerThanTimestamp, newerThanTimestampVersion)) {
+                            if (flushingMemoryIndexStackCopy.mightContain(newerThanTimestamp,
+                                    newerThanTimestampVersion)) {
                                 flushingMemoryIndexReader = flushingMemoryIndexStackCopy.acquireReader();
                                 if (flushingMemoryIndexReader != null) {
                                     break;
@@ -544,15 +555,15 @@ public class LAB implements ValueIndex<byte[]> {
             }
 
             return rangeStripedCompactableIndexes.pointTx(keys,
-                newerThanTimestamp,
-                newerThanTimestampVersion,
-                memoryIndexReader,
-                flushingMemoryIndexReader,
-                hashIndexEnabled,
-                hydrateValues,
-                streamKeyBuffer,
-                streamValueBuffer,
-                valueStream);
+                    newerThanTimestamp,
+                    newerThanTimestampVersion,
+                    memoryIndexReader,
+                    flushingMemoryIndexReader,
+                    hashIndexEnabled,
+                    hydrateValues,
+                    streamKeyBuffer,
+                    streamValueBuffer,
+                    valueStream);
         } finally {
             if (memoryIndexReader != null) {
                 memoryIndexReader.release();
@@ -564,14 +575,14 @@ public class LAB implements ValueIndex<byte[]> {
     }
 
     private boolean rangeTx(boolean acquireCommitSemaphore,
-        int index,
-        boolean pointFrom,
-        byte[] from,
-        byte[] to,
-        long newerThanTimestamp,
-        long newerThanTimestampVersion,
-        ReaderTx tx,
-        boolean hydrateValues) throws Exception {
+                            int index,
+                            boolean pointFrom,
+                            byte[] from,
+                            byte[] to,
+                            long newerThanTimestamp,
+                            long newerThanTimestampVersion,
+                            ReaderTx tx,
+                            boolean hydrateValues) throws Exception {
 
         ReadIndex memoryIndexReader = null;
         ReadIndex flushingMemoryIndexReader = null;
@@ -597,7 +608,8 @@ public class LAB implements ValueIndex<byte[]> {
                     memoryIndexReader = memoryIndexStackCopy.acquireReader();
                     if (memoryIndexReader != null) {
                         if (flushingMemoryIndexStackCopy != null) {
-                            if (flushingMemoryIndexStackCopy.mightContain(newerThanTimestamp, newerThanTimestampVersion)) {
+                            if (flushingMemoryIndexStackCopy.mightContain(newerThanTimestamp,
+                                    newerThanTimestampVersion)) {
                                 flushingMemoryIndexReader = flushingMemoryIndexStackCopy.acquireReader();
                                 if (flushingMemoryIndexReader != null) {
                                     break;
@@ -626,27 +638,27 @@ public class LAB implements ValueIndex<byte[]> {
             ReadIndex reader = memoryIndexReader;
             ReadIndex flushingReader = flushingMemoryIndexReader;
             return rangeStripedCompactableIndexes.rangeTx(index,
-                pointFrom,
-                from,
-                to,
-                newerThanTimestamp,
-                newerThanTimestampVersion,
-                (index1, pointFrom1, fromKey, toKey, acquired, hydrateValues1) -> {
-                    int active = (reader == null) ? 0 : 1;
-                    int flushing = (flushingReader == null) ? 0 : 1;
-                    ReadIndex[] indexes = new ReadIndex[acquired.length + active + flushing];
-                    int i = 0;
-                    if (reader != null) {
-                        indexes[i] = reader;
-                        i++;
-                    }
-                    if (flushingReader != null) {
-                        indexes[i] = flushingReader;
-                    }
-                    System.arraycopy(acquired, 0, indexes, active + flushing, acquired.length);
-                    return tx.tx(index1, pointFrom1, fromKey, toKey, indexes, hydrateValues1);
-                },
-                hydrateValues
+                    pointFrom,
+                    from,
+                    to,
+                    newerThanTimestamp,
+                    newerThanTimestampVersion,
+                    (index1, pointFrom1, fromKey, toKey, acquired, hydrateValues1) -> {
+                        int active = (reader == null) ? 0 : 1;
+                        int flushing = (flushingReader == null) ? 0 : 1;
+                        ReadIndex[] indexes = new ReadIndex[acquired.length + active + flushing];
+                        int i = 0;
+                        if (reader != null) {
+                            indexes[i] = reader;
+                            i++;
+                        }
+                        if (flushingReader != null) {
+                            indexes[i] = flushingReader;
+                        }
+                        System.arraycopy(acquired, 0, indexes, active + flushing, acquired.length);
+                        return tx.tx(index1, pointFrom1, fromKey, toKey, indexes, hydrateValues1);
+                    },
+                    hydrateValues
             );
         } finally {
             if (memoryIndexReader != null) {
@@ -661,28 +673,28 @@ public class LAB implements ValueIndex<byte[]> {
 
     @Override
     public long append(AppendValues<byte[]> values, boolean fsyncOnFlush,
-        BolBuffer rawEntryBuffer, BolBuffer keyBuffer) throws Exception {
+                       BolBuffer rawEntryBuffer, BolBuffer keyBuffer) throws Exception {
         return internalAppend(values, fsyncOnFlush, -1, rawEntryBuffer, keyBuffer, true);
     }
 
     public long onOpenAppend(AppendValues<byte[]> values, boolean fsyncOnFlush, long overrideMaxHeapPressureInBytes,
-        BolBuffer rawEntryBuffer, BolBuffer keyBuffer) throws Exception {
+                             BolBuffer rawEntryBuffer, BolBuffer keyBuffer) throws Exception {
         return internalAppend(values, fsyncOnFlush, overrideMaxHeapPressureInBytes, rawEntryBuffer, keyBuffer, false);
     }
 
     private long internalAppend(
-        AppendValues<byte[]> values,
-        boolean fsyncOnFlush,
-        long overrideMaxHeapPressureInBytes,
-        BolBuffer rawEntryBuffer,
-        BolBuffer keyBuffer,
-        boolean journal) throws Exception {
+            AppendValues<byte[]> values,
+            boolean fsyncOnFlush,
+            long overrideMaxHeapPressureInBytes,
+            BolBuffer rawEntryBuffer,
+            BolBuffer keyBuffer,
+            boolean journal) throws Exception {
 
         if (values == null) {
             return -1;
         }
 
-        boolean[] appended = { false };
+        boolean[] appended = {false};
         commitSemaphore.acquire();
         long appendedVersion;
         try {
@@ -698,38 +710,40 @@ public class LAB implements ValueIndex<byte[]> {
 
             lastAppendTimestamp = System.currentTimeMillis();
 
-            long[] count = { 0 };
+            long[] count = {0};
             if (journal && wal != null) {
                 wal.appendTx(labId, appendedVersion, fsyncOnFlush, activeWAL -> {
                     appended[0] = memoryIndex.append(
-                        (stream) -> {
-                            return values.consume(
-                                (index, key, timestamp, tombstoned, version, value) -> {
+                            (stream) -> {
+                                return values.consume(
+                                        (index, key, timestamp, tombstoned, version, value) -> {
 
-                                    BolBuffer rawEntry = rawhide.toRawEntry(key, timestamp, tombstoned, version, value, rawEntryBuffer);
-                                    activeWAL.append(labId, appendedVersion, rawEntry);
-                                    stats.journaledAppend.increment();
+                                            BolBuffer rawEntry = rawhide.toRawEntry(key, timestamp, tombstoned, version,
+                                                    value, rawEntryBuffer);
+                                            activeWAL.append(labId, appendedVersion, rawEntry);
+                                            stats.journaledAppend.increment();
 
-                                    count[0]++;
-                                    return stream.stream(rawEntry);
-                                }
-                            );
-                        }, keyBuffer
+                                            count[0]++;
+                                            return stream.stream(rawEntry);
+                                        }
+                                );
+                            }, keyBuffer
                     );
                 });
             } else {
                 appended[0] = memoryIndex.append(
-                    (stream) -> {
-                        return values.consume(
-                            (index, key, timestamp, tombstoned, version, value) -> {
+                        (stream) -> {
+                            return values.consume(
+                                    (index, key, timestamp, tombstoned, version, value) -> {
 
-                                BolBuffer rawEntry = rawhide.toRawEntry(key, timestamp, tombstoned, version, value, rawEntryBuffer);
-                                stats.append.increment();
-                                count[0]++;
-                                return stream.stream(rawEntry);
-                            }
-                        );
-                    }, keyBuffer
+                                        BolBuffer rawEntry = rawhide.toRawEntry(key, timestamp, tombstoned, version,
+                                                value, rawEntryBuffer);
+                                        stats.append.increment();
+                                        count[0]++;
+                                        return stream.stream(rawEntry);
+                                    }
+                            );
+                        }, keyBuffer
                 );
             }
             LOG.inc("append>count", count[0]);
@@ -737,7 +751,9 @@ public class LAB implements ValueIndex<byte[]> {
         } finally {
             commitSemaphore.release();
         }
-        heapPressure.commitIfNecessary(this, overrideMaxHeapPressureInBytes >= 0 ? overrideMaxHeapPressureInBytes : maxHeapPressureInBytes, fsyncOnFlush);
+        heapPressure.commitIfNecessary(this,
+                overrideMaxHeapPressureInBytes >= 0 ? overrideMaxHeapPressureInBytes : maxHeapPressureInBytes,
+                fsyncOnFlush);
         return appended[0] ? appendedVersion : -1;
     }
 
@@ -775,12 +791,17 @@ public class LAB implements ValueIndex<byte[]> {
         }
     }
 
-    private boolean internalCommit(boolean fsync, BolBuffer keyBuffer, BolBuffer entryBuffer, BolBuffer entryKeyBuffer) throws Exception {
+    private boolean internalCommit(boolean fsync,
+                                   BolBuffer keyBuffer,
+                                   BolBuffer entryBuffer,
+                                   BolBuffer entryKeyBuffer) throws Exception {
         synchronized (commitSemaphore) {
-            long appendVersion = -1;
+            long fromAppendVersion = -1;
+            long toAppendVersion = -1;
             // open new memory index and mark existing for flush
             commitSemaphore.acquire(Short.MAX_VALUE);
             try {
+                fromAppendVersion = memoryIndexInitialAppendVersion;
                 if (memoryIndex.isEmpty()) {
                     return false;
                 }
@@ -789,16 +810,19 @@ public class LAB implements ValueIndex<byte[]> {
                 } else {
                     stats.commit.increment();
                 }
-                appendVersion = this.appendVersion.incrementAndGet();
+                toAppendVersion = this.appendVersion.incrementAndGet();
                 flushingMemoryIndex = memoryIndex;
-                LABMap<BolBuffer, BolBuffer> labIndex = indexProvider.create(rawhide, flushingMemoryIndex.poweredUpTo());
+                LABMap<BolBuffer, BolBuffer> labIndex = indexProvider.create(rawhide,
+                        flushingMemoryIndex.poweredUpTo());
                 memoryIndex = new LABMemoryIndex(destroy, heapPressure, stats, rawhide, labIndex);
+                memoryIndexInitialAppendVersion = this.appendVersion.incrementAndGet();
             } finally {
                 commitSemaphore.release(Short.MAX_VALUE);
             }
 
             // flush existing memory index to disk
-            rangeStripedCompactableIndexes.append(rawhideName, appendVersion, flushingMemoryIndex, fsync, keyBuffer, entryBuffer, entryKeyBuffer);
+            rangeStripedCompactableIndexes.append(rawhideName, fromAppendVersion, toAppendVersion, flushingMemoryIndex,
+                    fsync, keyBuffer, entryBuffer, entryKeyBuffer);
 
             // destroy existing memory index
             LABMemoryIndex destroyableMemoryIndex;
@@ -813,23 +837,26 @@ public class LAB implements ValueIndex<byte[]> {
 
             // commit to WAL
             if (wal != null) {
-                wal.commit(labId, appendVersion, fsync);
+                wal.commit(labId, toAppendVersion, fsync);
             }
             lastCommitTimestamp = System.currentTimeMillis();
-
             return true;
         }
     }
 
     @Override
-    public List<Future<Object>> compact(boolean fsync, int minDebt, int maxDebt, boolean waitIfToFarBehind) throws Exception {
+    public List<Future<Object>> compact(boolean fsync,
+                                        int minDebt,
+                                        int maxDebt,
+                                        boolean waitIfToFarBehind) throws Exception {
 
         int debt = rangeStripedCompactableIndexes.debt();
         if (debt == 0 || debt < minDebt) {
             return Collections.emptyList();
         }
         if (ongoingCompactions.incrementAndGet() != 1) {
-            LOG.info("ongoingCompactions:"+ongoingCompactions.decrementAndGet());
+            long ongoing = ongoingCompactions.decrementAndGet();
+            LOG.info("ongoingCompactions:" + ongoing);
             return Collections.emptyList();
         }
         try {
@@ -840,7 +867,8 @@ public class LAB implements ValueIndex<byte[]> {
                 if (corrupt) {
                     throw new LABCorruptedException();
                 }
-                List<Callable<Void>> compactors = rangeStripedCompactableIndexes.buildCompactors(rawhideName, fsync, minDebt);
+                List<Callable<Void>> compactors = rangeStripedCompactableIndexes.buildCompactors(rawhideName, fsync,
+                        minDebt);
                 if (compactors != null && !compactors.isEmpty()) {
                     if (awaitable == null) {
                         awaitable = new ArrayList<>(compactors.size());
@@ -876,7 +904,8 @@ public class LAB implements ValueIndex<byte[]> {
                 if (waitIfToFarBehind && debt >= maxDebt) {
                     synchronized (compactLock) {
                         if (!closeRequested.get() && ongoingCompactions.get() > 1) {
-                            LOG.debug("Waiting because debt is too high for index:{} debt:{}", rangeStripedCompactableIndexes, debt);
+                            LOG.debug("Waiting because debt is too high for index:{} debt:{}",
+                                    rangeStripedCompactableIndexes, debt);
                             compactLock.wait();
                         } else {
                             break;
@@ -921,18 +950,18 @@ public class LAB implements ValueIndex<byte[]> {
         }
         LOG.debug("Closed {}", this);
         stats.closed.increment();
-
+        closed.set(true);
     }
 
     @Override
     public String toString() {
         return "LAB{"
-            + ", minDebt=" + minDebt
-            + ", maxDebt=" + maxDebt
-            + ", ongoingCompactions=" + ongoingCompactions
-            + ", corrupt=" + corrupt
-            + ", rawhide=" + rawhide
-            + '}';
+                + ", minDebt=" + minDebt
+                + ", maxDebt=" + maxDebt
+                + ", ongoingCompactions=" + ongoingCompactions
+                + ", corrupt=" + corrupt
+                + ", rawhide=" + rawhide
+                + '}';
     }
 
 

@@ -15,6 +15,7 @@ import com.github.jnthnclt.os.lab.core.guts.api.SplitterBuilder;
 import com.github.jnthnclt.os.lab.log.LABLogger;
 import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
 import com.google.common.collect.Lists;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,6 +37,8 @@ public class CompactableIndexes {
     // newest to oldest
     private final LABStats stats;
     private final Rawhide rawhide;
+    private final byte[] labId;
+    private final LABFiles labFiles;
     private final IndexesLock indexesLock = new IndexesLock();
     private volatile boolean[] merging = new boolean[0]; // is volatile for reference changes not value changes.
     private volatile ReadOnlyIndex[] indexes = new ReadOnlyIndex[0];  // is volatile for reference changes not value changes.
@@ -45,9 +48,11 @@ public class CompactableIndexes {
     private final AtomicBoolean compacting = new AtomicBoolean();
     private volatile TimestampAndVersion maxTimestampAndVersion = TimestampAndVersion.NULL;
 
-    public CompactableIndexes(LABStats stats, Rawhide rawhide) {
+    public CompactableIndexes(LABStats stats, Rawhide rawhide, byte[] labId, LABFiles labFiles) {
         this.stats = stats;
         this.rawhide = rawhide;
+        this.labId = labId;
+        this.labFiles = labFiles;
     }
 
     public boolean append(ReadOnlyIndex index) {
@@ -84,9 +89,9 @@ public class CompactableIndexes {
         for (ReadOnlyIndex rawConcurrentReadableIndex : concurrentReadableIndexs) {
             Footer other = rawConcurrentReadableIndex.footer();
             if (rawhide.isNewerThan(other.maxTimestamp,
-                other.maxTimestampVersion,
-                maxTimestamp,
-                maxTimestampVersion)) {
+                    other.maxTimestampVersion,
+                    maxTimestamp,
+                    maxTimestampVersion)) {
 
                 maxTimestamp = other.maxTimestamp;
                 maxTimestampVersion = other.maxTimestampVersion;
@@ -136,20 +141,21 @@ public class CompactableIndexes {
     }
 
     public Callable<Void> compactor(
-        LABStats stats,
-        String rawhideName,
-        long splittableIfKeysLargerThanBytes,
-        long splittableIfValuesLargerThanBytes,
-        long splittableIfLargerThanBytes,
-        SplitterBuilder splitterBuilder,
-        int minMergeDebt,
-        boolean fsync,
-        MergerBuilder mergerBuilder
-    ) throws Exception {
+            LABStats stats,
+            String rawhideName,
+            long splittableIfKeysLargerThanBytes,
+            long splittableIfValuesLargerThanBytes,
+            long splittableIfLargerThanBytes,
+            SplitterBuilder splitterBuilder,
+            int minMergeDebt,
+            boolean fsync,
+            MergerBuilder mergerBuilder
+    ) {
         if (disposed) {
             return null;
         }
-        if (!splittable(splittableIfKeysLargerThanBytes, splittableIfValuesLargerThanBytes, splittableIfLargerThanBytes) && debt() == 0) {
+        if (!splittable(splittableIfKeysLargerThanBytes, splittableIfValuesLargerThanBytes,
+                splittableIfLargerThanBytes) && debt() == 0) {
             return null;
         }
 
@@ -160,7 +166,8 @@ public class CompactableIndexes {
         return () -> {
             try {
 
-                if (splittable(splittableIfKeysLargerThanBytes, splittableIfValuesLargerThanBytes, splittableIfLargerThanBytes)) {
+                if (splittable(splittableIfKeysLargerThanBytes, splittableIfValuesLargerThanBytes,
+                        splittableIfLargerThanBytes)) {
                     Callable<Void> splitter = splitterBuilder.buildSplitter(rawhideName, fsync, this::buildSplitter);
                     if (splitter != null) {
                         stats.spliting.incrementAndGet();
@@ -194,9 +201,9 @@ public class CompactableIndexes {
     }
 
     private boolean splittable(
-        long splittableIfKeysLargerThanBytes,
-        long splittableIfValuesLargerThanBytes,
-        long splittableIfLargerThanBytes) {
+            long splittableIfKeysLargerThanBytes,
+            long splittableIfValuesLargerThanBytes,
+            long splittableIfLargerThanBytes) {
 
         ReadOnlyIndex[] splittable;
         synchronized (indexesLock) {
@@ -219,13 +226,15 @@ public class CompactableIndexes {
             if (minKey == null) {
                 minKey = aSplittable.minKey();
             } else {
-                minKey = byteBufferKeyComparator.compare(minKey, aSplittable.minKey()) < 0 ? minKey : aSplittable.minKey();
+                minKey = byteBufferKeyComparator.compare(minKey,
+                        aSplittable.minKey()) < 0 ? minKey : aSplittable.minKey();
             }
 
             if (maxKey == null) {
                 maxKey = aSplittable.maxKey();
             } else {
-                maxKey = byteBufferKeyComparator.compare(maxKey, aSplittable.maxKey()) < 0 ? maxKey : aSplittable.maxKey();
+                maxKey = byteBufferKeyComparator.compare(maxKey,
+                        aSplittable.maxKey()) < 0 ? maxKey : aSplittable.maxKey();
             }
         }
 
@@ -243,9 +252,9 @@ public class CompactableIndexes {
     }
 
     private Splitter buildSplitter(IndexFactory leftHalfIndexFactory,
-        IndexFactory rightHalfIndexFactory,
-        CommitIndex commitIndex,
-        boolean fsync) throws Exception {
+                                   IndexFactory rightHalfIndexFactory,
+                                   CommitIndex commitIndex,
+                                   boolean fsync) throws Exception {
 
         // lock out merging if possible
         long allVersion;
@@ -274,11 +283,11 @@ public class CompactableIndexes {
         private final boolean fsync;
 
         public Splitter(ReadOnlyIndex[] all,
-            long allVersion,
-            IndexFactory leftHalfIndexFactory,
-            IndexFactory rightHalfIndexFactory,
-            CommitIndex commitIndex,
-            boolean fsync) {
+                        long allVersion,
+                        IndexFactory leftHalfIndexFactory,
+                        IndexFactory rightHalfIndexFactory,
+                        CommitIndex commitIndex,
+                        boolean fsync) {
 
             this.all = all;
             this.allVersion = allVersion;
@@ -330,7 +339,8 @@ public class CompactableIndexes {
                         return null;
                     } else {
                         BolBuffer entryKeyBuffer = new BolBuffer();
-                        byte[] middle = Lists.newArrayList(UIO.iterateOnSplits(minKey, maxKey, true, 1, rawhide.getKeyComparator())).get(1);
+                        byte[] middle = Lists.newArrayList(
+                                UIO.iterateOnSplits(minKey, maxKey, true, 1, rawhide.getKeyComparator())).get(1);
                         BolBuffer bbMiddle = new BolBuffer(middle);
                         LABAppendableIndex leftAppendableIndex = null;
                         LABAppendableIndex rightAppendableIndex = null;
@@ -339,7 +349,7 @@ public class CompactableIndexes {
                             rightAppendableIndex = rightHalfIndexFactory.createIndex(join, worstCaseCount - 1);
                             LABAppendableIndex effectiveFinalRightAppenableIndex = rightAppendableIndex;
                             InterleaveStream feedInterleaver = new InterleaveStream(rawhide,
-                                ActiveScan.indexToFeeds(readers, false, false, null, null, rawhide, null));
+                                    ActiveScan.indexToFeeds(readers, false, false, null, null, rawhide, null));
                             try {
                                 LOG.debug("Splitting with a middle of:{}", Arrays.toString(middle));
 
@@ -349,7 +359,7 @@ public class CompactableIndexes {
                                         BolBuffer rawEntry = new BolBuffer();
                                         while ((rawEntry = feedInterleaver.next(rawEntry, null)) != null) {
                                             int c = rawhide.compareKey(rawEntry, entryKeyBuffer,
-                                                bbMiddle);
+                                                    bbMiddle);
 
                                             if (c < 0) {
                                                 if (!leftStream.stream(rawEntry)) {
@@ -404,7 +414,7 @@ public class CompactableIndexes {
                                 if (allVersion == version) {
                                     LOG.debug("Commiting split for a middle of:{}", Arrays.toString(middle));
 
-                                    commitIndex.commit(commitRanges);
+                                    ReadOnlyIndex commit = commitIndex.commit(commitRanges);
                                     disposed = true;
                                     for (ReadOnlyIndex destroy : all) {
                                         destroy.destroy();
@@ -418,15 +428,19 @@ public class CompactableIndexes {
                                     return null;
                                 } else {
 
-                                    LOG.debug("Version has changed {} for a middle of:{}", allVersion, Arrays.toString(middle));
+                                    LOG.debug("Version has changed {} for a middle of:{}", allVersion,
+                                            Arrays.toString(middle));
                                     int catchupLength = merging.length - splitLength;
                                     for (int i = 0; i < catchupLength; i++) {
                                         if (merging[i]) {
-                                            LOG.debug("Waiting for merge flag to clear at {} for a middle of:{}", i, Arrays.toString(middle));
-                                            LOG.debug("splitLength={} merge.length={} catchupLength={}", splitLength, merging.length, catchupLength);
+                                            LOG.debug("Waiting for merge flag to clear at {} for a middle of:{}", i,
+                                                    Arrays.toString(middle));
+                                            LOG.debug("splitLength={} merge.length={} catchupLength={}", splitLength,
+                                                    merging.length, catchupLength);
                                             LOG.debug("merging:{}", Arrays.toString(merging));
                                             indexesLock.wait();
-                                            LOG.debug("Merge flag to cleared at {} for a middle of:{}", i, Arrays.toString(middle));
+                                            LOG.debug("Merge flag to cleared at {} for a middle of:{}", i,
+                                                    Arrays.toString(middle));
                                             continue CATCHUP_YOU_BABY_TOMATO;
                                         }
                                     }
@@ -445,33 +459,38 @@ public class CompactableIndexes {
                                 LABAppendableIndex catchupRightAppendableIndex = null;
                                 try {
                                     catchupLeftAppendableIndex = leftHalfIndexFactory.createIndex(id, catchup.count());
-                                    catchupRightAppendableIndex = rightHalfIndexFactory.createIndex(id, catchup.count());
+                                    catchupRightAppendableIndex = rightHalfIndexFactory.createIndex(id,
+                                            catchup.count());
                                     LABAppendableIndex effectivelyFinalCatchupRightAppendableIndex = catchupRightAppendableIndex;
 
                                     ReadIndex catchupReader = catchup.acquireReader();
                                     try {
                                         InterleaveStream catchupFeedInterleaver = new InterleaveStream(rawhide,
-                                            ActiveScan.indexToFeeds(new ReadIndex[] { catchup }, false, false, null, null, rawhide, null));
+                                                ActiveScan.indexToFeeds(new ReadIndex[]{catchup}, false, false, null,
+                                                        null, rawhide, null));
                                         try {
-                                            LOG.debug("Doing a catchup split for a middle of:{}", Arrays.toString(middle));
+                                            LOG.debug("Doing a catchup split for a middle of:{}",
+                                                    Arrays.toString(middle));
                                             catchupLeftAppendableIndex.append((leftStream) -> {
-                                                return effectivelyFinalCatchupRightAppendableIndex.append((rightStream) -> {
+                                                return effectivelyFinalCatchupRightAppendableIndex.append(
+                                                        (rightStream) -> {
 
-                                                    BolBuffer rawEntry = new BolBuffer();
-                                                    while ((rawEntry = catchupFeedInterleaver.next(rawEntry, null)) != null) {
-                                                        if (rawhide.compareKey(
-                                                            rawEntry,
-                                                            entryKeyBuffer,
-                                                            bbMiddle) < 0) {
-                                                            if (!leftStream.stream(rawEntry)) {
-                                                                return false;
+                                                            BolBuffer rawEntry = new BolBuffer();
+                                                            while ((rawEntry = catchupFeedInterleaver.next(rawEntry,
+                                                                    null)) != null) {
+                                                                if (rawhide.compareKey(
+                                                                        rawEntry,
+                                                                        entryKeyBuffer,
+                                                                        bbMiddle) < 0) {
+                                                                    if (!leftStream.stream(rawEntry)) {
+                                                                        return false;
+                                                                    }
+                                                                } else if (!rightStream.stream(rawEntry)) {
+                                                                    return false;
+                                                                }
                                                             }
-                                                        } else if (!rightStream.stream(rawEntry)) {
-                                                            return false;
-                                                        }
-                                                    }
-                                                    return true;
-                                                }, rightKeyBuffer);
+                                                            return true;
+                                                        }, rightKeyBuffer);
                                             }, leftKeyBuffer);
                                         } finally {
                                             catchupFeedInterleaver.close();
@@ -479,7 +498,8 @@ public class CompactableIndexes {
                                     } finally {
                                         catchupReader.release();
                                     }
-                                    LOG.debug("Catchup splitting is flushing for a middle of:{}", Arrays.toString(middle));
+                                    LOG.debug("Catchup splitting is flushing for a middle of:{}",
+                                            Arrays.toString(middle));
                                     catchupLeftAppendableIndex.closeAppendable(fsync);
                                     catchupRightAppendableIndex.closeAppendable(fsync);
 
@@ -530,7 +550,10 @@ public class CompactableIndexes {
         }
     }
 
-    private Merger buildMerger(int minimumRun, boolean fsync, IndexFactory indexFactory, CommitIndex commitIndex) throws Exception {
+    private Merger buildMerger(int minimumRun,
+                               boolean fsync,
+                               IndexFactory indexFactory,
+                               CommitIndex commitIndex) throws Exception {
         boolean[] mergingCopy;
         ReadOnlyIndex[] indexesCopy;
         ReadOnlyIndex[] mergeSet;
@@ -595,14 +618,14 @@ public class CompactableIndexes {
         private final MergeRange mergeRange;
 
         private Merger(
-            long[] counts,
-            long[] generations,
-            ReadOnlyIndex[] mergeSet,
-            IndexRangeId mergeRangeId,
-            IndexFactory indexFactory,
-            CommitIndex commitIndex,
-            boolean fsync,
-            MergeRange mergeRange) {
+                long[] counts,
+                long[] generations,
+                ReadOnlyIndex[] mergeSet,
+                IndexRangeId mergeRangeId,
+                IndexFactory indexFactory,
+                CommitIndex commitIndex,
+                boolean fsync,
+                MergeRange mergeRange) {
 
             this.mergeRange = mergeRange;
             this.counts = counts;
@@ -638,7 +661,7 @@ public class CompactableIndexes {
                 try {
                     appendableIndex = indexFactory.createIndex(mergeRangeId, worstCaseCount);
                     InterleaveStream feedInterleaver = new InterleaveStream(rawhide,
-                        ActiveScan.indexToFeeds(readers, false, false, null, null, rawhide, null));
+                            ActiveScan.indexToFeeds(readers, false, false, null, null, rawhide, null));
                     try {
                         appendableIndex.append((stream) -> {
 
@@ -702,10 +725,10 @@ public class CompactableIndexes {
                 stats.debt.add(indexLengthChange);
 
                 LOG.debug("Merged:  {} millis counts:{} gens:{} {}",
-                    (System.currentTimeMillis() - startMerge),
-                    TieredCompaction.range(counts, mergeRange.offset, mergeRange.length),
-                    Arrays.toString(generations),
-                    index.name()
+                        (System.currentTimeMillis() - startMerge),
+                        TieredCompaction.range(counts, mergeRange.offset, mergeRange.length),
+                        Arrays.toString(generations),
+                        index.name()
                 );
 
                 for (ReadOnlyIndex rawConcurrentReadableIndex : mergeSet) {
@@ -750,7 +773,12 @@ public class CompactableIndexes {
 
     }
 
-    public boolean tx(int index, boolean pointFrom, byte[] fromKey, byte[] toKey, ReaderTx tx, boolean hydrateValues) throws Exception {
+    public boolean tx(int index,
+                      boolean pointFrom,
+                      byte[] fromKey,
+                      byte[] toKey,
+                      ReaderTx tx,
+                      boolean hydrateValues) throws Exception {
 
         ReadOnlyIndex[] stackIndexes;
 
@@ -812,7 +840,8 @@ public class CompactableIndexes {
             copy = indexes;
         }
         for (ReadOnlyIndex aCopy : copy) {
-            System.out.println(prefix + keyToString.keyToString(aCopy.minKey()) + "->" + keyToString.keyToString(aCopy.maxKey()));
+            System.out.println(
+                    prefix + keyToString.keyToString(aCopy.minKey()) + "->" + keyToString.keyToString(aCopy.maxKey()));
         }
     }
 

@@ -45,7 +45,7 @@ public class CompactableIndexsNGTest {
     public void testPointGets(LABHashIndexType hashIndexType) throws Exception {
 
         ExecutorService destroy = Executors.newSingleThreadExecutor();
-        CompactableIndexes indexs = new CompactableIndexes(new LABStats(new AtomicLong()), rawhide);
+        CompactableIndexes indexs = new CompactableIndexes(new LABStats(new AtomicLong()), rawhide, null,null);
         AtomicLong id = new AtomicLong();
         AtomicLong timeProvider = new AtomicLong();
         BolBuffer keyBuffer = new BolBuffer();
@@ -83,7 +83,7 @@ public class CompactableIndexsNGTest {
 
             ReadOnlyFile readOnlyFile = new ReadOnlyFile(file);
             LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-            indexs.append(new ReadOnlyIndex(null, destroy, indexRangeId, readOnlyFile, rawhide, leapsCache));
+            indexs.append(new ReadOnlyIndex(null,null, destroy, indexRangeId, readOnlyFile, rawhide, leapsCache));
         }
 
         for (int i = 1; i <= id.get(); i++) {
@@ -123,7 +123,7 @@ public class CompactableIndexsNGTest {
         boolean fsync = true;
         int minimumRun = 4;
 
-        CompactableIndexes indexs = new CompactableIndexes(new LABStats(new AtomicLong()), rawhide);
+        CompactableIndexes indexs = new CompactableIndexes(new LABStats(new AtomicLong()), rawhide, null,null);
         long time = System.currentTimeMillis();
         System.out.println("Seed:" + time);
         Random rand = new Random(1446914103456L);
@@ -149,7 +149,7 @@ public class CompactableIndexsNGTest {
 
                 ReadOnlyFile readOnlyFile = new ReadOnlyFile(file);
                 LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-                indexs.append(new ReadOnlyIndex(null, destroy, indexRangeId, readOnlyFile, rawhide, leapsCache));
+                indexs.append(new ReadOnlyIndex(null,null, destroy, indexRangeId, readOnlyFile, rawhide, leapsCache));
 
             }
             Thread.sleep(10);
@@ -177,7 +177,7 @@ public class CompactableIndexsNGTest {
                 },
                 (ids) -> {
                     LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-                    return new ReadOnlyIndex(null, destroy, ids.get(0), new ReadOnlyFile(indexFiler), rawhide,
+                    return new ReadOnlyIndex(null,null, destroy, ids.get(0), new ReadOnlyFile(indexFiler), rawhide,
                         leapsCache);
                 }));
 
@@ -200,7 +200,7 @@ public class CompactableIndexsNGTest {
         boolean fsync = true;
         int minimumRun = 4;
 
-        CompactableIndexes indexs = new CompactableIndexes(new LABStats(new AtomicLong()), rawhide);
+        CompactableIndexes indexs = new CompactableIndexes(new LABStats(new AtomicLong()), rawhide, null,null);
         long time = System.currentTimeMillis();
         System.out.println("Seed:" + time);
         Random rand = new Random(1446914103456L);
@@ -227,7 +227,7 @@ public class CompactableIndexsNGTest {
 
             ReadOnlyFile readOnlyFile = new ReadOnlyFile(file);
             LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-            ReadOnlyIndex readOnlyIndex = new ReadOnlyIndex(null, destroy, indexRangeId, readOnlyFile, rawhide, leapsCache);
+            ReadOnlyIndex readOnlyIndex = new ReadOnlyIndex(null,null, destroy, indexRangeId, readOnlyFile, rawhide, leapsCache);
             ReadIndex readIndex = readOnlyIndex.acquireReader();
             Scanner scanner = readIndex.rowScan(new BolBuffer(), new BolBuffer());
 
@@ -271,7 +271,7 @@ public class CompactableIndexsNGTest {
                         () -> 0);
                 }, (ids) -> {
                     LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-                    return new ReadOnlyIndex(null, destroy, ids.get(0), new ReadOnlyFile(indexFiler), rawhide,
+                    return new ReadOnlyIndex(null,null, destroy, ids.get(0), new ReadOnlyFile(indexFiler), rawhide,
                         leapsCache);
                 }));
 
@@ -297,11 +297,11 @@ public class CompactableIndexsNGTest {
                 return true;
             }, true);
 
-        indexs = new CompactableIndexes(new LABStats(new AtomicLong()), rawhide);
+        indexs = new CompactableIndexes(new LABStats(new AtomicLong()), rawhide, null,null);
         IndexRangeId indexRangeId = new IndexRangeId(0, 0, 0);
         ReadOnlyFile indexFile = new ReadOnlyFile(indexFiler);
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-        indexs.append(new ReadOnlyIndex(null, destroy, indexRangeId, indexFile, rawhide, leapsCache));
+        indexs.append(new ReadOnlyIndex(null,null, destroy, indexRangeId, indexFile, rawhide, leapsCache));
 
         assertions(indexs, count, step, desired);
     }

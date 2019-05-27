@@ -7,8 +7,27 @@
         <artifactId>os.lab</artifactId>
         <version>1.10-SNAPSHOT</version>
     </parent>
+    <properties>
+        <aws-version>1.11.558</aws-version>
+    </properties>
+
     <groupId>com.github.jnthnclt</groupId>
     <artifactId>os.lab.s3</artifactId>
     <dependencies>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-s3</artifactId>
+            <version>${aws-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.jnthnclt</groupId>
+            <artifactId>os.lab.base</artifactId>
+            <version>1.10-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.jnthnclt</groupId>
+            <artifactId>os.lab.core</artifactId>
+            <version>1.10-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 </project>
