@@ -22,7 +22,7 @@ public class BitSortPOC {
 
         Index index = new Index();
 
-        for (int i = 0; i < 6_000_000; i++) {
+        for (int i = 0; i < 1_000_000; i++) {
             Map<Field, Integer> document = Maps.newHashMap();
             for (Field field : Field.values()) {
                 document.put(field, field.generate());
@@ -42,13 +42,12 @@ public class BitSortPOC {
         }
 
         long start = System.currentTimeMillis();
-        BitSortTree bitSortTree1 = new BitSortTree();
+        BitSortTreePOC bitSortTree1 = new BitSortTreePOC();
         bitSortTree1.populate(input, 512);
         System.out.println("BitSortTree elapse:" + (System.currentTimeMillis() - start));
 
 
         for (int i = 0; i < 20; i++) {
-            System.out.println("\nquery:" + i);
 
             Map<Field, Integer> query = Maps.newHashMap();
             for (int j = 0; j < 2; j++) {
@@ -59,12 +58,14 @@ public class BitSortPOC {
             if (results.size() == 0) {
                 continue;
             }
-            System.out.println(results.size() + " latency:" + (System.currentTimeMillis() - start) + " " + results);
+
+            System.out.println("\nquery:" + i);
+            System.out.println("Fancy:"+results.size() + " latency:" + (System.currentTimeMillis() - start) + " " + results);
 
 
             start = System.currentTimeMillis();
             results = index.query(query, sortField, null, 0, 10);
-            System.out.println(results.size() + " latency:" + (System.currentTimeMillis() - start) + " " + results);
+            System.out.println("Brute:"+results.size() + " latency:" + (System.currentTimeMillis() - start) + " " + results);
         }
     }
 
@@ -114,7 +115,7 @@ public class BitSortPOC {
 
         public List<Result> query(Map<Field, Integer> query,
                                   Field sort,
-                                  BitSortTree bitSortTree,
+                                  BitSortTreePOC bitSortTree,
                                   int offset,
                                   int limit) {
 
@@ -133,7 +134,7 @@ public class BitSortPOC {
             }
 
             int cardinality = answer.getCardinality();
-            System.out.println("Total:" + cardinality);
+            //System.out.println("Total:" + cardinality);
 
             if (bitSortTree != null && cardinality > offset + limit) {
                 answer = bitSortTree.topN(answer, offset + limit);
@@ -188,39 +189,7 @@ public class BitSortPOC {
         }
     }
 
-    public static void main2(String[] args) {
-        Random random = new Random();
-
-        List<int[]> input = Lists.newArrayList();
-        int count = 512;
-        for (int i = 0; i < count; i++) {
-            input.add(new int[]{i, random.nextInt(count)});
-        }
-        BitSortTree bitSortTree = new BitSortTree();
-        bitSortTree.populate(input, 4);
-
-        List<int[]> bestN = Lists.newArrayList();
-        for (int i = 0; i < 10; i++) {
-            bestN.add(input.get(i));
-        }
-        Collections.sort(bestN, Comparator.comparingInt(o -> o[0]));
-        for (int i = 0; i < 10; i++) {
-            System.out.println(Arrays.toString(bestN.get(i)));
-        }
-
-
-        RoaringBitmap answer = new RoaringBitmap();
-        for (int i = 0; i < count; i++) {
-            answer.add(i);
-        }
-
-        RoaringBitmap bitmap = bitSortTree.topN(answer, 10);
-        System.out.println(bitmap);
-    }
-
-
-    static class BitSortTree {
-
+    static class BitSortTreePOC {
 
         BitSort bitSort;
 
@@ -242,7 +211,7 @@ public class BitSortPOC {
             start = System.currentTimeMillis();
             int i = 0;
             for (int[] indexFieldValue : indexFieldValues) {
-                bitSort.add(i, indexFieldValue[0]);
+                bitSort.add(i, indexFieldValue[0], indexFieldValue[1]);
                 i++;
             }
             bitSort.done();
@@ -257,65 +226,5 @@ public class BitSortPOC {
         }
     }
 
-    static class BitSort {
 
-        int size;
-        int halfSize;
-        RoaringBitmap bitmap = new RoaringBitmap();
-
-        BitSort high;
-        BitSort low;
-
-        public BitSort(int size, int leafSize) {
-            this.size = size;
-            this.halfSize = size / 2;
-            if (this.size > leafSize) {
-                high = new BitSort(halfSize, leafSize);
-                low = new BitSort(halfSize, leafSize);
-            }
-        }
-
-        public void add(int order, int id) {
-            if (high != null) {
-                if (order < halfSize) {
-                    high.add(order, id);
-                } else {
-                    low.add(order - halfSize, id);
-                }
-            } else {
-                bitmap.add(id);
-            }
-        }
-
-        public RoaringBitmap done() {
-            if (high != null) {
-                bitmap.or(high.done());
-                bitmap.or(low.done());
-            }
-            return bitmap;
-        }
-
-        public int topN(RoaringBitmap answer, RoaringBitmap keep, int n) {
-            RoaringBitmap and = RoaringBitmap.and(answer, bitmap);
-            int cardinality = and.getCardinality();
-            if (cardinality > n) {
-                if (high != null) {
-                    int keeping = high.topN(answer, keep, n);
-                    if (keeping < n) {
-                        if (low != null) {
-                            keeping = low.topN(answer, keep, n);
-                            if (keeping < n) {
-                                keep.or(and);
-                            }
-                        }
-                    }
-                } else {
-                    keep.or(and);
-                }
-            } else {
-                keep.or(and);
-            }
-            return keep.getCardinality();
-        }
-    }
 }

@@ -10,5 +10,11 @@
     <groupId>com.github.jnthnclt</groupId>
     <artifactId>os.lab.base</artifactId>
     <dependencies>
+        <dependency>
+            <groupId>com.github.jnthnclt</groupId>
+            <artifactId>os.lab.collections</artifactId>
+            <version>1.11-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 </project>

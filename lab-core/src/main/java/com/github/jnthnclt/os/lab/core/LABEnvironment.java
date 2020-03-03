@@ -7,7 +7,7 @@ import com.github.jnthnclt.os.lab.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.github.jnthnclt.os.lab.core.api.JournalStream;
 import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
 import com.github.jnthnclt.os.lab.core.api.RawEntryFormat;
-import com.github.jnthnclt.os.lab.core.api.ValueIndex;
+import com.github.jnthnclt.os.lab.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABKeyValueRawhide;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;

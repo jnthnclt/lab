@@ -1,11 +1,12 @@
 package com.github.jnthnclt.os.lab.core.search;
 
+import com.github.jnthnclt.os.lab.api.ValueIndex;
 import com.github.jnthnclt.os.lab.base.BolBuffer;
 import com.github.jnthnclt.os.lab.base.UIO;
 import com.github.jnthnclt.os.lab.collections.bah.BAHash;
+import com.github.jnthnclt.os.lab.core.ExternalIdToInternalId;
 import com.github.jnthnclt.os.lab.core.LABIndexProvider;
 import com.github.jnthnclt.os.lab.core.LABValueIndexConfigBuilder;
-import com.github.jnthnclt.os.lab.core.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.bitmaps.LABBitmapIndex;
 import com.github.jnthnclt.os.lab.core.bitmaps.LABBitmapIndexes;
 import com.github.jnthnclt.os.lab.core.bitmaps.LABBitmaps;
@@ -28,7 +29,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -57,13 +57,22 @@ public class LABSearchIndex {
 
     private final LABIndexProvider valueIndexProvider;
     private final File root;
-    private final ValueIndex<byte[]> guidToIdx;
+    private final ExternalIdToInternalId externalIdToInternalId;
     private final ValueIndex<byte[]> fieldNameToFieldId;
     private final Map<String, ValueIndex<byte[]>> fieldNameBlob = Maps.newConcurrentMap();
 
     public final LABBitmapIndexes<RoaringBitmap, RoaringBitmap> fieldIndex;
 
     public LABSearchIndex(LABIndexProvider valueIndexProvider, File root) throws Exception {
+        this(valueIndexProvider, root, new ExternalIdToInternalId(
+                valueIndexProvider.buildIndex(root, new LABValueIndexConfigBuilder("guidToIndex").build())));
+
+    }
+
+    public LABSearchIndex(LABIndexProvider valueIndexProvider,
+                          File root,
+                          ExternalIdToInternalId externalIdToInternalId) throws Exception {
+
 
         this.valueIndexProvider = valueIndexProvider;
         this.root = root;
@@ -71,7 +80,8 @@ public class LABSearchIndex {
         this.fieldNameToFieldId = valueIndexProvider.buildIndex(root,
                 new LABValueIndexConfigBuilder("fieldNameToFieldId").build());
 
-        this.guidToIdx = valueIndexProvider.buildIndex(root, new LABValueIndexConfigBuilder("guidToIndex").build());
+        this.externalIdToInternalId = externalIdToInternalId;
+
 
         LABBitmaps<RoaringBitmap, RoaringBitmap> bitmaps = new RoaringLABBitmaps();
 
@@ -232,7 +242,7 @@ public class LABSearchIndex {
         AtomicBoolean canceled = new AtomicBoolean(false);
         stored.get(keyStream -> {
             int i = 0;
-            for (Long idx : allocateIdxs(externalIds, guidToIdx)) {
+            for (Long idx : externalIdToInternalId.getOrAllocateInternalId(externalIds)) {
                 keyStream.key(i, UIO.longBytes(idx), 0, 8);
                 i++;
                 if (canceled.get()) {
@@ -562,7 +572,7 @@ public class LABSearchIndex {
     public void update(LABSearchIndexUpdates updates, boolean delete) throws Exception {
 
         List<Long> externalIds = Lists.newArrayList(updates.guids);
-        long[] internalId = allocateIdxs(externalIds, guidToIdx);
+        long[] internalId = externalIdToInternalId.getOrAllocateInternalId(externalIds);
         Map<Long, Integer> guidToInternalId = Maps.newHashMap();
         for (int i = 0; i < internalId.length; i++) {
             guidToInternalId.put(externalIds.get(i), (int) internalId[i]);
@@ -649,22 +659,8 @@ public class LABSearchIndex {
      * @throws Exception
      */
     public RoaringBitmap toBitmap(long... externalIds) throws Exception {
-        long[] internalIds = new long[externalIds.length];
-        Arrays.fill(internalIds, -1);
-        synchronized (guidToIdx) {
-            guidToIdx.get(keyStream -> {
-                for (int i = 0; i < externalIds.length; i++) {
-                    keyStream.key(i, UIO.longBytes(externalIds[i]), 0, 8);
-                }
-                return true;
-            }, (int index, BolBuffer key, long timestamp, boolean tombstoned, long version, BolBuffer payload) -> {
-                if (payload != null) {
-                    internalIds[index] = payload.getLong(0);
-                }
-                return true;
-            }, true);
-        }
-        if (internalIds[0] == -1) {
+        long[] internalIds = externalIdToInternalId.get(externalIds);
+        if (internalIds == null) {
             return null;
         }
         RoaringBitmap bitmap = new RoaringBitmap();
@@ -677,66 +673,12 @@ public class LABSearchIndex {
     }
 
 
-    private long[] allocateIdxs(Collection<Long> externalIds,
-                                ValueIndex<byte[]> externalIdToInternalIdx) throws Exception {
-        AtomicLong maxId = new AtomicLong(0);
-        long[] internalIds = new long[externalIds.size()];
-        Arrays.fill(internalIds, -1L);
-
-        synchronized (externalIdToInternalIdx) {
-            externalIdToInternalIdx.get(keyStream -> {
-                int i = 0;
-                for (Long externalId : externalIds) {
-                    keyStream.key(i, UIO.longBytes(externalId), 0, 8);
-                    i++;
-                }
-                keyStream.key(i, UIO.longBytes(Long.MAX_VALUE), 0, 8);
-                return true;
-            }, (int index, BolBuffer key, long timestamp, boolean tombstoned, long version, BolBuffer payload) -> {
-                if (payload != null) {
-                    if (index < internalIds.length) {
-                        internalIds[index] = payload.getLong(0);
-                    } else {
-                        maxId.set(payload.getLong(0));
-                    }
-                }
-                return true;
-            }, true);
-
-            long id = maxId.get();
-            boolean[] allocatedIds = new boolean[internalIds.length];
-            for (int i = 0; i < internalIds.length; i++) {
-                if (internalIds[i] == -1) {
-                    allocatedIds[i] = true;
-                    internalIds[i] = maxId.incrementAndGet();
-                }
-            }
-
-            if (maxId.get() > id) {
-                long timestamp = System.currentTimeMillis(); // FIX_ME
-
-                externalIdToInternalIdx.append(appendValueStream -> {
-                    appendValueStream.stream(0, UIO.longBytes(Long.MAX_VALUE), timestamp, false, timestamp,
-                            UIO.longBytes(maxId.get()));
-                    int i = 0;
-                    for (Long externalId : externalIds) {
-                        appendValueStream.stream(i, UIO.longBytes(externalId), timestamp, false, timestamp,
-                                UIO.longBytes(internalIds[i]));
-                        i++;
-                    }
-                    return true;
-                }, true, new BolBuffer(), new BolBuffer());
-            }
-        }
-        return internalIds;
-    }
-
     public void flush() throws Exception {
         for (Entry<String, ValueIndex<byte[]>> entry : fieldNameBlob.entrySet()) {
             entry.getValue().commit(true, true);
         }
 
-        guidToIdx.commit(true, true);
+        externalIdToInternalId.flush();
         fieldIndex.flush();
         fieldNameToFieldId.commit(true, true);
     }
@@ -747,7 +689,7 @@ public class LABSearchIndex {
             compact(entry.getValue());
         }
 
-        compact(guidToIdx);
+        externalIdToInternalId.compact();
         compact(fieldNameToFieldId);
 
         fieldIndex.compact();
@@ -767,7 +709,7 @@ public class LABSearchIndex {
 
     public List<String> summary() throws Exception {
         List<String> s = Lists.newArrayList();
-        s.add("guid-to-idx: count=" + guidToIdx.count() + " debt=" + guidToIdx.debt());
+        s.add(externalIdToInternalId.summary());
         s.add("field-name-lut: count=" + fieldNameToFieldId.count() + " debt=" + fieldNameToFieldId.debt());
         for (Entry<String, ValueIndex<byte[]>> stringValueIndexEntry : fieldNameBlob.entrySet()) {
             ValueIndex<byte[]> valueIndex = stringValueIndexEntry.getValue();

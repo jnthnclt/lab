@@ -20,8 +20,12 @@
 package com.github.jnthnclt.os.lab.base;
 
 import com.github.jnthnclt.os.lab.io.IAppendOnly;
+import com.github.jnthnclt.os.lab.io.filer.IAppendBytesOnly;
+import com.github.jnthnclt.os.lab.io.filer.IReadable;
 import com.github.jnthnclt.os.lab.log.LABLogger;
 import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
+
+import java.io.EOFException;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.text.DecimalFormat;
@@ -350,5 +354,216 @@ public class UIO {
         byte[] result = new byte[length];
         System.arraycopy(a, a.length - length, result, 0, length);
         return result;
+    }
+
+    /**
+     *
+     * @param _filer
+     * @param fieldName
+     * @return
+     * @throws IOException
+     */
+    public static byte readByte(IReadable _filer, String fieldName) throws IOException {
+        int v = _filer.read();
+        if (v < 0) {
+            throw new EOFException();
+        }
+        return (byte) v;
+    }
+
+    /**
+     *
+     * @param _filer
+     * @param fieldName
+     * @return
+     * @throws IOException
+     */
+    public static byte[] readByteArray(IReadable _filer, String fieldName, byte[] lengthBuffer) throws IOException {
+        int len = readLength(_filer, lengthBuffer);
+        if (len < 0) {
+            return null;
+        }
+        if (len == 0) {
+            return new byte[0];
+        }
+        byte[] array = new byte[len];
+        readFully(_filer, array, len);
+        return array;
+    }
+
+    /**
+     *
+     * @param _filer
+     * @return
+     * @throws IOException
+     */
+    public static int readLength(IReadable _filer, byte[] lengthBuffer) throws IOException {
+        return readInt(_filer, "length", lengthBuffer);
+    }
+
+    /**
+     *
+     * @param _filer
+     * @param fieldName
+     * @return
+     * @throws IOException
+     */
+    public static int readInt(IReadable _filer, String fieldName, byte[] intBuffer) throws IOException {
+        readFully(_filer, intBuffer, 4);
+        int v = 0;
+        v |= (intBuffer[0] & 0xFF);
+        v <<= 8;
+        v |= (intBuffer[1] & 0xFF);
+        v <<= 8;
+        v |= (intBuffer[2] & 0xFF);
+        v <<= 8;
+        v |= (intBuffer[3] & 0xFF);
+        return v;
+    }
+
+    private static void readFully(IReadable readable, byte[] into, int length) throws IOException {
+        int read = readable.read(into, 0, length);
+        if (read != length) {
+            throw new IOException("Failed to fully. Only had " + read + " needed " + length);
+        }
+    }
+
+    // Reading
+    /**
+     *
+     * @param _filer
+     * @param fieldName
+     * @return
+     * @throws IOException
+     */
+    public static boolean readBoolean(IReadable _filer, String fieldName) throws IOException {
+        int v = _filer.read();
+        if (v < 0) {
+            throw new EOFException();
+        }
+        return (v != 0);
+    }
+
+    /**
+     *
+     * @param _filer
+     * @param fieldName
+     * @return
+     * @throws IOException
+     */
+    public static long readLong(IReadable _filer, String fieldName, byte[] longBuffer) throws IOException {
+        readFully(_filer, longBuffer, 8);
+        long v = 0;
+        v |= (longBuffer[0] & 0xFF);
+        v <<= 8;
+        v |= (longBuffer[1] & 0xFF);
+        v <<= 8;
+        v |= (longBuffer[2] & 0xFF);
+        v <<= 8;
+        v |= (longBuffer[3] & 0xFF);
+        v <<= 8;
+        v |= (longBuffer[4] & 0xFF);
+        v <<= 8;
+        v |= (longBuffer[5] & 0xFF);
+        v <<= 8;
+        v |= (longBuffer[6] & 0xFF);
+        v <<= 8;
+        v |= (longBuffer[7] & 0xFF);
+        return v;
+    }
+
+    /**
+     *
+     * @param _filer
+     * @param v
+     * @param fieldName
+     * @throws IOException
+     */
+    public static void writeByte(IAppendBytesOnly _filer, byte v,
+                                 String fieldName) throws IOException {
+        _filer.write(v);
+    }
+
+
+    /**
+     *
+     * @param _filer
+     * @param v
+     * @param fieldName
+     * @throws IOException
+     */
+    public static void writeLong(IAppendBytesOnly _filer, long v,
+                                 String fieldName, byte[] longBuffer) throws IOException {
+        longBuffer[0] = (byte) (v >>> 56);
+        longBuffer[1] = (byte) (v >>> 48);
+        longBuffer[2] = (byte) (v >>> 40);
+        longBuffer[3] = (byte) (v >>> 32);
+        longBuffer[4] = (byte) (v >>> 24);
+        longBuffer[5] = (byte) (v >>> 16);
+        longBuffer[6] = (byte) (v >>> 8);
+        longBuffer[7] = (byte) (v);
+
+        _filer.write(longBuffer, 0, 8);
+    }
+
+    public static void writeByteArray(IAppendBytesOnly _filer, byte[] array, String fieldName, byte[] lengthBuffer) throws IOException {
+        writeByteArray(_filer, array, 0, array == null ? -1 : array.length, fieldName, lengthBuffer);
+    }
+
+
+    /**
+     *
+     * @param _filer
+     * @param array
+     * @param _start
+     * @param _len
+     * @param fieldName
+     * @throws IOException
+     */
+    public static void writeByteArray(IAppendBytesOnly _filer, byte[] array,
+                                      int _start, int _len, String fieldName, byte[] lengthBuffer) throws IOException {
+        int len;
+        if (array == null) {
+            len = -1;
+        } else {
+            len = _len;
+        }
+        writeLength(_filer, len, lengthBuffer);
+        if (len < 0) {
+            return;
+        }
+        _filer.write(array, _start, len);
+    }
+
+    /**
+     *
+     * @param _filer
+     * @param l
+     * @throws IOException
+     */
+    private static void writeLength(IAppendBytesOnly _filer, int l, byte[] lengthBuffer) throws IOException {
+        writeInt(_filer, l, "length", lengthBuffer);
+    }
+
+    /**
+     *
+     * @param _filer
+     * @param v
+     * @param fieldName
+     * @throws IOException
+     */
+    public static void writeInt(IAppendBytesOnly _filer, int v, String fieldName, byte[] intBuffer) throws IOException {
+        intBuffer[0] = (byte) (v >>> 24);
+        intBuffer[1] = (byte) (v >>> 16);
+        intBuffer[2] = (byte) (v >>> 8);
+        intBuffer[3] = (byte) (v);
+
+        _filer.write(intBuffer, 0, 4);
+    }
+
+    public static byte[] unsignedShortBytes(int v, byte[] bytes, int offset) {
+        bytes[offset + 0] = (byte) (v >>> 8);
+        bytes[offset + 1] = (byte) v;
+        return bytes;
     }
 }

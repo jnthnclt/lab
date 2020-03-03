@@ -7,9 +7,9 @@ import com.github.jnthnclt.os.lab.core.LAB;
 import com.github.jnthnclt.os.lab.core.LABEnvironment;
 import com.github.jnthnclt.os.lab.core.LABHeapPressure;
 import com.github.jnthnclt.os.lab.core.LABStats;
-import com.github.jnthnclt.os.lab.core.api.Keys.KeyStream;
+import com.github.jnthnclt.os.lab.api.Keys.KeyStream;
 import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
-import com.github.jnthnclt.os.lab.core.api.ValueIndex;
+import com.github.jnthnclt.os.lab.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
 import com.github.jnthnclt.os.lab.core.api.rawhide.LABFixedWidthKeyFixedWidthValueRawhide;
 import com.github.jnthnclt.os.lab.core.guts.LABFiles;
@@ -29,7 +29,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import org.testng.annotations.Test;
-import org.testng.collections.Lists;
 
 /**
  * @author jonathan.colt

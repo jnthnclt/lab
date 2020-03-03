@@ -1,6 +1,6 @@
 package com.github.jnthnclt.os.lab.core.bitmaps;
 
-import com.github.jnthnclt.os.lab.core.api.ValueIndex;
+import com.github.jnthnclt.os.lab.api.ValueIndex;
 import java.util.concurrent.atomic.AtomicLong;
 import org.roaringbitmap.LABBitmapAndLastId;
 import org.roaringbitmap.RoaringBitmap;

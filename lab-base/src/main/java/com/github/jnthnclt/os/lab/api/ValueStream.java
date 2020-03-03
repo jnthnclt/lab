@@ -1,4 +1,4 @@
-package com.github.jnthnclt.os.lab.core.api;
+package com.github.jnthnclt.os.lab.api;
 
 import com.github.jnthnclt.os.lab.base.BolBuffer;
 

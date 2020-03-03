@@ -4,7 +4,7 @@ import com.github.jnthnclt.os.lab.base.BolBuffer;
 import com.github.jnthnclt.os.lab.base.IndexUtil;
 import com.github.jnthnclt.os.lab.base.UIO;
 import com.github.jnthnclt.os.lab.core.LABUtils;
-import com.github.jnthnclt.os.lab.core.api.ValueStream;
+import com.github.jnthnclt.os.lab.api.ValueStream;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
 import com.github.jnthnclt.os.lab.io.IAppendOnly;
 import java.io.IOException;

@@ -1,7 +1,7 @@
 package com.github.jnthnclt.os.lab.core.api.rawhide;
 
 import com.github.jnthnclt.os.lab.base.BolBuffer;
-import com.github.jnthnclt.os.lab.core.api.ValueStream;
+import com.github.jnthnclt.os.lab.api.ValueStream;
 import com.github.jnthnclt.os.lab.core.io.PointerReadableByteBufferFile;
 import com.github.jnthnclt.os.lab.io.IAppendOnly;
 

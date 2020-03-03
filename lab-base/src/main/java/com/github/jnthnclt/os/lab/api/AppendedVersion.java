@@ -1,4 +1,4 @@
-package com.github.jnthnclt.os.lab.core;
+package com.github.jnthnclt.os.lab.api;
 
 public class AppendedVersion {
     public final byte[] labId;

@@ -22,6 +22,7 @@
         <module>lab-nn</module>
         <module>lab-export</module>
         <module>lab-s3</module>
+        <module>lab-order</module>
     </modules>
 
 
@@ -68,7 +69,6 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
 
-        <jive.utils.version>0.112</jive.utils.version>
         <mlogger.version>0.26</mlogger.version>
         <filer.version>0.98</filer.version>
         <commons.io.version>2.4</commons.io.version>

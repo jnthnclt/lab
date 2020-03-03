@@ -2,7 +2,7 @@ package com.github.jnthnclt.os.lab.core.bitmaps;
 
 import com.github.jnthnclt.os.lab.base.BolBuffer;
 import com.github.jnthnclt.os.lab.base.UIO;
-import com.github.jnthnclt.os.lab.core.api.ValueIndex;
+import com.github.jnthnclt.os.lab.api.ValueIndex;
 import com.github.jnthnclt.os.lab.log.LABLogger;
 import com.github.jnthnclt.os.lab.log.LABLoggerFactory;
 import com.google.common.primitives.Bytes;

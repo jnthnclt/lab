@@ -1,4 +1,4 @@
-package com.github.jnthnclt.os.lab.core.api;
+package com.github.jnthnclt.os.lab.api;
 
 /**
  * Created by jonathan.colt on 5/19/17.

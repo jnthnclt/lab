@@ -1,10 +1,7 @@
 package com.github.jnthnclt.os.lab.core;
 
-import com.github.jnthnclt.os.lab.core.api.MemoryRawEntryFormat;
-import com.github.jnthnclt.os.lab.core.api.ValueIndex;
+import com.github.jnthnclt.os.lab.api.ValueIndex;
 import com.github.jnthnclt.os.lab.core.api.ValueIndexConfig;
-import com.github.jnthnclt.os.lab.core.api.rawhide.LABRawhide;
-import com.github.jnthnclt.os.lab.core.guts.LABHashIndexType;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
