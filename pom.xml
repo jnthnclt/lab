@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.jnthnclt</groupId>
     <artifactId>os.lab</artifactId>
-    <version>1.11</version>
+    <version>1.11.1-SNAPSHOT</version>
 
     <packaging>pom</packaging>
 
