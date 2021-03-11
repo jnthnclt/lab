@@ -24,12 +24,13 @@ class DirectBufferCleaner {
         try {
             _directBufferClass = Class.forName("sun.nio.ch.DirectBuffer");
             _directBufferCleanerMethod = _directBufferClass.getMethod("cleaner");
-            _cleanerClass = Class.forName("sun.misc.Cleaner");
+            _cleanerClass = _directBufferCleanerMethod.getReturnType();
             _cleanMethod = _cleanerClass.getMethod("clean");
             _available = true;
         } catch (ClassNotFoundException | NoSuchMethodException | SecurityException e) {
-            System.out.println("Failed to reflect direct buffer cleaner, these methods will be unavailable");
-            e.printStackTrace();
+            System.out.println("Failed to reflect direct buffer cleaner, these methods will be unavailable. " +
+                               "If you are on Java 9+ add --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED " +
+                               "to JVM options");
         }
         directBufferClass = _directBufferClass;
         directBufferCleanerMethod = _directBufferCleanerMethod;
@@ -46,8 +47,9 @@ class DirectBufferCleaner {
                     cleanMethod.invoke(cleaner);
                 }
             } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-                System.out.println("Failed to clean buffer");
-                e.printStackTrace();
+                System.out.println("Failed to clean buffer. " +
+                                   "If you are on Java 9+ add --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED " +
+                                   "to JVM options");
             }
         }
     }

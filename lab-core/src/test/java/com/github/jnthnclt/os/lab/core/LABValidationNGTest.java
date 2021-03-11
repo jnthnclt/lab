@@ -325,7 +325,7 @@ public class LABValidationNGTest {
                                 },
                                 (index, key, timestamp, tombstoned, version1, value1) -> {
                                     hits.incrementAndGet();
-                                    found.add(key == null ? 0 : key.getLong(0));
+                                    found.add(key == null ? 0L : key.getLong(0));
                                     return true;
                                 }, true);
                         }
