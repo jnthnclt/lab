@@ -29,9 +29,9 @@ public class RoaringUtils {
         int pos1 = 0, pos2 = 0;
 
         while (pos1 < length1 && pos2 < length2) {
-            final short s1 = x1.highLowContainer.getKeyAtIndex(pos1);
-            final short s2 = x2.highLowContainer.getKeyAtIndex(pos2);
-            if (s1 == s2) {
+            final char k1 = x1.highLowContainer.getKeyAtIndex(pos1);
+            final char k2 = x2.highLowContainer.getKeyAtIndex(pos2);
+            if (k1 == k2) {
                 final Container c1 = x1.highLowContainer.getContainerAtIndex(pos1);
                 final Container c2 = x2.highLowContainer.getContainerAtIndex(pos2);
                 final Container c = c1.and(c2);
@@ -40,10 +40,10 @@ public class RoaringUtils {
                 }
                 ++pos1;
                 ++pos2;
-            } else if (Util.compareUnsigned(s1, s2) < 0) { // s1 < s2
-                pos1 = x1.highLowContainer.advanceUntil(s2, pos1);
-            } else { // s1 > s2
-                pos2 = x2.highLowContainer.advanceUntil(s1, pos2);
+            } else if (k1 < k2) {
+                pos1 = x1.highLowContainer.advanceUntil(k2, pos1);
+            } else { // k1 > k2
+                pos2 = x2.highLowContainer.advanceUntil(k1, pos2);
             }
         }
         return false;
