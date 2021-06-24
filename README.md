@@ -2,7 +2,7 @@
 =========
 
 [![Maven metadata URI](https://img.shields.io/maven-central/v/com.github.jnthnclt/os.lab)](https://search.maven.org/search?q=g:com.github.jnthnclt)
-[![Build Status](https://travis-ci.org/jnthnclt/lab.png)](https://travis-ci.com/jnthnclt/lab.svg?branch=master)
+[![Build Status](https://travis-ci.com/jnthnclt/lab.svg?branch=master)](https://travis-ci.com/jnthnclt/lab)
 [![Coverage Status](https://coveralls.io/repos/github/jnthnclt/lab/badge.svg?branch=master)](https://coveralls.io/github/jnthnclt/lab?branch=master)
 [![docs-badge][]][docs]
 [![][license img]][license]
