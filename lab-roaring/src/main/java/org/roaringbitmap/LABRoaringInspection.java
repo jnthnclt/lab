@@ -2,14 +2,11 @@ package org.roaringbitmap;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.Shorts;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-
-import static org.roaringbitmap.Util.toIntUnsigned;
 
 public class LABRoaringInspection {
 
@@ -53,7 +50,7 @@ public class LABRoaringInspection {
             ArrayContainer arrayContainer = (ArrayContainer) container;
             int cardinality = arrayContainer.cardinality;
             if (cardinality > 0) {
-                short last = arrayContainer.content[cardinality - 1];
+                char last = arrayContainer.content[cardinality - 1];
                 return toIntUnsigned(last);
             }
         } else if (container instanceof RunContainer) {
@@ -72,7 +69,7 @@ public class LABRoaringInspection {
                 long l = longs[i];
                 int leadingZeros = Long.numberOfLeadingZeros(l);
                 if (leadingZeros < 64) {
-                    short last = (short) ((i * 64) + 64 - leadingZeros - 1);
+                    char last = (char) ((i * 64) + 64 - leadingZeros - 1);
                     return toIntUnsigned(last);
                 }
             }
@@ -246,16 +243,12 @@ public class LABRoaringInspection {
 //        }
 //    }
 
-    private static int containerMin(RoaringBitmap bitmap, int pos) {
-        return toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
-    }
-
     public static int key(int position) {
         return Util.highbits(position);
     }
 
     public static int[] keys(RoaringBitmap bitmap) {
-        short[] bitmapKeys = bitmap.highLowContainer.keys;
+        char[] bitmapKeys = bitmap.highLowContainer.keys;
         int[] copyKeys = new int[bitmap.highLowContainer.size];
         for (int i = 0; i < copyKeys.length; i++) {
             copyKeys[i] = toIntUnsigned(bitmapKeys[i]);
@@ -269,40 +262,40 @@ public class LABRoaringInspection {
         int pos1 = 0;
         int pos2 = 0;
 
-        int lastKey1 = length1 == 0 ? -1 : Util.toIntUnsigned(x1.highLowContainer.getKeyAtIndex(length1 - 1));
-        int lastKey2 = length2 == 0 ? -1 : Util.toIntUnsigned(x2.highLowContainer.getKeyAtIndex(length2 - 1));
+        int lastKey1 = length1 == 0 ? -1 : toIntUnsigned(x1.highLowContainer.getKeyAtIndex(length1 - 1));
+        int lastKey2 = length2 == 0 ? -1 : toIntUnsigned(x2.highLowContainer.getKeyAtIndex(length2 - 1));
         int[] keys = new int[Math.max(lastKey1, lastKey2) + 1];
 
         int ki = 0;
         while (pos1 < length1 && pos2 < length2) {
-            short s1 = x1.highLowContainer.getKeyAtIndex(pos1);
-            short s2 = x2.highLowContainer.getKeyAtIndex(pos2);
-            if (s1 == s2) {
+            char k1 = x1.highLowContainer.getKeyAtIndex(pos1);
+            char k2 = x2.highLowContainer.getKeyAtIndex(pos2);
+            if (k1 == k2) {
                 Container c1 = x1.highLowContainer.getContainerAtIndex(pos1);
                 Container c2 = x2.highLowContainer.getContainerAtIndex(pos2);
 
                 if (!c1.equals(c2)) {
-                    keys[ki++] = Util.toIntUnsigned(s1);
+                    keys[ki++] = toIntUnsigned(k1);
                 }
 
                 ++pos1;
                 ++pos2;
-            } else if (Util.compareUnsigned(s1, s2) < 0) {
-                keys[ki++] = Util.toIntUnsigned(s1);
+            } else if (k1 < k2) {
+                keys[ki++] = toIntUnsigned(k1);
                 ++pos1;
             } else {
-                keys[ki++] = Util.toIntUnsigned(s2);
+                keys[ki++] = toIntUnsigned(k2);
                 ++pos2;
             }
         }
         while (pos1 < length1) {
-            short s1 = x1.highLowContainer.getKeyAtIndex(pos1);
-            keys[ki++] = Util.toIntUnsigned(s1);
+            char s1 = x1.highLowContainer.getKeyAtIndex(pos1);
+            keys[ki++] = toIntUnsigned(s1);
             ++pos1;
         }
         while (pos2 < length2) {
-            short s2 = x2.highLowContainer.getKeyAtIndex(pos2);
-            keys[ki++] = Util.toIntUnsigned(s2);
+            char s2 = x2.highLowContainer.getKeyAtIndex(pos2);
+            keys[ki++] = toIntUnsigned(s2);
             ++pos2;
         }
 
@@ -321,7 +314,7 @@ public class LABRoaringInspection {
 
     public static boolean[] userializeAtomized(RoaringBitmap index, int[] ukeys, DataOutput[] dataOutputs) throws IOException {
         RoaringArray array = index.highLowContainer;
-        short[] keys = intToShortKeys(ukeys);
+        char[] keys = intToCharKeys(ukeys);
         boolean[] out = new boolean[keys.length];
         for (int i = 0; i < keys.length; i++) {
             if (dataOutputs[i] == null) {
@@ -359,7 +352,7 @@ public class LABRoaringInspection {
 
     public static long[] serializeSizeInBytes(RoaringBitmap bitmap, int[] ukeys) {
         RoaringArray array = bitmap.highLowContainer;
-        short[] keys = intToShortKeys(ukeys);
+        char[] keys = intToCharKeys(ukeys);
         long[] sizes = new long[keys.length];
         for (int i = 0; i < keys.length; i++) {
             Container container = array.getContainer(keys[i]);
@@ -372,7 +365,7 @@ public class LABRoaringInspection {
         try {
             List<ContainerAndLastSetBit> containers = Lists.newArrayList();
             boolean v = streamAtoms.stream((key, dataInput) -> {
-                containers.add(deserializeContainer(intToShortKey(key), dataInput));
+                containers.add(deserializeContainer(intToCharKey(key), dataInput));
                 return true;
             });
             if (containers.isEmpty()) {
@@ -381,8 +374,8 @@ public class LABRoaringInspection {
                 boolean isAscending = true;
                 boolean isDescending = true;
                 for (int i = 1; i < containers.size(); i++) {
-                    short lastKey = containers.get(i - 1).key;
-                    short nextKey = containers.get(i).key;
+                    char lastKey = containers.get(i - 1).key;
+                    char nextKey = containers.get(i).key;
                     if (lastKey > nextKey) {
                         isAscending = false;
                     } else if (lastKey < nextKey) {
@@ -413,14 +406,14 @@ public class LABRoaringInspection {
     }
 
     @VisibleForTesting
-    static int deserialize(RoaringBitmap bitmap, List<ContainerAndLastSetBit> containers) throws IOException {
+    static int deserialize(RoaringBitmap bitmap, List<ContainerAndLastSetBit> containers) {
         RoaringArray array = bitmap.highLowContainer;
 
         array.clear();
         array.size = containers.size();
 
         if ((array.keys == null) || (array.keys.length < array.size)) {
-            array.keys = new short[array.size];
+            array.keys = new char[array.size];
             array.values = new Container[array.size];
         }
 
@@ -435,7 +428,7 @@ public class LABRoaringInspection {
         return lastSetBit;
     }
 
-    private static ContainerAndLastSetBit deserializeContainer(short key, DataInput inContainer) throws IOException {
+    private static ContainerAndLastSetBit deserializeContainer(char key, DataInput inContainer) throws IOException {
 
         int last = inContainer.readShort() & 0xFFFF;
         boolean isRun = inContainer.readBoolean();
@@ -455,28 +448,28 @@ public class LABRoaringInspection {
             val = new BitmapContainer(bitmapArray, cardinality);
         } else if (isRun) {
             // cf RunContainer.writeArray()
-            int nbrruns = toIntUnsigned(Short.reverseBytes(inContainer.readShort()));
-            final short lengthsAndValues[] = new short[2 * nbrruns];
+            int nbrruns = toIntUnsigned(Character.reverseBytes(inContainer.readChar()));
+            final char[] lengthsAndValues = new char[2 * nbrruns];
 
             for (int j = 0; j < 2 * nbrruns; ++j) {
-                lengthsAndValues[j] = Short.reverseBytes(inContainer.readShort());
+                lengthsAndValues[j] = Character.reverseBytes(inContainer.readChar());
             }
             val = new RunContainer(lengthsAndValues, nbrruns);
         } else {
-            final short[] shortArray = new short[cardinality];
-            for (int l = 0; l < shortArray.length; ++l) {
-                shortArray[l] = Short.reverseBytes(inContainer.readShort());
+            final char[] charArray = new char[cardinality];
+            for (int l = 0; l < charArray.length; ++l) {
+                charArray[l] = Character.reverseBytes(inContainer.readChar());
             }
-            val = new ArrayContainer(shortArray);
+            val = new ArrayContainer(charArray);
         }
         return new ContainerAndLastSetBit(key, val, lastSetBit);
     }
 
     public static void optimize(RoaringBitmap bitmap, int[] ukeys) {
         RoaringArray array = bitmap.highLowContainer;
-        short[] keys = intToShortKeys(ukeys);
-        for (int i = 0; i < keys.length; i++) {
-            int index = array.getIndex(keys[i]);
+        char[] keys = intToCharKeys(ukeys);
+        for (char key : keys) {
+            int index = array.getIndex(key);
             if (index >= 0) {
                 Container container = array.getContainerAtIndex(index);
                 array.setContainerAtIndex(index, container.runOptimize());
@@ -485,11 +478,11 @@ public class LABRoaringInspection {
     }
 
 private static class ContainerAndLastSetBit implements Comparable<ContainerAndLastSetBit> {
-    private final short key;
+    private final char key;
     private final Container container;
     private final int lastSetBit;
 
-    private ContainerAndLastSetBit(short key, Container container, int lastSetBit) {
+    private ContainerAndLastSetBit(char key, Container container, int lastSetBit) {
         this.key = key;
         this.container = container;
         this.lastSetBit = lastSetBit;
@@ -497,26 +490,38 @@ private static class ContainerAndLastSetBit implements Comparable<ContainerAndLa
 
     @Override
     public int compareTo(ContainerAndLastSetBit o) {
-        return Shorts.compare(key, o.key);
+        return Character.compare(key, o.key);
     }
 }
 
     public static short intToShortKey(int ukey) {
-        return Util.lowbits(ukey);
+        return (short) (ukey & 0xFFFF);
     }
 
     public static short[] intToShortKeys(int[] ukeys) {
         short[] keys = new short[ukeys.length];
         for (int i = 0; i < keys.length; i++) {
-            keys[i] = Util.lowbits(ukeys[i]);
+            keys[i] = intToShortKey(ukeys[i]);
         }
         return keys;
     }
 
-//    public static int shortToIntKey(short key) {
-//        return toIntUnsigned(key);
-//    }
-//
+    private static char intToCharKey(int ukey) {
+        return (char) ukey;
+    }
+
+    private static char[] intToCharKeys(int[] ukeys) {
+        char[] keys = new char[ukeys.length];
+        for (int i = 0; i < keys.length; i++) {
+            keys[i] = intToCharKey(ukeys[i]);
+        }
+        return keys;
+    }
+
+    private static int toIntUnsigned(char x) {
+        return x & 0xFFFF;
+    }
+
 //    public static int[] shortToIntKeys(short[] keys) {
 //        int[] ukeys = new int[keys.length];
 //        for (int i = 0; i < ukeys.length; i++) {

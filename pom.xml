@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.jnthnclt</groupId>
     <artifactId>os.lab</artifactId>
-    <version>1.12.1</version>
+    <version>1.12.2-SNAPSHOT</version>
 
     <packaging>pom</packaging>
 
@@ -100,7 +100,7 @@
         <dependency>
             <groupId>org.roaringbitmap</groupId>
             <artifactId>RoaringBitmap</artifactId>
-            <version>0.6.47</version>
+            <version>0.9.14</version>
         </dependency>
         <dependency>
             <groupId>org.testng</groupId>
