@@ -8,7 +8,7 @@
         <version>1.12.2</version>
     </parent>
     <properties>
-        <aws-version>1.11.558</aws-version>
+        <aws-version>1.12.261</aws-version>
     </properties>
 
     <groupId>com.github.jnthnclt</groupId>
